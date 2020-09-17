@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 13:35:59 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/17 14:52:49 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/17 16:11:53 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,15 +16,28 @@
 #include <stdlib.h>
 #include <netinet/in.h>
 #include <string>
+#include <iostream>
 
 #define PORT 8080
 
+int	handle_msgs(int client_socket) {
+	char		buffer[1024] = {0};
+	int			valread;
+
+	if (!(valread = read(client_socket, buffer, 1024)))
+		return (1);
+	std::string resp = "Server has read : " + std::string(buffer) + " with code : " + std::to_string(valread);
+	std::cout << resp << std::endl;
+	send(client_socket, resp.c_str(), resp.length(), 0);
+	return (0);
+}
+
+
 int main() {
-	int					server_fd, new_socket, valread;
+	int					server_fd, new_socket;
 	struct sockaddr_in	address;
 	int					opt = 1;
 	int					addrlen = sizeof(address);
-	char				buffer[1024] = {0};
 	std::string			greeting = "Hello from server";
 
 	// Socket FD
@@ -61,24 +74,29 @@ int main() {
 		exit(EXIT_FAILURE);
 	}
 
-	// listen to a maximum 3 request in pending queue
-	if (listen(server_fd, 3) < 0) {
-		perror("listen failed\n");
-		exit(EXIT_FAILURE);
+	while (true) {
+		// listen to a maximum 3 request in pending queue
+		if (listen(server_fd, 3) < 0) {
+			perror("listen failed\n");
+			exit(EXIT_FAILURE);
+		}
+
+		// accept the incoming connection
+		if ((new_socket = accept(server_fd, 
+						reinterpret_cast<struct sockaddr *>(&address), 
+						reinterpret_cast<socklen_t*>(&addrlen))) < 0) {
+			perror("accept failed\n");
+			exit(EXIT_FAILURE);
+		}
+
+		std::cout << "next client accepted" << std::endl;
+
+		while (true) {
+			if (handle_msgs(new_socket))
+				break ;
+		}
+
+		std::cout << "Client disconnected" << std::endl;
 	}
-
-	// accet the incoming connection
-	if ((new_socket = accept(server_fd, 
-					reinterpret_cast<struct sockaddr *>(&address), 
-					reinterpret_cast<socklen_t*>(&addrlen))) < 0) {
-		perror("accept failed\n");
-		exit(EXIT_FAILURE);
-	}
-
-	valread = read(new_socket, buffer, 1024);
-	printf("Server has read : %s\n", buffer);
-	send(new_socket, greeting.c_str(), greeting.length(), 0);
-	printf("Server has send response\n");
-
 	return (EXIT_SUCCESS);
 }

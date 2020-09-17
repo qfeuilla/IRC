@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 14:15:21 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/17 14:54:16 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/17 16:00:34 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,14 +15,29 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <string>
+#include <iostream>
+#include <fstream>
 
 #define PORT 8080
 
+int		handle_msgs(int sock) {
+	std::string	msg;
+	int			valread;
+	char		buffer[1024] = {0};
+
+	std::getline(std::cin, msg);
+	send( sock, msg.c_str(), msg.length(), 0 );
+	valread = read( sock, buffer, 1024);
+	std::cout << buffer << std::endl;
+	if (msg == "exit")
+		return (1);
+	return (0);
+}
+
 int main() {
-	int					sock = 0, valread;
+	int					sock = 0;
 	struct sockaddr_in	serv_addr;
 	std::string			greeting = "Hello I am a new client";
-	char				buffer[1024] = {0};
 	
 	// See server implementation for explenations
 	if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
@@ -44,10 +59,11 @@ int main() {
 		perror("Connection to the server failed\n");
 		return(EXIT_FAILURE);
 	}
-	send(sock, greeting.c_str(), greeting.length(), 0);
-	printf("Client has send greetings\n");
-	valread = read( sock, buffer, 1024);
-	printf("Client has read : %s\n", buffer);
+	
+	while (true) {
+		if (handle_msgs(sock))
+			break ;
+	}
 
 	return (EXIT_SUCCESS);
 }
