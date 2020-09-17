@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 14:15:21 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/17 16:00:34 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/17 17:23:18 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -59,6 +59,8 @@ int main() {
 		perror("Connection to the server failed\n");
 		return(EXIT_FAILURE);
 	}
+	
+	std::cout << "You are successfully connected" << std::endl;
 	
 	while (true) {
 		if (handle_msgs(sock))
