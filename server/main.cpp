@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 13:35:59 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/17 16:11:53 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/17 16:22:17 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,7 +26,7 @@ int	handle_msgs(int client_socket) {
 
 	if (!(valread = read(client_socket, buffer, 1024)))
 		return (1);
-	std::string resp = "Server has read : " + std::string(buffer) + " with code : " + std::to_string(valread);
+	std::string resp = "Server has read : " + std::string(buffer);
 	std::cout << resp << std::endl;
 	send(client_socket, resp.c_str(), resp.length(), 0);
 	return (0);
