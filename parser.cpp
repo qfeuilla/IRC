@@ -1,34 +1,33 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   Fd.hpp                                             :+:      :+:    :+:   */
+/*   parser.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2020/09/17 18:40:52 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/20 16:32:43 by qfeuilla         ###   ########.fr       */
+/*   Created: 2020/09/19 19:15:55 by qfeuilla          #+#    #+#             */
+/*   Updated: 2020/09/20 17:24:03 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#ifndef FD_HPP
-# define FD_HPP
-
 #include "ft_irc.hpp"
-#include <string>
+#include <iostream>
 
-class Fd {
-public:
-	Fd();
-	virtual ~Fd();
+Command		*parse(std::string cmd) {
+	std::vector<std::string>	container;
+	size_t						last = 0;
+	size_t						i;
 
-	virtual void	read_func();
-	virtual void	write_func();
+	for (i = 0; i < cmd.length(); i++) {	
+		if (cmd[i] == ' ') {
+			container.push_back(std::string(&cmd[last], &cmd[i]));
+			while (cmd[i] == ' ') 
+				i++;
+			last = i;
+		}
+	}
+	if (last < i - 1)
+		container.push_back(std::string(&cmd[last], &cmd[i - 1]));
+	return (new Command(container));
+}
 
-	// Server or client
-	int		type;
-	char	buf_read[BUF_SIZE + 1];
-	char	buf_write[BUF_SIZE + 1];
-	int		sock;
-};
-
-#endif

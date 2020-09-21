@@ -15,6 +15,7 @@
 
 #include "Environment.hpp"
 #include "Client.hpp"
+#include <string>
 
 class Server : public Fd {
 public:
@@ -23,10 +24,9 @@ public:
 
 	~Server();
 
-	virtual void	read_func(int);
-	virtual void	write_func(int);
-
-	void	accept_srv(int);
+	virtual void	read_func();
+	virtual void	write_func();
+	void	accept_srv();
 
 	void	load_options(int, char **);
 	void	create();
@@ -39,7 +39,6 @@ private:
 	int					port;
 	int					action;
 	Environment			*ev;
-	int					s;
 };
 
 #endif

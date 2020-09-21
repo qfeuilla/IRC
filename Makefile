@@ -4,17 +4,22 @@ SRCS = 	main.cpp \
 		Environment.cpp \
 		error_handling.cpp \
 		Fd.cpp \
-		Server.cpp
+		Server.cpp \
+		parser.cpp \
+		Command.cpp
 
 OBJS = ${SRCS:.cpp=.o}
 
 NAME = bircd
 
-CFLAGS = -I. -g3 -Wall -Werror
-LDFLAGS = 
+CPPFLAGS = -I. -g3 -Wall -Werror -Wextra
+LDFLAGS =
 
 CC = clang++
 RM = rm -f
+
+.cpp.o:
+	${CC} ${CPPFLAGS} -c $< -o ${<:.cpp=.o}
 
 ${NAME}:	${OBJS}
 		${CC} -o ${NAME} ${OBJS} ${LDFLAGS}

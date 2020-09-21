@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:51:25 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/17 23:36:31 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/21 11:53:37 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,39 +15,71 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <iostream>
-#include "algorithm"
 #include <string.h>
+#include <sys/types.h>
+#include <fcntl.h>
+#include <sstream>
 
-Client::Client(Environment *e) : ev(e) {
-	type = FD_CLIENT;
+Client::Client(Environment *e, int s) : ev(e) {
+	type = FD_WAITC;
+	is_setup = false;
+	sock = s;
 }
 
-Client::~Client() { 
+Client::~Client() {
 	std::cout << "client destructed" << std::endl;
 }
 
-void	Client::read_func(int cs) {
-	int	r;
-	int	i;
-	std::string resp;
+Client::Client(const Client &old) {
+	*this = old;
+}
 
-	memset(&buf_read, 0, BUF_SIZE + 1);
-	r = recv(cs, &buf_read, BUF_SIZE, 0);
-	if (r <= 0) {
-		close(cs);
-		type = FD_FREE;
-		std::cout << "client #" << cs << " gone away" << std::endl;
+int		Client::execute_parsed(Command *parsed) {
+	switch (parsed->cmd_code())
+	{
+	case PASS_CC:
+		if (parsed->prefix.empty() && parsed->arguments.size() == 1) {
+			if (is_setup) {
+				send(sock, "Already register the right PASS\n", 32, 0);
+			} else {
+				if (parsed->arguments[0] == *ev->password) {
+					is_setup = true;
+					type = FD_CLIENT;
+					send(sock, "Good code you are register\n", 27, 0);
+				}
+				else
+					send(sock, "Wrong code please try again\n", 28, 0);
+			}
+		} 
+		else
+			send(sock, "error format PASS\n", 18, 0);
+		break;
+	
+	default:
+		break;
 	}
-	else {
-		resp = "client #" + std::to_string(cs) + ": " + buf_read;
-		std::cout << resp << std::endl;
-		i = 0;
-		while (i < ev->clients_num) {
-			if ((ev->clients_fd[i]->type == FD_CLIENT) && (i != cs))
-				send(i, resp.c_str(), resp.length(), 0);
-			i++;
-		}
+	return (0);
+}
+
+void	Client::read_func() {
+	int	r;
+	std::string resp;
+	std::string resps;
+	std::string dt;
+	Command		*parsed;
+
+	fcntl(sock, F_SETFL, O_NONBLOCK);
+	memset(&buf_read, 0, BUF_SIZE + 1);
+	r = recv(sock, &buf_read, BUF_SIZE, 0);
+	std::string line;
+	std::string rd = std::string(buf_read);
+	std::istringstream iss(rd);
+	while (std::getline(iss, line) && !line.empty()) {
+		parsed = parse(line);
+		std::cout << "Line : " << line << std::endl;
+		std::cout << *parsed << std::endl;
+		execute_parsed(parsed);
     }
 }
 
-void	Client::write_func(int cs) { }
+void	Client::write_func() { }

@@ -1,34 +1,34 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   Fd.hpp                                             :+:      :+:    :+:   */
+/*   Command.hpp                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2020/09/17 18:40:52 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/20 16:32:43 by qfeuilla         ###   ########.fr       */
+/*   Created: 2020/09/20 16:41:03 by qfeuilla          #+#    #+#             */
+/*   Updated: 2020/09/20 20:13:29 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#ifndef FD_HPP
-# define FD_HPP
+#ifndef COMMAND_HPP
+# define COMMAND_HPP
 
-#include "ft_irc.hpp"
-#include <string>
+# include <string>
+# include <vector>
+# include <ostream>
 
-class Fd {
+class Command {
 public:
-	Fd();
-	virtual ~Fd();
+	Command(std::vector<std::string>);
+	~Command();
 
-	virtual void	read_func();
-	virtual void	write_func();
+	int	cmd_code() const;
 
-	// Server or client
-	int		type;
-	char	buf_read[BUF_SIZE + 1];
-	char	buf_write[BUF_SIZE + 1];
-	int		sock;
+	std::string						prefix;
+	std::string						command;
+	std::vector<std::string>		arguments;
 };
+
+std::ostream &			operator<<( std::ostream & o, Command const & i );
 
 #endif

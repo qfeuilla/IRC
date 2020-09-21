@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 18:39:56 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/17 23:25:10 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/20 15:50:31 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,6 @@ Fd::Fd() {
 
 Fd::~Fd() { }
 
-void Fd::read_func(int socket) { }
+void Fd::read_func() { }
 
-void Fd::write_func(int socket) { }
+void Fd::write_func() { }
