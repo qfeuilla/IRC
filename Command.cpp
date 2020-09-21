@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/20 16:41:00 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/21 12:18:56 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/21 20:56:21 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,7 +15,7 @@
 
 Command::~Command() { }
 
-Command::Command(std::vector<std::string> cmd) {
+Command::Command(std::vector<std::string> cmd, std::string ln) {
 	if (cmd[0][0] == ':') {
 		prefix = cmd[0];
 		command = cmd[1];
@@ -27,6 +27,7 @@ Command::Command(std::vector<std::string> cmd) {
 		if (cmd.size() > 1)
 			arguments = std::vector<std::string>(&cmd[1], &cmd[cmd.size()]);
 	}
+	line = ln;
 }
 
 int		Command::cmd_code() const {
@@ -99,13 +100,16 @@ int		Command::cmd_code() const {
 }
 
 std::ostream &			operator<<( std::ostream &o, Command const & cmd ) {
+	o << "Line : " << cmd.line << "\n";
 	if (!cmd.prefix.empty())
 		o << "Prefix : " << cmd.prefix << "\n";
 	o << "Command : " << cmd.command << "\n";
 	o << "Arguments : [";
-	for (size_t i = 0; i < cmd.arguments.size() - 1; i++)
-			o << cmd.arguments[i] << ", ";
-	o << cmd.arguments[cmd.arguments.size() - 1];
+	if (cmd.arguments.size() >= 1) {
+		for (size_t i = 0; i < cmd.arguments.size() - 1; i++)
+				o << cmd.arguments[i] << ", ";
+		o << cmd.arguments[cmd.arguments.size() - 1];
+	}
 	o << "]\n";
 	return (o);
 }

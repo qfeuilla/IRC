@@ -28,12 +28,14 @@ Server::Server() {
 	type = FD_SERVER;
 	ev = new Environment();
 	ev->password = new std::string("");
+	ev->start = time(0);
 }
 
 Server::Server(int ac, char **av) {
 	type = FD_SERVER;
 	ev = new Environment();
 	ev->password = new std::string("");
+	ev->start = time(0);
 	load_options(ac, av);
 }
 

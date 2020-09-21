@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/19 19:15:55 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/21 12:08:26 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/21 20:57:20 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,6 +28,6 @@ Command		*parse(std::string cmd) {
 	}
 	if (last < i - 1)
 		container.push_back(std::string(&cmd[last], &cmd[i - 1]));
-	return (new Command(container));
+	return (new Command(container, std::string(&cmd[0], &cmd[cmd.length() - 1])));
 }
 

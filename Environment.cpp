@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:52:01 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/17 22:42:02 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/22 00:57:30 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,7 @@
 #include <sys/select.h>
 #include <sys/resource.h>
 #include <iostream>
+#include "Client.hpp"
 
 Environment::Environment() {
 	struct rlimit	rlp;
@@ -45,4 +46,28 @@ void Environment::init_fds() {
 		}
 		i++;
 	}
+}
+
+std::vector<Fd *>	Environment::search_history_nick(std::string nk) {
+	std::vector<Fd *> buff;
+	
+	for (Fd *f : client_history) {
+		Client *c = reinterpret_cast<Client *>(f);
+		if (c->nick == nk) 
+			buff.push_back(c);
+	}
+	return buff;
+}
+
+std::vector<Fd *>	Environment::search_list_nick(std::string nk) {
+	std::vector<Fd *> buff;
+	
+	for (Fd *f : clients_fd) {
+		if (f->type == FD_CLIENT) {
+			Client *c = reinterpret_cast<Client *>(f);
+			if (c->nick == nk) 
+				buff.push_back(c);
+		}
+	}
+	return buff;
 }

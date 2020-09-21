@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:50:59 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/20 20:34:46 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/22 00:52:03 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,12 +26,31 @@ public:
 	virtual void	read_func();
 	virtual void	write_func();
 
-	int				execute_parsed(Command *parsed);
+	// * Functions Client
+	void			PASS(Command *);
+	void			NICK(Command *);
+	void			USER(Command *);
 
-	bool			is_setup;
+	int				execute_parsed(Command *);
+
+	time_t				creation;
+	time_t				last;
+
+	std::string			pass;
+	std::string			nick;
+	std::string			username;
+	std::string			hostname;
+	std::string			servername;
+	std::string			realname;
 
 private:
 	Environment			*ev;
+	bool				pass_set;
+	bool				nick_set;
+	bool				is_setup;
+	
 };
+
+std::ostream &			operator<<( std::ostream & o, Client const & i );
 
 #endif

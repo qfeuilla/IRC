@@ -1,35 +1,22 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   Command.hpp                                        :+:      :+:    :+:   */
+/*   structs.hpp                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2020/09/20 16:41:03 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/21 20:54:16 by qfeuilla         ###   ########.fr       */
+/*   Created: 2020/09/21 14:49:42 by qfeuilla          #+#    #+#             */
+/*   Updated: 2020/09/21 22:25:57 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#ifndef COMMAND_HPP
-# define COMMAND_HPP
+#ifndef STRUCTS_HPP
+# define STRUCTS_HPP
 
-# include <string>
-# include <vector>
-# include <ostream>
-
-class Command {
-public:
-	Command(std::vector<std::string>, std::string);
-	~Command();
-
-	int	cmd_code() const;
-
-	std::string						line;
-	std::string						prefix;
-	std::string						command;
-	std::vector<std::string>		arguments;
+struct Error {
+	const char	*error_code;
+	const char	*to_format;
+	size_t		param_num;
 };
-
-std::ostream &			operator<<( std::ostream & o, Command const & i );
 
 #endif

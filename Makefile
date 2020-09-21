@@ -6,7 +6,8 @@ SRCS = 	main.cpp \
 		Fd.cpp \
 		Server.cpp \
 		parser.cpp \
-		Command.cpp
+		Command.cpp \
+		replies.cpp
 
 OBJS = ${SRCS:.cpp=.o}
 
