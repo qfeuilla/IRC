@@ -3,7 +3,7 @@
 /*                                                        :::      ::::::::   */
 /*   Client.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
+/*   By: mayeul <mayeul@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:51:25 by qfeuilla          #+#    #+#             */
 /*   Updated: 2020/09/24 15:03:06 by qfeuilla         ###   ########.fr       */
@@ -1019,6 +1019,23 @@ int		Client::execute_parsed(Command *parsed) {
 		break;
 	case MODE_CC:
 		MODE(parsed);
+	case JOIN_CC:
+		if (parsed->prefix.empty() && parsed->arguments.size() == 1) {
+			try {
+				if (ev->channels.join(sock, parsed->arguments[0]))
+					Channel::sendMsgToSocket(sock, "Channel joined\n");
+			} catch (const std::exception& e) {
+				Channel::sendMsgToSocket(sock, e.what());
+			}
+		}
+		break;
+	case PART_CC:
+		if (parsed->prefix.empty() && parsed->arguments.size() >= 1) {
+			if (ev->channels.leave(sock, parsed->arguments[0]))
+				Channel::sendMsgToSocket(sock, "Channel left\n");
+			else
+				Channel::sendMsgToSocket(sock, "Could not leave channel (you were not in it xd)\n");
+		}
 		break;
 	case QUIT_CC:
 		QUIT(parsed);
