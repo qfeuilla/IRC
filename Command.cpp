@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/20 16:41:00 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/20 20:25:16 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/21 12:18:56 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,11 +19,13 @@ Command::Command(std::vector<std::string> cmd) {
 	if (cmd[0][0] == ':') {
 		prefix = cmd[0];
 		command = cmd[1];
-		arguments = std::vector<std::string>(&cmd[2], &cmd[cmd.size()]);
+		if (cmd.size() > 2)
+			arguments = std::vector<std::string>(&cmd[2], &cmd[cmd.size()]);
 	} else {
 		prefix = "";
 		command = cmd[0];
-		arguments = std::vector<std::string>(&cmd[1], &cmd[cmd.size()]);
+		if (cmd.size() > 1)
+			arguments = std::vector<std::string>(&cmd[1], &cmd[cmd.size()]);
 	}
 }
 
