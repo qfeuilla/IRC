@@ -68,7 +68,7 @@ void		Server::create() {
 		exit (EXIT_FAILURE);
 	}
 	sin.sin_family = AF_INET;
-	sin.sin_addr.s_addr = inet_addr("10.0.2.15");
+	sin.sin_addr.s_addr = inet_addr("127.0.0.1");
 	sin.sin_port = htons(port);
 	X(-1, bind(sock, (struct sockaddr*)&sin, sizeof(sin)), "bind");
 	X(-1, listen(sock, 42), "listen");
