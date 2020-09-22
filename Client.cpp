@@ -1020,9 +1020,9 @@ int		Client::execute_parsed(Command *parsed) {
 	case MODE_CC:
 		MODE(parsed);
 	case JOIN_CC:
-		if (parsed->prefix.empty() && parsed->arguments.size() == 1) {
+		if (parsed->prefix.empty() && parsed->arguments.size() >= 1) {
 			try {
-				if (ev->channels.join(sock, parsed->arguments[0]))
+				if (ev->channels.join(sock, parsed->arguments))
 					Channel::sendMsgToSocket(sock, "Channel joined\n");
 			} catch (const std::exception& e) {
 				Channel::sendMsgToSocket(sock, e.what());
@@ -1031,7 +1031,7 @@ int		Client::execute_parsed(Command *parsed) {
 		break;
 	case PART_CC:
 		if (parsed->prefix.empty() && parsed->arguments.size() >= 1) {
-			if (ev->channels.leave(sock, parsed->arguments[0]))
+			if (ev->channels.leave(sock, parsed->arguments))
 				Channel::sendMsgToSocket(sock, "Channel left\n");
 			else
 				Channel::sendMsgToSocket(sock, "Could not leave channel (you were not in it xd)\n");
