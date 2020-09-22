@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/20 16:41:00 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/21 20:56:21 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/22 10:49:08 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,70 +31,100 @@ Command::Command(std::vector<std::string> cmd, std::string ln) {
 }
 
 int		Command::cmd_code() const {
-	if (command == "PASS")
+	if (command == "PASS")	
 		return (PASS_CC);
 	else if (command == "NICK")
 		return (NICK_CC);
 	else if (command == "USER")
 		return (USER_CC);
-	else if (command == "SERVER")
-		return (SERVER_CC);
-	else if (command == "OPER")
+	else if (command == "OPER")	
 		return (OPER_CC);
-	else if (command == "QUIT")
-		return (QUIT_CC);
-	else if (command == "SQUIT")
-		return (SQUIT_CC);
-	else if (command == "JOIN")
-		return (JOIN_CC);
-	else if (command == "PART")
-		return (PART_CC);
-	else if (command == "MODE")
+	else if (command == "MODE")	
 		return (MODE_CC);
-	else if (command == "TOPIC")
+	else if (command == "SERVICE")	
+		return (SERVICE_CC);
+	else if (command == "QUIT")	
+		return (QUIT_CC);
+	else if (command == "SQUIT")	
+		return (SQUIT_CC);
+	else if (command == "JOIN")	
+		return (JOIN_CC);
+	else if (command == "PART")	
+		return (PART_CC);
+	else if (command == "TOPIC")	
 		return (TOPIC_CC);
-	else if (command == "NAMES")
+	else if (command == "NAMES")	
 		return (NAMES_CC);
-	else if (command == "LIST")
+	else if (command == "LIST")	
 		return (LIST_CC);
-	else if (command == "INVITE")
+	else if (command == "INVITE")	
 		return (INVITE_CC);
-	else if (command == "KICK")
+	else if (command == "KICK")	
 		return (KICK_CC);
-	else if (command == "VERSION")
-		return (VERSION_CC);
-	else if (command == "STATS")
-		return (STATS_CC);
-	else if (command == "LINKS")
-		return (LINKS_CC);
-	else if (command == "TIME")
-		return (TIME_CC);
-	else if (command == "CONNECT")
-		return (CONNECT_CC);
-	else if (command == "TRACE")
-		return (TRACE_CC);
-	else if (command == "ADMIN")
-		return (ADMIN_CC);
-	else if (command == "INFO")
-		return (INFO_CC);
-	else if (command == "PRIVMSG")
+	else if (command == "PRIVMSG")	
 		return (PRIVMSG_CC);
-	else if (command == "NOTICE")
+	else if (command == "NOTICE")	
 		return (NOTICE_CC);
-	else if (command == "WHO")
+	else if (command == "MOTD")	
+		return (MOTD_CC);
+	else if (command == "LUSERS")	
+		return (LUSERS_CC);
+	else if (command == "VERSION")	
+		return (VERSION_CC);
+	else if (command == "STATS")	
+		return (STATS_CC);
+	else if (command == "LINKS")	
+		return (LINKS_CC);
+	else if (command == "TIME")	
+		return (TIME_CC);
+	else if (command == "CONNECT")	
+		return (CONNECT_CC);
+	else if (command == "TRACE")	
+		return (TRACE_CC);
+	else if (command == "ADMIN")	
+		return (ADMIN_CC);
+	else if (command == "INFO")	
+		return (INFO_CC);
+	else if (command == "SERVLIST")	
+		return (SERVLIST_CC);
+	else if (command == "SQUERY")	
+		return (SQUERY_CC);
+	else if (command == "WHO")	
 		return (WHO_CC);
-	else if (command == "WHOIS")
+	else if (command == "WHOIS")	
 		return (WHOIS_CC);
-	else if (command == "WHOWAS")
+	else if (command == "WHOWAS")	
 		return (WHOWAS_CC);
-	else if (command == "KILL")
+	else if (command == "KILL")	
 		return (KILL_CC);
-	else if (command == "PING")
+	else if (command == "PING")	
 		return (PING_CC);
-	else if (command == "PONG")
+	else if (command == "PONG")	
 		return (PONG_CC);
-	else if (command == "ERROR")
+	else if (command == "ERROR")	
 		return (ERROR_CC);
+	else if (command == "AWAY")
+		return (AWAY_CC);
+	else if (command == "REHASH")	
+		return (REHASH_CC);
+	else if (command == "DIE")	
+		return (DIE_CC);
+	else if (command == "RESTART")	
+		return (RESTART_CC);
+	else if (command == "SUMMON")	
+		return (SUMMON_CC);
+	else if (command == "USERS")	
+		return (USERS_CC);
+	else if (command == "WALLOPS")	
+		return (WALLOPS_CC);
+	else if (command == "USERHOST")	
+		return (USERHOST_CC);
+	else if (command == "ISON")	
+		return (ISON_CC);
+	else if (command == "SERVER")	
+		return (SERVER_CC);
+	else if (command == "NJOIN")	
+		return (NJOIN_CC);
 	else
 		return (WRONG_CMD);
 }

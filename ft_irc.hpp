@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 18:24:57 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/21 22:49:40 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/22 10:58:37 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,5 +33,6 @@ Command						*parse(std::string cmd);
 std::string					_reply_formating(const char *, Error, 
 								std::vector<std::string>, const char *,
 								const char*, int);
+bool						is_special(char c);
 
 #endif

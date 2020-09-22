@@ -6,12 +6,14 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/20 17:01:28 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/22 00:45:05 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/22 10:38:57 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef DEFINES_HPP
 #define DEFINES_HPP
+
+# define SERV_NAME		"chat.ft.irc"
 
 // * utilitie for format
 
@@ -27,39 +29,54 @@
 
 // * Command number for switch operations
 
-# define WRONG_CMD 0
-# define PASS_CC 1
-# define NICK_CC 2
-# define USER_CC 3
-# define SERVER_CC 4
-# define OPER_CC 5
-# define QUIT_CC 7
-# define SQUIT_CC 6
-# define JOIN_CC 8
-# define PART_CC 9
-# define MODE_CC 10
-# define TOPIC_CC 11
-# define NAMES_CC 12
-# define LIST_CC 13
-# define INVITE_CC 14
-# define KICK_CC 15
-# define VERSION_CC 16
-# define STATS_CC 17
-# define LINKS_CC 18
-# define TIME_CC 19
-# define CONNECT_CC 21
-# define TRACE_CC 22
-# define ADMIN_CC 23
-# define INFO_CC 24
-# define PRIVMSG_CC 25
-# define NOTICE_CC 26
-# define WHO_CC 27
-# define WHOIS_CC 28
-# define WHOWAS_CC 29
-# define KILL_CC 30
-# define PING_CC 31
-# define PONG_CC 32
-# define ERROR_CC 33
+# define WRONG_CMD		0
+# define PASS_CC		1
+# define NICK_CC		2
+# define USER_CC		3
+# define OPER_CC		4
+# define MODE_CC		5
+# define SERVICE_CC		6
+# define QUIT_CC		7
+# define SQUIT_CC		8
+# define JOIN_CC		9
+# define PART_CC		10
+# define TOPIC_CC		11
+# define NAMES_CC		12
+# define LIST_CC		13
+# define INVITE_CC		14
+# define KICK_CC		15
+# define PRIVMSG_CC		16
+# define NOTICE_CC		17
+# define MOTD_CC		18
+# define LUSERS_CC		19
+# define VERSION_CC		20
+# define STATS_CC		21
+# define LINKS_CC		22
+# define TIME_CC		23
+# define CONNECT_CC		24
+# define TRACE_CC		25
+# define ADMIN_CC		26
+# define INFO_CC		27
+# define SERVLIST_CC	28
+# define SQUERY_CC		29
+# define WHO_CC			30
+# define WHOIS_CC		31
+# define WHOWAS_CC		32
+# define KILL_CC		33
+# define PING_CC		34
+# define PONG_CC		35
+# define ERROR_CC		36
+# define AWAY_CC		37
+# define REHASH_CC		38
+# define DIE_CC			39
+# define RESTART_CC		40
+# define SUMMON_CC		41
+# define USERS_CC		42
+# define WALLOPS_CC		43
+# define USERHOST_CC	44
+# define ISON_CC		45
+# define SERVER_CC		46
+# define NJOIN_CC		47
 
 // * Messages necessay rights to execute
 

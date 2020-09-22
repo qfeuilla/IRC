@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:51:25 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/22 00:57:58 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/22 11:05:15 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,9 +21,16 @@
 #include <sstream>
 
 bool		check_nick(std::string nk) {
-	// TODO
-	(void)nk;
-	return true;
+	if (nk.length() > 9)
+		return (false);
+	if (!(is_special(nk[0]) || std::isalpha(nk[0])))
+		return (false);
+	for (char c : nk) {
+		if (!(is_special(nk[0]) || std::isalnum(nk[0])
+				|| c == '-'))
+			return (false);
+	}
+	return (true);
 }
 
 Client::Client(Environment *e, int s) : ev(e) {
@@ -31,8 +38,8 @@ Client::Client(Environment *e, int s) : ev(e) {
 	is_setup = false;
 	sock = s;
 	creation = time(0);
-	nick = "*";
-	servername = "*";
+	nick = "NA";
+	servername = SERV_NAME;
 }
 
 Client::~Client() {
@@ -119,7 +126,8 @@ void	Client::USER(Command *cmd) {
 		if (cmd->prefix.empty() && cmd->arguments.size() >= 4) {
 			username = cmd->arguments[0];
 			hostname = cmd->arguments[1];
-			servername = cmd->arguments[2];
+			if (cmd->arguments[2] != "*")
+				servername = cmd->arguments[2];
 			for (size_t i = 3; i < cmd->arguments.size() - 1; i++) {
 				realname += cmd->arguments[i];
 				realname += " ";
@@ -185,11 +193,11 @@ void	Client::read_func() {
 void	Client::write_func() { }
 
 std::ostream &			operator<<( std::ostream & o, Client const & cl ) {
-	o << "Pass :" << cl.pass << "\n";
-	o << "Nickname :" << cl.nick << "\n";
-	o << "UserName :" << cl.username << "\n";
-	o << "HostName :" << cl.hostname << "\n";
-	o << "ServerName :" << cl.servername << "\n";
-	o << "RealName :" << cl.realname << "\n";
+	o << "Pass : " << cl.pass << "\n";
+	o << "Nickname : " << cl.nick << "\n";
+	o << "UserName : " << cl.username << "\n";
+	o << "HostName : " << cl.hostname << "\n";
+	o << "ServerName : " << cl.servername << "\n";
+	o << "RealName : " << cl.realname << "\n";
 	return (o);
 }
