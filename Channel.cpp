@@ -33,7 +33,7 @@ bool				Channel::join(socket_t socket)
 {
 	bool	ret;
 
-	std::pair<socket_t, _User_modes*>	new_el(socket, new _User_modes());
+	std::pair<socket_t, _Chan_modes*>	new_el(socket, new _Chan_modes());
 	ret = _users.insert(new_el).second;
 
 	// * debug only

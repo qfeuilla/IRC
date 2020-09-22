@@ -12,35 +12,38 @@ class Channel
 public:
 	typedef	int			socket_t;
 private:
-	/*
-		Les modes disponibles sont :
-		i - marque un utilisateur comme invisible ;
-		s - marque un utilisateur comme recevant les notifications du serveur ;
-		w - l'utilisateur reçoit les WALLOPs ;
-		o - drapeau d'opérateur.
-	*/
-	class _User_modes
+	class _Chan_modes
 	{
 	public:
-		bool	i;
-		bool	s;
-		bool	w;
-		bool	o;
-		_User_modes(): i(false), s(false), w(false), o(false) {}
-		_User_modes &operator=(const _User_modes &other)
+		std::map<Channel::socket_t, std::string>	o; // Operator privileges
+		std::map<Channel::socket_t, std::string>	v; // Ability to speak on a moderated channel
+		bool		p; // Private channel
+		bool		s; // Secret channel
+		bool		i; // Users can't join without invite
+		bool		t; // Topic can only be set by an operator
+		bool		m; // Only voiced users and operators can talk
+		int			l; // User limit
+		std::string	k; // Channel password
+		_Chan_modes(): o(), v(), p(false), s(false), i(false), t(false), m(false), l(-1), k() {}
+		_Chan_modes &operator=(const _Chan_modes &other)
 		{
-			i = other.i;
-			s = other.s;
-			w = other.w;
 			o = other.o;
+			v = other.v;
+			p = other.p;
+			s = other.s;
+			i = other.i;
+			t = other.t;
+			m = other.m;
+			l = other.l;
+			k = other.k;
 			return (*this);
 		}
 	};
 	
-	typedef	std::map<socket_t, _User_modes*>	_users_map;
+	typedef	std::map<socket_t, _Chan_modes*>	_users_map;
 	
 	std::string							_name;
-	std::map<socket_t, _User_modes*>	_users;
+	std::map<socket_t, _Chan_modes*>	_users;
 
 	void	_print_channel(void) {
 		_users_map::iterator	current = _users.begin();
