@@ -14,15 +14,22 @@
 #include <stdlib.h>
 #include <iostream>
 #include <netdb.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 #include <sys/select.h>
 #include <fcntl.h>
 #include <string.h>
 
-
 Server::~Server() {
 	std::cout << "server destructed" << std::endl;
+}
+
+std::string		Server::generate_servname(std::string ex) {
+	std::string		gen;
+	std::vector<std::string> names = {"ampere", "archimedes", "aristote", "becquerel", "bohr", "bose", "boyle", "carson", "copernicus", "watson", "curie", "cuvier", "dalton", "darwin", "einstein", "faraday", "fermi", "feynman", "fleming", "franklin", "feuillade", "galilei", "hawking", "hershel", "hertz", "hippocrates", "hubble", "joule", "kepler", "lavoisier", "lovelace", "maxwell", "mendeleev", "newton", "nobel", "pasteur", "planck", "rutherford", "thomson", "kelvin", "volta", "wegener"};
+
+	srand(time(0));
+	gen = names[rand() % names.size()];
+	gen += ex;
+	return (gen);
 }
 
 Server::Server() {
@@ -32,6 +39,7 @@ Server::Server() {
 	ev->username_oper = new std::string("superUO");
 	ev->start = time(0);
 	ev->accept_operators = true;
+	ev->serv = new std::string(generate_servname(EX_NAME));
 }
 
 Server::Server(int ac, char **av) {
@@ -41,6 +49,7 @@ Server::Server(int ac, char **av) {
 	ev->username_oper = new std::string("superUO");
 	ev->start = time(0);
 	ev->accept_operators = true;
+	ev->serv = new std::string(generate_servname(EX_NAME));
 	load_options(ac, av);
 }
 
@@ -85,7 +94,7 @@ void		Server::accept_srv() {
 		<< ntohs(csin.sin_port) << std::endl;
 
 	delete ev->clients_fd[cs];
-	ev->clients_fd[cs] = new Client(ev, cs);
+	ev->clients_fd[cs] = new Client(ev, cs, csin);
 }
 
 void		Server::read_func() {

@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 18:24:57 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/22 10:58:37 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/22 22:32:05 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,6 +21,8 @@
 # include "Command.hpp"
 # include "structs.hpp"
 # include <ctime>
+# include <netinet/in.h>
+# include <arpa/inet.h>
 
 # define Xv(err,res,str)	(x_void(err,res,str,__FILE__,__LINE__))
 # define X(err,res,str)		(x_int(err,res,str,__FILE__,__LINE__))
@@ -34,5 +36,6 @@ std::string					_reply_formating(const char *, Error,
 								std::vector<std::string>, const char *,
 								const char*, int);
 bool						is_special(char c);
+std::vector<std::string>	parse_comma(std::string cmd);
 
 #endif

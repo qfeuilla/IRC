@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:50:59 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/22 15:18:31 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/22 22:53:17 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,26 +18,28 @@
 
 class Client : public Fd {
 public:
-	Client(Environment *, int);
+	Client(Environment *, int, struct sockaddr_in);
 	~Client();
 
 	Client(const Client &);
 
-	virtual void	read_func();
-	virtual void	write_func();
+	virtual void		read_func();
+	virtual void		write_func();
 
 	// * Functions Client
-	void			PASS(Command *);
-	void			NICK(Command *);
-	void			USER(Command *);
-	void			OPER(Command *);
-	void			MODE(Command *);
+	void				PASS(Command *);
+	void				NICK(Command *);
+	void				USER(Command *);
+	void				OPER(Command *);
+	void				MODE(Command *);
+	void				QUIT(Command *);
+	void				PRIVMSG(Command *);
 
-	int				execute_parsed(Command *);
+	int					execute_parsed(Command *);
 
-	void			exec_registerMS();
-	std::string		get_userMODEs_ms();
-	bool			set_uMODE(char c, bool add);
+	void				exec_registerMS();
+	std::string			get_userMODEs_ms();
+	bool				set_uMODE(char c, bool add);
 
 	time_t				creation;
 	time_t				last;
@@ -53,6 +55,8 @@ public:
 	bool				o_mode;
 	bool				w_mode;
 	bool				s_mode;
+	
+	struct sockaddr_in	csin;
 
 private:
 	Environment			*ev;

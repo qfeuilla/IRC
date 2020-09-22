@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:54:23 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/22 12:05:31 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/22 22:53:04 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,6 +27,8 @@ public:
 	// * search return the list of Fd that match conditions
 	std::vector<Fd *>		search_history_nick(std::string);
 	std::vector<Fd *>		search_list_nick(std::string);
+	std::vector<Fd *>		match_mask_serv(std::string);
+	std::vector<Fd *>		match_mask_host(std::string); 
 	// TODO : for other params
 
 	std::vector<Fd *>	clients_fd;
@@ -39,6 +41,7 @@ public:
 	std::string			*username_oper;
 	time_t				start;
 	bool				accept_operators;
+	std::string			*serv;
 };
 
 #endif 

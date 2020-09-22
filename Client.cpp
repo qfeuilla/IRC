@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:51:25 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/22 15:21:48 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/22 22:59:34 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,17 +33,19 @@ bool		check_nick(std::string nk) {
 	return (true);
 }
 
-Client::Client(Environment *e, int s) : ev(e) {
+Client::Client(Environment *e, int s, struct sockaddr_in addr) : ev(e) {
 	type = FD_CLIENT;
 	is_setup = false;
 	sock = s;
 	creation = time(0);
-	nick = "NA";
+	nick = "*";
 	i_mode = false;
 	o_mode = false;
 	s_mode = false;
 	w_mode = false;
-	servername = SERV_NAME;
+	servername = *e->serv;
+	hostname = "0"; // * ip of the user if not specified
+	csin = addr;
 }
 
 Client::~Client() {
@@ -104,6 +106,10 @@ void	Client::NICK(Command *cmd) {
 
 					std::cout << ms;
 					send(sock, ms.c_str(), ms.length(), 0);
+					if (!nick_set) {
+						nick_set = true;
+						exec_registerMS();
+					}
 				} else {
 					nick = cmd->arguments[0];
 					nick_set = true;
@@ -144,7 +150,8 @@ void	Client::USER(Command *cmd) {
 	if (!is_setup) {
 		if (cmd->prefix.empty() && cmd->arguments.size() >= 4) {
 			username = cmd->arguments[0];
-			hostname = cmd->arguments[1];
+			if (cmd->arguments[1] != "0")
+				hostname = cmd->arguments[1]; // * not used deprecated
 			if (cmd->arguments[2] != "*")
 				servername = cmd->arguments[2];
 			for (size_t i = 3; i < cmd->arguments.size() - 1; i++) {
@@ -154,7 +161,8 @@ void	Client::USER(Command *cmd) {
 			realname += cmd->arguments[cmd->arguments.size() - 1];
 			realname = std::string(&realname[1], &realname[realname.length()]);
 			is_setup = true;
-			exec_registerMS();
+			if (nick_set)
+				exec_registerMS();
 		} else {
 			ms = reply_formating(servername.c_str(), ERR_NEEDMOREPARAMS, {cmd->line}, nick.c_str());
 			std::cout << ms;
@@ -287,6 +295,78 @@ void	Client::MODE(Command *cmd) {
 	}
 }
 
+void	Client::QUIT(Command *cmd) {
+	(void)cmd;
+	std::string ans;
+	std::string ms;
+
+	if (cmd->arguments.size()) {
+		for (size_t i = 0; i < cmd->arguments.size(); i++) {
+			ms += cmd->arguments[i];
+			ms += " ";
+		}
+	} else {
+		ms = nick;
+	}
+
+	ev->client_history.push_back(this);
+	ans += ":";
+	ans += nick;
+	ans += " QUIT :";
+	ans += ms;
+	ans += CRLF;
+	std::cout << ans;
+	send(sock, ans.c_str(), ans.size(), 0);
+	ev->clients_fd[sock] = new Fd();
+	close(sock);
+}
+
+void	Client::PRIVMSG(Command *cmd) {
+	std::string 		ms;
+	std::vector<Fd *> 	tmp;
+	int					good = 0;
+	
+	if (cmd->arguments.size() >= 2) {
+		for (std::string targ : parse_comma(cmd->arguments[0])) {
+			if (targ[0] == '#') {
+				// TODO : chans
+			} else if (targ[0] == '$') {
+				// TODO : multi server
+			} else {
+				if (!(tmp = ev->search_list_nick(targ)).empty()) {
+					Client *c = reinterpret_cast<Client *>(tmp[0]);
+
+					ms += ":";
+					ms += nick;
+					ms += " PRIVMSG ";
+					ms += targ;
+					ms += " ";
+					for (size_t i = 1; i < cmd->arguments.size(); i++) {
+						ms += cmd->arguments[i];
+						ms += " ";
+					}
+					ms += CRLF;
+					send(c->sock, ms.c_str(), ms.length(), 0);
+					good += 1;
+				} else {
+					ms = reply_formating(servername.c_str(), ERR_NOSUCHNICK, {targ}, nick.c_str());
+					std::cout << ms;
+					send(sock, ms.c_str(), ms.size(), 0);
+				}
+			}
+		}
+		if (good == 0) {
+			ms = reply_formating(servername.c_str(), ERR_NORECIPIENT, {cmd->line}, nick.c_str());
+			std::cout << ms;
+			send(sock, ms.c_str(), ms.size(), 0);
+		}
+	} else {
+		ms = reply_formating(servername.c_str(), ERR_NOTEXTTOSEND, {}, nick.c_str());
+		std::cout << ms;
+		send(sock, ms.c_str(), ms.size(), 0);
+	}
+}
+
 int		Client::execute_parsed(Command *parsed) {
 	switch (parsed->cmd_code())
 	{
@@ -307,6 +387,12 @@ int		Client::execute_parsed(Command *parsed) {
 		break;
 	case MODE_CC:
 		MODE(parsed);
+		break;
+	case QUIT_CC:
+		QUIT(parsed);
+		break;
+	case PRIVMSG_CC:
+		PRIVMSG(parsed);
 		break;
 	default:
 		break;
@@ -344,5 +430,7 @@ std::ostream &			operator<<( std::ostream & o, Client const & cl ) {
 	o << "HostName : " << cl.hostname << "\n";
 	o << "ServerName : " << cl.servername << "\n";
 	o << "RealName : " << cl.realname << "\n";
+	o << "IP addr : " << inet_ntoa(cl.csin.sin_addr) << "\n";
+	o << "Port : " << htons(cl.csin.sin_port) << "\n"; 
 	return (o);
 }

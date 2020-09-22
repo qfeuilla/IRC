@@ -26,14 +26,16 @@ public:
 
 	virtual void	read_func();
 	virtual void	write_func();
-	void	accept_srv();
+	void			accept_srv();
 
-	void	load_options(int, char **);
-	void	create();
+	std::string		generate_servname(std::string);
 
-	void	init_fd();
-	void	serv_select();
-	void	do_actions();
+	void			load_options(int, char **);
+	void			create();
+
+	void			init_fd();
+	void			serv_select();
+	void			do_actions();
 
 private:
 	int					port;

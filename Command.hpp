@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/20 16:41:03 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/21 20:54:16 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/22 23:01:41 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,6 +16,8 @@
 # include <string>
 # include <vector>
 # include <ostream>
+
+// TODO : implement a struct prefix for user formating (like qfeu!~qfeuilla@einstein.ft.irc)
 
 class Command {
 public:

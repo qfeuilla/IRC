@@ -6,14 +6,14 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/20 17:01:28 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/22 15:17:12 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/22 21:19:48 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef DEFINES_HPP
 #define DEFINES_HPP
 
-# define SERV_NAME		"chat.ft.irc"
+# define EX_NAME		".ft.irc"
 
 // * utilitie for format
 
@@ -36,20 +36,20 @@
 # define USER_CC		3
 # define OPER_CC		4
 # define MODE_CC		5
-# define SERVICE_CC		6
+# define SERVICE_CC		6 // * Not implemented, used for chat bot
 # define QUIT_CC		7
-# define SQUIT_CC		8
-# define JOIN_CC		9
-# define PART_CC		10
-# define TOPIC_CC		11
-# define NAMES_CC		12
-# define LIST_CC		13
-# define INVITE_CC		14
-# define KICK_CC		15
-# define PRIVMSG_CC		16
+# define SQUIT_CC		8 // TODO : When server to server will be implmented
+# define JOIN_CC		9 // TODO : When biniding channel to this branch
+# define PART_CC		10 // TODO : When binding channel to this branch
+# define TOPIC_CC		11 // TODO : When binding channel to this branch
+# define NAMES_CC		12 // TODO : When binding channel to this branch
+# define LIST_CC		13 // TODO : When binding channel to this branch
+# define INVITE_CC		14 // TODO : When binding channel to this branch
+# define KICK_CC		15 // TODO : When binding channel to this branch
+# define PRIVMSG_CC		16 // TODO : extanding when multi server
 # define NOTICE_CC		17
 # define MOTD_CC		18
-# define LUSERS_CC		19
+# define LUSERS_CC		19 // TODO :
 # define VERSION_CC		20
 # define STATS_CC		21
 # define LINKS_CC		22
