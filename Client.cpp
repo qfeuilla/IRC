@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:51:25 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/22 11:05:15 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/22 15:21:48 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,7 +26,7 @@ bool		check_nick(std::string nk) {
 	if (!(is_special(nk[0]) || std::isalpha(nk[0])))
 		return (false);
 	for (char c : nk) {
-		if (!(is_special(nk[0]) || std::isalnum(nk[0])
+		if (!(is_special(c) || std::isalnum(c)
 				|| c == '-'))
 			return (false);
 	}
@@ -39,6 +39,10 @@ Client::Client(Environment *e, int s) : ev(e) {
 	sock = s;
 	creation = time(0);
 	nick = "NA";
+	i_mode = false;
+	o_mode = false;
+	s_mode = false;
+	w_mode = false;
 	servername = SERV_NAME;
 }
 
@@ -87,21 +91,23 @@ void	Client::NICK(Command *cmd) {
 		if (check_nick(cmd->arguments[0])) {
 			if (ev->search_list_nick(cmd->arguments[0]).empty()) {
 				// * if client is setup so it is a nick change
-				ms += ":";
-				ms += nick;
-				ms += " NICK :";
-				ms += cmd->arguments[0];
-				ms += CRLF;
 				if (is_setup) {
+					ms += ":";
+					ms += nick;
+					ms += " NICK :";
+					ms += cmd->arguments[0];
+					ms += CRLF;
+					
 					// * save old client for histoy purpose
 					ev->client_history.push_back(new Client(*this));
 					nick = cmd->arguments[0];
+
+					std::cout << ms;
+					send(sock, ms.c_str(), ms.length(), 0);
 				} else {
 					nick = cmd->arguments[0];
 					nick_set = true;
 				}
-				std::cout << ms;
-				send(sock, ms.c_str(), ms.length(), 0);
 			} else {
 				ms = reply_formating(servername.c_str(), ERR_NICKNAMEINUSE, {cmd->arguments[0]}, nick.c_str());
 				std::cout << ms;
@@ -117,6 +123,19 @@ void	Client::NICK(Command *cmd) {
 		std::cout << ms;
 		send(sock, ms.c_str(), ms.size(), 0);
 	}
+}
+
+void	Client::exec_registerMS() {
+	std::string tmp;
+
+	tmp += ":";
+	tmp += nick;
+	tmp += " MODE ";
+	tmp += nick;
+	tmp += " +i";
+	tmp += CR;
+	execute_parsed(parse(tmp));
+	// TODO : need more functions (i will do)
 }
 
 void	Client::USER(Command *cmd) {
@@ -135,6 +154,7 @@ void	Client::USER(Command *cmd) {
 			realname += cmd->arguments[cmd->arguments.size() - 1];
 			realname = std::string(&realname[1], &realname[realname.length()]);
 			is_setup = true;
+			exec_registerMS();
 		} else {
 			ms = reply_formating(servername.c_str(), ERR_NEEDMOREPARAMS, {cmd->line}, nick.c_str());
 			std::cout << ms;
@@ -145,6 +165,125 @@ void	Client::USER(Command *cmd) {
 		ms = reply_formating(servername.c_str(), ERR_ALREADYREGISTRED, {}, nick.c_str());
 		std::cout << ms;
 		send(sock, ms.c_str(), ms.size(), 0);
+	}
+}
+
+void	Client::OPER(Command *cmd) {
+	std::string ms;
+
+	if (cmd->arguments.size() >= 2) {
+		if (ev->accept_operators) {
+			if (*ev->password == cmd->arguments[1] 
+				&& *ev->username_oper == cmd->arguments[0]) {
+					o_mode = true;
+					ms = reply_formating(servername.c_str(), RPL_YOUREOPER, {}, nick.c_str());
+					std::cout << ms;
+					send(sock, ms.c_str(), ms.size(), 0);
+			} else {
+				ms = reply_formating(servername.c_str(), ERR_PASSWDMISMATCH, {}, nick.c_str());
+				std::cout << ms;
+				send(sock, ms.c_str(), ms.size(), 0);
+			}
+		} else {
+			ms = reply_formating(servername.c_str(), ERR_NOOPERHOST, {}, nick.c_str());
+			std::cout << ms;
+			send(sock, ms.c_str(), ms.size(), 0);
+		}
+	} else {
+		ms = reply_formating(servername.c_str(), ERR_NEEDMOREPARAMS, {cmd->line}, nick.c_str());
+		std::cout << ms;
+		send(sock, ms.c_str(), ms.size(), 0);
+	}
+	
+}
+
+std::string		Client::get_userMODEs_ms() {
+	std::string	ms;
+
+	if (w_mode || o_mode || i_mode || s_mode)
+		ms += "+";
+	if (w_mode)
+		ms += "w";
+	if (o_mode)
+		ms += "o";
+	if (i_mode)
+		ms += "i";
+	if (s_mode)
+		ms += "s";
+	ms = reply_formating(servername.c_str(), RPL_UMODEIS, {ms}, nick.c_str());
+	return (ms);
+}
+
+bool	Client::set_uMODE(char m, bool add) {
+	if (m == 'i') {
+		i_mode = (add ? true : false);
+	} else if (m == 's') {
+		s_mode = (add ? true : false);
+	} else if (m == 'o') {
+		o_mode = (add ? o_mode : false);
+	} else if (m == 'w') {
+		w_mode = (add ? true : false);
+	} else
+		return false;
+	return true;
+}
+
+void	Client::MODE(Command *cmd) {
+	std::string		ms;
+
+	if (cmd->arguments.size() >= 2) {
+		if (cmd->arguments[0][0] != '#') {
+			if (cmd->arguments[0] == nick) {
+				size_t	i = 0;
+				bool	add = false;
+
+				// * set flags
+				for (; i < cmd->arguments[1].length() && i < 4; i++) {
+					if (i == 0) {
+						if (cmd->arguments[1][i] == '-')
+							;
+						else if (cmd->arguments[1][i] == '+')
+							add = true;
+						else
+							break;
+					} else if (!set_uMODE(cmd->arguments[1][i], add))
+						break;
+				}
+
+				// * if mode propetly format
+				if ((i == cmd->arguments[1].length() || i == 4) && cmd->arguments[1].length() > 1) {
+					ms += ":";
+					ms += nick;
+					ms += " MODE ";
+					ms += cmd->arguments[0];
+					ms += " ";
+					ms += cmd->arguments[1];
+					ms += CRLF;
+					std::cout << ms;
+					send(sock, ms.c_str(), ms.size(), 0);
+				} else {
+					ms = reply_formating(servername.c_str(), ERR_UMODEUNKNOWNFLAG, {}, nick.c_str());
+					std::cout << ms;
+					send(sock, ms.c_str(), ms.size(), 0);
+				}
+			} else {
+				ms = reply_formating(servername.c_str(), ERR_USERSDONTMATCH, {}, nick.c_str());
+				std::cout << ms;
+				send(sock, ms.c_str(), ms.size(), 0);
+			}
+		} else {
+			// TODO : call the channell MODE with Client and Command as params if parmas[0] is a channel;
+		}
+	} else {
+		if (cmd->arguments.size() == 1) {
+			ms = get_userMODEs_ms();
+			std::cout << ms;
+			send(sock, ms.c_str(), ms.size(), 0);
+		} else {
+			ms = reply_formating(servername.c_str(), ERR_NEEDMOREPARAMS, {cmd->line}, nick.c_str());
+			std::cout << ms;
+			send(sock, ms.c_str(), ms.size(), 0);
+		}
 	}
 }
 
@@ -162,6 +301,12 @@ int		Client::execute_parsed(Command *parsed) {
 	case USER_CC:
 		USER(parsed);
 		std::cout << *this << std::endl;
+		break;
+	case OPER_CC:
+		OPER(parsed);
+		break;
+	case MODE_CC:
+		MODE(parsed);
 		break;
 	default:
 		break;

@@ -20,6 +20,7 @@
 #include <fcntl.h>
 #include <string.h>
 
+
 Server::~Server() {
 	std::cout << "server destructed" << std::endl;
 }
@@ -28,14 +29,18 @@ Server::Server() {
 	type = FD_SERVER;
 	ev = new Environment();
 	ev->password = new std::string("");
+	ev->username_oper = new std::string("superUO");
 	ev->start = time(0);
+	ev->accept_operators = true;
 }
 
 Server::Server(int ac, char **av) {
 	type = FD_SERVER;
 	ev = new Environment();
 	ev->password = new std::string("");
+	ev->username_oper = new std::string("superUO");
 	ev->start = time(0);
+	ev->accept_operators = true;
 	load_options(ac, av);
 }
 

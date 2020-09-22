@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:50:59 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/22 00:52:03 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/22 15:18:31 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -30,8 +30,14 @@ public:
 	void			PASS(Command *);
 	void			NICK(Command *);
 	void			USER(Command *);
+	void			OPER(Command *);
+	void			MODE(Command *);
 
 	int				execute_parsed(Command *);
+
+	void			exec_registerMS();
+	std::string		get_userMODEs_ms();
+	bool			set_uMODE(char c, bool add);
 
 	time_t				creation;
 	time_t				last;
@@ -42,6 +48,11 @@ public:
 	std::string			hostname;
 	std::string			servername;
 	std::string			realname;
+
+	bool				i_mode;
+	bool				o_mode;
+	bool				w_mode;
+	bool				s_mode;
 
 private:
 	Environment			*ev;

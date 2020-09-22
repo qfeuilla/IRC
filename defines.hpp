@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/20 17:01:28 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/22 10:38:57 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/22 15:17:12 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,7 @@
 // * utilitie for format
 
 # define CRLF			"\r\n"
+# define CR				"\r"
 
 // * User types
 

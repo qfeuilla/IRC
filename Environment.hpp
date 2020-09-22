@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:54:23 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/22 00:55:14 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/22 12:05:31 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,7 +36,9 @@ public:
 	int					maxfd;
 	int					clients_num;
 	std::string			*password;
+	std::string			*username_oper;
 	time_t				start;
+	bool				accept_operators;
 };
 
 #endif 
