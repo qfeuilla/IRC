@@ -5,18 +5,25 @@
 #include <exception>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <algorithm>
+#include <list>
 #include <map>
 
+class Client;
 class Channel
 {
 public:
 	typedef	int			socket_t;
 private:
+	typedef	std::map<std::string, socket_t>	_users_map;
 	class _Chan_modes
 	{
 	public:
-		std::map<Channel::socket_t, std::string>	o; // Operator privileges
-		std::map<Channel::socket_t, std::string>	v; // Ability to speak on a moderated channel
+		typedef	std::list<std::string>	usr_list;
+		usr_list	invitation_list; // if i is set to true
+
+		usr_list	o; // Operator privileges
+		usr_list	v; // Ability to speak on a moderated channel
 		bool		p; // Private channel
 		bool		s; // Secret channel
 		bool		i; // Users can't join without invite
@@ -24,40 +31,45 @@ private:
 		bool		m; // Only voiced users and operators can talk
 		int			l; // User limit
 		std::string	k; // Channel password
-		_Chan_modes(): o(), v(), p(false), s(false), i(false), t(false), m(false), l(-1), k() {}
-		_Chan_modes &operator=(const _Chan_modes &other)
-		{
-			o = other.o;
-			v = other.v;
-			p = other.p;
-			s = other.s;
-			i = other.i;
-			t = other.t;
-			m = other.m;
-			l = other.l;
-			k = other.k;
-			return (*this);
-		}
+		int			users;
+		_Chan_modes(): invitation_list(), o(), v(), p(false), s(false), i(false), t(false), m(false), l(-1), k(), users(0) {}
 	};
 	
-	typedef	std::map<socket_t, _Chan_modes*>	_users_map;
 	
 	std::string							_name;
-	std::map<socket_t, _Chan_modes*>	_users;
+	_users_map							_users;
+	_Chan_modes							_modes;
 
-	void	_print_channel(void) {
+	bool		_hasRights(const std::string &userName)
+	{
+		_Chan_modes::usr_list::iterator	user = std::find(_modes.o.begin(), _modes.o.end(), userName);
+		return (user != _modes.o.end());
+	}
+
+	bool		_is_in_list(const std::string &userName, _Chan_modes::usr_list &listToCheck)
+	{
+		_Chan_modes::usr_list::iterator	user = std::find(listToCheck.begin(), listToCheck.end(), userName);
+		return (user != listToCheck.end());
+	}
+	bool		_is_in_chan(const std::string &userName)
+	{
+		_users_map::iterator	user = _users.find(userName);
+		return (user != _users.end());
+	}
+	void		_print_channel(void) {
 		_users_map::iterator	current = _users.begin();
 		_users_map::iterator	end = _users.end();
 
 		std::cout << "sockets in " << _name << "\n";
 		while (current != end) {
-			std::cout << "fd num = " << (*current).first << ", "; 
+			std::cout << "fd num = " << (*current).second << "(" << (*current).first << "), "; 
 			++current;
 		}
 		std::cout << "\n\n";
 	}
 public:
-	Channel(const std::string &name = std::string());
+	Channel();
+	Channel(const std::string &name, std::string nick, socket_t socket);
 	~Channel();
 	Channel	&operator=(const Channel& other);
 
@@ -66,9 +78,21 @@ public:
 	static void			sendMsgToSocket(socket_t socket, const std::string &msg);
 
 	// *	join(socket) returns true on succes (false if socket was already in the channel before the call)
-	bool				join(socket_t socket);
+	bool				join(std::string nick, socket_t socket, const std::string &passwd);
 	// *	leave(socket) returns true if the channel is now empty
-	bool				leave(socket_t socket);
+	bool				leave(std::string nick);
+	
+	// MODES METHODS
+	bool	mode_o(bool append, std::string nick, socket_t socket, const std::string &target);
+	bool	mode_v(bool append, std::string nick, socket_t socket, const std::string &target);
+
+	bool	mode_p(bool append, std::string nick, socket_t socket);
+	bool	mode_s(bool append, std::string nick, socket_t socket);
+	bool	mode_i(bool append, std::string nick, socket_t socket);
+	bool	mode_t(bool append, std::string nick, socket_t socket);
+	bool	mode_m(bool append, std::string nick, socket_t socket);
+	bool	mode_l(bool append, std::string nick, socket_t socket, int limit);
+	bool	mode_k(bool append, std::string nick, socket_t socket, const std::string &passwd);
 
 	// exceptions
 	class badName: public std::exception

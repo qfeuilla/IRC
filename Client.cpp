@@ -336,7 +336,9 @@ void	Client::MODE(Command *cmd) {
 				custom_send(ms, this);
 			}
 		} else {
-			// TODO : call the channell MODE with Client and Command as params if parmas[0] is a channel;
+			// TODO : set the errors messages;
+			std::cout << "CHANGING SOME MODES\n\n";
+			ev->channels.mode(nick, sock, cmd->arguments);
 		}
 	} else {
 		if (cmd->arguments.size() == 1) {
@@ -1022,7 +1024,7 @@ int		Client::execute_parsed(Command *parsed) {
 	case JOIN_CC:
 		if (parsed->prefix.empty() && parsed->arguments.size() >= 1) {
 			try {
-				if (ev->channels.join(sock, parsed->arguments))
+				if (ev->channels.join(nick, sock, parsed->arguments))
 					Channel::sendMsgToSocket(sock, "Channel joined\n");
 			} catch (const std::exception& e) {
 				Channel::sendMsgToSocket(sock, e.what());
@@ -1031,7 +1033,7 @@ int		Client::execute_parsed(Command *parsed) {
 		break;
 	case PART_CC:
 		if (parsed->prefix.empty() && parsed->arguments.size() >= 1) {
-			if (ev->channels.leave(sock, parsed->arguments))
+			if (ev->channels.leave(nick, sock, parsed->arguments))
 				Channel::sendMsgToSocket(sock, "Channel left\n");
 			else
 				Channel::sendMsgToSocket(sock, "Could not leave channel (you were not in it xd)\n");
