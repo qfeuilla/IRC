@@ -1,6 +1,7 @@
 #include "ChannelMaster.hpp"
 ChannelMaster::ChannelMaster() {
 	_channels = new _channel_list();
+	_user_channels = new _user_chan_map();
 	std::cout << "created channel master\n";
 }
 ChannelMaster::~ChannelMaster() {
@@ -15,19 +16,21 @@ ChannelMaster::~ChannelMaster() {
 		delete chan;
 	}
 	delete _channels;
+	delete _user_channels;
 }
-void	ChannelMaster::_testChannelName(const std::string &channelName)
+bool	ChannelMaster::_testChannelName(socket_t socket, const std::string &channelName)
 {
 	if (channelName.at(0) != '#' && channelName.at(0) != '&')
-		throw Channel::badName(channelName, "Channel should start with # or &");
+		return (Channel::sendMsgToSocket(socket, Channel::badName(channelName, "Channel should start with # or &")));
 	if (channelName.length() > 200)
-		throw Channel::badName(channelName, "Channel should not be more than 200 characters");
+		return (Channel::sendMsgToSocket(socket, Channel::badName(channelName, "Channel should not be more than 200 characters")));
 	if (channelName.find(" ") != std::string::npos)
-		throw Channel::badName(channelName, "Channel should not contain space (' ')");
+		return (Channel::sendMsgToSocket(socket, Channel::badName(channelName, "Channel should not contain space (' ')")));
 	if (channelName.find(",") != std::string::npos)
-		throw Channel::badName(channelName, "Channel should not contain comma (',')");
+		return (Channel::sendMsgToSocket(socket, Channel::badName(channelName, "Channel should not contain comma (',')")));
 	if (channelName.find("\7") != std::string::npos)
-		throw Channel::badName(channelName, "Channel should not contain ^G ('\\7')");
+		return (Channel::sendMsgToSocket(socket, Channel::badName(channelName, "Channel should not contain ^G ('\\7')")));
+	return (false); // channelName is well formatted
 }
 
 std::vector<std::string>	splitComma(std::string const &str)
@@ -47,7 +50,7 @@ std::vector<std::string>	splitComma(std::string const &str)
 }
 
 
-bool	ChannelMaster::join(std::string nick, socket_t socket, const std::vector<std::string> &args)
+bool	ChannelMaster::join(std::string nick, socket_t socket, const std::vector<std::string> &args, std::list<Channel*> *usrChans)
 {
 	std::map<std::string, std::string>	name_pass_map;
 	std::map<std::string, std::string>::iterator	current;
@@ -56,6 +59,7 @@ bool	ChannelMaster::join(std::string nick, socket_t socket, const std::vector<st
 	std::vector<std::string>	passwds;
 	bool	ret = true;
 
+	(*_user_channels)[nick] = usrChans;
 	names = splitComma(args[0]);
 	if (args.size() > 1)
 		passwds = splitComma(args[1]);
@@ -78,35 +82,46 @@ bool	ChannelMaster::_join_channel(std::string nick, socket_t socket, const std::
 {
 	Channel	*chan = _chan_exists(channelName);
 	if (!chan) {
-		_testChannelName(channelName);
+		if (_testChannelName(socket, channelName))
+			return (false);
 		Channel	*nchan = new Channel(channelName, nick, socket);
 		_channels->push_back(nchan);
+		(*_user_channels)[nick]->push_back(nchan);
 		return (true);
 	}
-	return (chan->join(nick, socket, passwd));
+	if (chan->join(nick, socket, passwd)) {
+		(*_user_channels)[nick]->push_back(chan);
+		return (true);
+	}
+	return (false);
 }
 
-bool	ChannelMaster::_leave_channel(std::string nick, socket_t socket, const std::string &channelName)
+bool	ChannelMaster::_leave_channel(std::string nick, socket_t socket, const std::string &channelName, const std::string &reason)
 {
 	Channel	*chan = _chan_exists(channelName);
 
-	(void)socket;
-	if (!chan)
+	if (!chan) {
+		Channel::sendMsgToSocket(socket, "There is no chan with this name\n");
 		return (false); // there is no channel with this name
-	if (chan->leave(nick))
-	{
+	}
+	if (chan->leave(nick, socket, reason)) {
+		(*_user_channels)[nick]->remove(chan); // remove this chan from this user channels list 
+		if (!chan->isEmpty())
+			return (true);
 		_channels->remove(chan); // channel is empty -> we delete it
 		delete chan;
+		return (true);
 	}
-	return (true);
+	return (false);
 }
 
 bool	ChannelMaster::leave(std::string nick, socket_t socket, const std::vector<std::string> &args)
 {
 	bool	ret = true;
 	std::vector<std::string>	names = splitComma(args[0]);
+	std::string		reason = args.size() > 1 ? args[1] : std::string(); 
 	for (size_t i = 0; i < names.size(); ++i) {
-		ret &= _leave_channel(nick, socket, names[i]);
+		ret &= _leave_channel(nick, socket, names[i], reason);
 	}
 	return (ret);
 }
@@ -120,11 +135,8 @@ bool	ChannelMaster::mode(std::string nick, socket_t socket, const std::vector<st
 	if (operations.size() < 2 || !(operations[0] == '+' || operations[0] == '-'))
 		return (false);
 	append = operations[0] == '+';
-	try {
-		_testChannelName(args[0]);
-	} catch(const std::exception& e) {
+	if (_testChannelName(socket, args[0]))
 		return (false);
-	}
 	chan = _chan_exists(args[0]);
 	if (!chan)
 		return (false);
@@ -184,4 +196,41 @@ Channel		*ChannelMaster::_chan_exists(const std::string &channelName)
 		++current;
 	}
 	return (nullptr);
+}
+
+bool	ChannelMaster::kick(std::string nick, socket_t socket, const std::vector<std::string> &args)
+{
+	Channel		*channel = _chan_exists(args[0]);
+	std::string	guyToKick = args[1];
+	std::string	reason = args.size() > 3 ? args[2] : std::string();
+	if (!channel)
+		return (!Channel::sendMsgToSocket(socket, "no chan with this name\n"));
+	if (channel->kick(nick, socket, guyToKick, reason)) {
+		(*_user_channels)[nick]->remove(channel);
+		return (true);
+	}
+	return (false);
+}
+
+
+bool	ChannelMaster::broadcastMsg(const std::string &sender, socket_t socket, const std::string &chanName, const std::string &msg)
+{
+	Channel		*channel = _chan_exists(chanName);
+
+	if (!channel)
+		return (!Channel::sendMsgToSocket(socket, "no chan with this name\n"));
+	return (channel->broadcastMsg(sender, socket, msg));
+}
+
+bool	ChannelMaster::topic(std::string nick, socket_t socket, const std::vector<std::string> &args)
+{
+	std::string	newTopic;
+	Channel		*channel = _chan_exists(args[0]);
+
+	if (!channel)
+		return (!Channel::sendMsgToSocket(socket, "no chan with this name\n"));
+	if (args.size() == 1)
+		return (!Channel::sendMsgToSocket(socket, std::string("Topic is: ") + channel->getTopic() + "\n"));
+	newTopic = args[1];
+	return (channel->setTopic(nick, socket, newTopic));
 }

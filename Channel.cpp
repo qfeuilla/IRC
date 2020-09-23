@@ -1,7 +1,7 @@
 #include "Channel.hpp"
 
-Channel::Channel(): _name(), _users(), _modes() {}
-Channel::Channel(const std::string &name, std::string nick, socket_t socket): _name(name), _users(), _modes() {
+Channel::Channel(): _name(), _users(), _modes(), _topic() {}
+Channel::Channel(const std::string &name, std::string nick, socket_t socket): _name(name), _users(), _modes(), _topic() {
 	_modes.o.push_back(nick);
 	std::cout << "Creating channel: " << _name << "\n\n";
 	join(nick, socket, "");
@@ -20,10 +20,52 @@ const std::string	&Channel::getName() const
 {
 	return (_name);
 }
+const std::string	&Channel::getTopic() const
+{
+	return (_topic);
+}
 
-void				Channel::sendMsgToSocket(int socket, const std::string &msg)
+bool				Channel::setTopic(std::string nick, socket_t socket, const std::string &newTopic)
+{
+	if (!_is_in_chan(nick))
+		return (!sendMsgToSocket(socket, "You are not in this chan\n"));
+	std::cout << "T mode = " << _modes.t << "\n\n";
+	if (_modes.t && !_hasRights(nick))
+		return (!sendMsgToSocket(socket, "Topic can only be set by an operator\n"));
+	_topic = std::string(newTopic);
+	sendMsgToSocket(socket, std::string("Topic set to: ") + newTopic + "\n");
+	broadcastMsg(nick, socket, std::string("Topic set to: ") + newTopic + "\n");
+	return (true);
+}
+
+bool				Channel::sendMsgToSocket(socket_t socket, const std::string &msg)
 {
 	send(socket, msg.c_str(), msg.length(), 0);
+	return (true);
+}
+
+bool				Channel::sendMsgToUser(const std::string &userName, const std::string &msg)
+{
+	_users_map::iterator	user = _users.find(userName);
+
+	if (user == _users.end())
+		return (false);
+	return (sendMsgToSocket((*user).second, msg));
+}
+
+bool				Channel::broadcastMsg(const std::string &sender, socket_t socket, const std::string &msg)
+{
+	if (!_is_in_chan(sender))
+		return (!sendMsgToSocket(socket, "You are not on this channel\n"));
+	_users_map::iterator	current = _users.begin();
+	_users_map::iterator	end = _users.end();
+	while (current != end) {
+		if ((*current).first != sender) { // * send msg to everyone but the sender
+			sendMsgToSocket((*current).second, msg);
+		}
+		++current;
+	}
+	return (true);
 }
 
 bool				Channel::join(std::string nick, socket_t socket, const std::string &passwd)
@@ -42,34 +84,40 @@ bool				Channel::join(std::string nick, socket_t socket, const std::string &pass
 			return (false);
 		}
 		_users.insert(std::pair<std::string, socket_t>(nick, socket));
+		_modes.invitation_list.remove(nick);
+		sendMsgToSocket(socket, "Channel joined\n");
 		// * debug only
 		_print_channel();
 		return (true);
 	}
-	return (false);
+	return (!sendMsgToSocket(socket, "You are already in this channel\n"));
 }
-bool				Channel::leave(std::string nick)
+
+// TODO broadcast leave msg (reason param)
+bool				Channel::leave(std::string nick, socket_t socket, const std::string &reason, bool kicked)
 {
+	(void)reason;
 	_users_map::iterator	user = _users.find(nick);
-	if (user == _users.end())
-		return (_users.empty()); // user was not in the channel
+	if (user == _users.end()) // user was not in the channel
+		return (!sendMsgToSocket(socket, nick + std::string(" is not is the channel ") + getName() + "\n"));
+	if (kicked)
+		sendMsgToSocket((*user).second, "You were kicked from the channel\n");
+	else
+		sendMsgToSocket((*user).second, "Channel left\n");
 	_users.erase(user);
 	// * debug only
 	_print_channel();
-	return (_users.empty());
+	return (true);
 }
 
-// exceptions
-Channel::badName::badName(const std::string &name, const std::string &reason) : _name(name), _reason(reason) {
-	_errorMsg = "Bad channel name: ";
-	_errorMsg += _reason;
-	_errorMsg += ": ";
-	_errorMsg += _name;
-	_errorMsg += '\n';
-}
-const char*	Channel::badName::what() const throw()
-{
-	return (_errorMsg.c_str());
+// errors
+std::string Channel::badName(const std::string &name, const std::string &reason) {
+	std::string	errorMsg = "Bad channel name: ";
+	errorMsg += reason;
+	errorMsg += ": ";
+	errorMsg += name;
+	errorMsg += '\n';
+	return (errorMsg);
 }
 
 // modes
@@ -88,7 +136,7 @@ bool	Channel::mode_o(bool append, std::string nick, socket_t socket, const std::
 		return (true);
 	}
 	
-	return (false);
+	return (!sendMsgToSocket(socket, "You need to be chan op for this\n"));
 }
 
 bool	Channel::mode_v(bool append, std::string nick, socket_t socket, const std::string &target)
@@ -106,7 +154,7 @@ bool	Channel::mode_v(bool append, std::string nick, socket_t socket, const std::
 		return (true);
 	}
 	
-	return (false);
+	return (!sendMsgToSocket(socket, "You need to be chan op for this\n"));
 }
 
 bool	Channel::mode_p(bool append, std::string nick, socket_t socket)
@@ -122,7 +170,7 @@ bool	Channel::mode_p(bool append, std::string nick, socket_t socket)
 		_modes.p = false;
 		return (true);
 	}
-	return (false);
+	return (!sendMsgToSocket(socket, "You need to be chan op for this\n"));
 }
 
 bool	Channel::mode_s(bool append, std::string nick, socket_t socket)
@@ -138,7 +186,7 @@ bool	Channel::mode_s(bool append, std::string nick, socket_t socket)
 		_modes.s = false;
 		return (true);
 	}
-	return (false);
+	return (!sendMsgToSocket(socket, "You need to be chan op for this\n"));
 }
 
 bool	Channel::mode_i(bool append, std::string nick, socket_t socket)
@@ -154,7 +202,7 @@ bool	Channel::mode_i(bool append, std::string nick, socket_t socket)
 		_modes.i = false;
 		return (true);
 	}
-	return (false);
+	return (!sendMsgToSocket(socket, "You need to be chan op for this\n"));
 }
 
 bool	Channel::mode_t(bool append, std::string nick, socket_t socket)
@@ -170,7 +218,7 @@ bool	Channel::mode_t(bool append, std::string nick, socket_t socket)
 		_modes.t = false;
 		return (true);
 	}
-	return (false);
+	return (!sendMsgToSocket(socket, "You need to be chan op for this\n"));
 }
 
 bool	Channel::mode_m(bool append, std::string nick, socket_t socket)
@@ -186,7 +234,7 @@ bool	Channel::mode_m(bool append, std::string nick, socket_t socket)
 		_modes.m = false;
 		return (true);
 	}
-	return (false);
+	return (!sendMsgToSocket(socket, "You need to be chan op for this\n"));
 }
 
 bool	Channel::mode_l(bool append, std::string nick, socket_t socket, int limit)
@@ -202,7 +250,7 @@ bool	Channel::mode_l(bool append, std::string nick, socket_t socket, int limit)
 		_modes.l = -1;
 		return (true);
 	}
-	return (false);
+	return (!sendMsgToSocket(socket, "You need to be chan op for this\n"));
 }
 
 bool	Channel::mode_k(bool append, std::string nick, socket_t socket, const std::string &passwd)
@@ -218,5 +266,34 @@ bool	Channel::mode_k(bool append, std::string nick, socket_t socket, const std::
 		_modes.k = "";
 		return (true);
 	}
+	return (!sendMsgToSocket(socket, "You need to be chan op for this\n"));
+}
+
+bool	Channel::kick(std::string nick, socket_t socket, const std::string &guyToKick, const std::string &reason)
+{
+	if (_hasRights(nick)) {
+		if (!_is_in_chan(guyToKick))
+			return (!sendMsgToSocket(socket, guyToKick + " is not in chan\n"));
+		return (leave(guyToKick, socket, reason, true));
+	}
 	return (false);
+}
+
+bool	Channel::invite(std::string nick, socket_t socket, const std::string &guyToInvite)
+{
+	if (_hasRights(nick)) {
+		if (_is_in_chan(guyToInvite))
+			return (!sendMsgToSocket(socket, guyToInvite + " is already in chan\n"));
+		if (_is_in_list(guyToInvite, _modes.invitation_list))
+			return (!sendMsgToSocket(socket, guyToInvite + " is already in the invitation list\n"));
+		_modes.invitation_list.push_back(guyToInvite);
+		sendMsgToUser(guyToInvite, std::string("You are invited in the ") + getName() + " channel\n");
+		return (sendMsgToSocket(socket, "invitation sent\n"));
+	}
+	return (!sendMsgToSocket(socket, "You need to be chan op for this\n"));
+}
+
+bool				Channel::isEmpty() const
+{
+	return (_users.empty());
 }

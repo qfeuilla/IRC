@@ -39,7 +39,7 @@ bool		check_nick(std::string nk) {
 	return (true);
 }
 
-Client::Client(Environment *e, int s, struct sockaddr_in addr) : ev(e) {
+Client::Client(Environment *e, int s, struct sockaddr_in addr) : channels(), ev(e) {
 	type = FD_WAITC;
 	is_setup = false;
 	sock = s;
@@ -1021,23 +1021,36 @@ int		Client::execute_parsed(Command *parsed) {
 		break;
 	case MODE_CC:
 		MODE(parsed);
+		break;
 	case JOIN_CC:
 		if (parsed->prefix.empty() && parsed->arguments.size() >= 1) {
-			try {
-				if (ev->channels.join(nick, sock, parsed->arguments))
-					Channel::sendMsgToSocket(sock, "Channel joined\n");
-			} catch (const std::exception& e) {
-				Channel::sendMsgToSocket(sock, e.what());
-			}
+			ev->channels.join(nick, sock, parsed->arguments, &channels);
 		}
 		break;
 	case PART_CC:
 		if (parsed->prefix.empty() && parsed->arguments.size() >= 1) {
-			if (ev->channels.leave(nick, sock, parsed->arguments))
-				Channel::sendMsgToSocket(sock, "Channel left\n");
-			else
-				Channel::sendMsgToSocket(sock, "Could not leave channel (you were not in it xd)\n");
+			ev->channels.leave(nick, sock, parsed->arguments);
 		}
+		break;
+	case KICK_CC:
+		if (parsed->prefix.empty() && parsed->arguments.size() >= 2) {
+			ev->channels.kick(nick, sock, parsed->arguments);
+		}
+		break;
+	case TOPIC_CC:
+		if (parsed->prefix.empty() && parsed->arguments.size() >= 1) {
+			ev->channels.topic(nick, sock, parsed->arguments);
+		}
+		// {
+		// 	std::list<Channel*>::iterator	current = channels.begin();
+		// 	std::list<Channel*>::iterator	end = channels.end();
+		// 	std::cout << nick << " is in the channels : \n";
+		// 	while (current != end) {
+		// 		std::cout << (*current)->getName() << ", ";
+		// 		++current;
+		// 	}
+		// 	std::cout << "\n\n";
+		// }
 		break;
 	case QUIT_CC:
 		QUIT(parsed);

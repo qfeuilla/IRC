@@ -15,6 +15,8 @@
 
 # include "Fd.hpp"
 # include "Environment.hpp"
+# include "Channel.hpp"
+# include <list>
 
 class Client : public Fd {
 public:
@@ -87,6 +89,8 @@ public:
 	int					sendq = 0;
 	size_t				Kb_sent = 0;
 	size_t				Kb_recv = 0;
+	
+	std::list<Channel*>	channels;
 
 private:
 	Environment			*ev;
