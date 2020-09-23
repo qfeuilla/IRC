@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:50:59 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/23 19:58:10 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/23 23:47:00 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -43,6 +43,11 @@ public:
 	void				TIME(Command *);
 	void				ADMIN(Command *);
 	void				INFO(Command *);
+	void				WHO(Command *);
+	void				WHOIS(Command *);
+	void				WHOWAS(Command *);
+	void				KILL(Command *);
+	void				PING(Command *);
 
 	int					execute_parsed(Command *);
 

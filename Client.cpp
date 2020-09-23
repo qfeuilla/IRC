@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:51:25 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/23 20:21:07 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/24 00:07:52 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -50,8 +50,8 @@ Client::Client(Environment *e, int s, struct sockaddr_in addr) : ev(e) {
 	s_mode = false;
 	w_mode = false;
 	servername = *e->serv;
-	hostname = "0"; // * ip of the user if not specified
 	csin = addr;
+	hostname = std::string(inet_ntoa(csin.sin_addr)); // * ip of the user if not specified
 }
 
 Client::~Client() {
@@ -562,7 +562,7 @@ void	Client::STATS(Command *cmd) {
 					ms += "!";
 					ms += c->username;
 					ms += "@";
-					ms += servername;
+					ms += hostname;
 					ms += " ";
 					ms += std::to_string(sendq);
 					ms += " ";
@@ -634,7 +634,8 @@ void	Client::TIME(Command *cmd) {
 	ev->cmd_count["TIME"] += 1;
 	time_t		now = time(NULL);
 
-	ms += std::asctime(std::localtime(&now));
+	ms = asctime(localtime(&now));
+	ms = std::string(&ms[0], &ms[ms.size() - 1]);
 	ms = reply_formating(servername.c_str(), RPL_TIME, std::vector<std::string>({servername, ms}), nick.c_str());
 	custom_send(ms, this);
 }
@@ -659,11 +660,12 @@ void	Client::ADMIN(Command *cmd) {
 void	Client::INFO(Command *cmd) {
 	(void)cmd;
 	std::string inf;
+	std::string buf;
 	ev->cmd_count["INFO"] += 1;
 
 	inf += " IRC --\n";
 	inf += " Based on RFCs given on 42 subject page : \n";
-	inf += "  // ! put the online subject save on the repo \n";
+	inf += " https://github.com/qfeuilla/ft_irc/blob/master/en.subject.pdf \n";
 	inf += " \n";
 	inf += " This program is free software; you can redistribute it and/or\n";
 	inf += " modify it under the terms of the GNU General Public License as\n";
@@ -681,7 +683,8 @@ void	Client::INFO(Command *cmd) {
 	inf += " \n";
 	inf += " \n";
 	inf += " On-line since:";
-	inf += std::asctime(gmtime(&(ev->start)));
+	buf = std::asctime(gmtime(&(ev->start)));
+	inf += std::string(&buf[0], &buf[buf.size() - 1]);
 	inf += " UTC \n";
 	
 	std::string line;
@@ -695,6 +698,165 @@ void	Client::INFO(Command *cmd) {
 
 	line = reply_formating(servername.c_str(), RPL_ENDOFINFO, {}, nick.c_str());
 	custom_send(line, this);
+}
+
+void	Client::WHO(Command *cmd) {
+	std::string ms;
+	ev->cmd_count["WHO"] += 1;
+
+	if (cmd->arguments.size() >= 1) {
+		for (Fd *f: ev->search_list_nick(cmd->arguments[0])) {
+			Client *c = reinterpret_cast<Client *>(f);
+			// TODO : addind same channel checking
+			if (c->o_mode || cmd->arguments.size() == 1
+				|| cmd->arguments[1] != "o") {
+				ms = c->username;
+				ms += " ";
+				ms += c->hostname;
+				ms += " ";
+				ms += c->servername;
+				ms += " ";
+				ms += c->nick;
+				ms += " H :0 ";
+				ms += c->realname;
+				ms = reply_formating(servername.c_str(), RPL_WHOREPLY, {ms},nick.c_str());
+				custom_send(ms, this);
+			}
+		}
+	} else {
+		for (Fd *f: ev->clients_fd) {
+			if (f->type == FD_CLIENT) {
+				Client *c = reinterpret_cast<Client *>(f);
+				// TODO : addind same channel checking
+				if (!c->i_mode) {
+					ms += c->username;
+					ms += " ";
+					ms += c->hostname;
+					ms += " ";
+					ms += c->servername;
+					ms += " ";
+					ms += c->nick;
+					ms += " H :0 ";
+					ms += c->realname;
+					ms = reply_formating(servername.c_str(), RPL_WHOREPLY, {ms},nick.c_str());
+					custom_send(ms, this);
+				}
+			}
+		}
+	}
+	ms = reply_formating(servername.c_str(), RPL_ENDOFWHO, {nick}, nick.c_str());
+	custom_send(ms, this);
+}
+
+void	Client::WHOIS(Command *cmd) {
+	// ! ignoring server parametre because no multi server for the moment
+	std::string ms;
+	ev->cmd_count["WHOIS"] += 1;
+	std::vector<Fd *> tmp;
+
+	if (cmd->arguments.size() >= 1) {
+		for (std::string targ : parse_comma(cmd->arguments[0])) {
+			if (!(tmp = ev->search_list_nick(targ)).empty()) {
+				Client *c = reinterpret_cast<Client *>(tmp[0]);
+				ms = reply_formating(servername.c_str(), RPL_WHOISUSER, std::vector<std::string>({c->nick, c->username, c->hostname, c->realname}), nick.c_str());
+				custom_send(ms, this);
+				ms = asctime(localtime(&c->last));
+				ms = std::string(&ms[0], &ms[ms.size() - 1]);
+				ms = reply_formating(servername.c_str(), RPL_WHOISSERVER, std::vector<std::string>({c->nick, c->servername, ms}), nick.c_str());
+				custom_send(ms, this);
+			} else {
+				ms = reply_formating(servername.c_str(), ERR_NOSUCHNICK, {targ}, nick.c_str());
+				custom_send(ms, this);
+			}
+		}
+		ms = reply_formating(servername.c_str(), RPL_ENDOFWHOIS, {nick}, nick.c_str());
+		custom_send(ms, this);
+	} else {
+		ms = reply_formating(servername.c_str(), ERR_NONICKNAMEGIVEN, {}, nick.c_str());
+		custom_send(ms, this);
+	}
+}
+
+void	Client::WHOWAS(Command *cmd) {
+	// ! ignoring server parametre because no multi server for the moment
+	std::string ms;
+	ev->cmd_count["WHOWAS"] += 1;
+	std::vector<Fd *> tmp;
+
+	if (cmd->arguments.size() >= 1) {
+		for (std::string targ : parse_comma(cmd->arguments[0])) {
+			if (!(tmp = ev->search_history_nick(targ)).empty()) {
+				Client *c = reinterpret_cast<Client *>(tmp[0]);
+				ms = reply_formating(servername.c_str(), RPL_WHOWASUSER, std::vector<std::string>({c->nick, c->username, c->hostname, c->realname}), nick.c_str());
+				custom_send(ms, this);
+				ms = asctime(localtime(&c->last));
+				ms = std::string(&ms[0], &ms[ms.size() - 1]);
+				ms = reply_formating(servername.c_str(), RPL_WHOISSERVER, std::vector<std::string>({c->nick, c->servername, ms}), nick.c_str());
+				custom_send(ms, this);
+			} else {
+				ms = reply_formating(servername.c_str(), ERR_NOSUCHNICK, {targ}, nick.c_str());
+				custom_send(ms, this);
+			}
+		}
+		ms = reply_formating(servername.c_str(), RPL_ENDOFWHOWAS, {nick}, nick.c_str());
+		custom_send(ms, this);
+	} else {
+		ms = reply_formating(servername.c_str(), ERR_NONICKNAMEGIVEN, {}, nick.c_str());
+		custom_send(ms, this);
+	}
+}
+
+void	Client::KILL(Command *cmd) {
+	std::string ms;
+	ev->cmd_count["KILL"] += 1;
+	std::vector<Fd *> tmp;
+
+	if (cmd->arguments.size() >= 2) {
+		if (o_mode) {
+			if (!(tmp = ev->search_list_nick(cmd->arguments[0])).empty()) {
+				Client *c = reinterpret_cast<Client *>(tmp[0]);
+				
+				ms = "QUIT ";
+				for (size_t i = 1; i < cmd->arguments.size(); i++) {
+					ms += cmd->arguments[i];
+					ms += " ";
+				}
+				ms += CR;
+				c->execute_parsed(parse(ms));
+			} else {
+				ms = reply_formating(servername.c_str(), ERR_NOSUCHNICK, {}, nick.c_str());
+				custom_send(ms, this);
+			}
+		} else {
+			ms = reply_formating(servername.c_str(), ERR_NOPRIVILEGES, {}, nick.c_str());
+			custom_send(ms, this);
+		}
+	} else {
+		ms = reply_formating(servername.c_str(), ERR_NEEDMOREPARAMS, {cmd->line}, nick.c_str());
+		custom_send(ms, this);
+	}
+}
+
+void	Client::PING(Command *cmd) {
+	std::string ms;
+	ev->cmd_count["PING"] += 1;
+
+	if (cmd->arguments.size() >= 1) {
+		ms = ":";
+		ms += servername;		
+		ms += " PONG ";
+		ms += servername;
+		ms += " :";
+		for (size_t i = 0; i < cmd->arguments.size(); i++) {
+			ms += cmd->arguments[i];
+			ms += " ";
+		}
+		ms += CRLF;
+		custom_send(ms, this);
+	} else {
+		ms = reply_formating(servername.c_str(), ERR_NOORIGIN, {}, nick.c_str());
+		custom_send(ms, this);
+	}
 }
 
 int		Client::execute_parsed(Command *parsed) {
@@ -750,6 +912,21 @@ int		Client::execute_parsed(Command *parsed) {
 		break;
 	case INFO_CC:
 		INFO(parsed);
+		break;
+	case WHO_CC:
+		WHO(parsed);
+		break;
+	case WHOIS_CC:
+		WHOIS(parsed);
+		break;
+	case WHOWAS_CC:
+		WHOWAS(parsed);
+		break;
+	case KILL_CC:
+		KILL(parsed);
+		break;
+	case PING_CC:
+		PING(parsed);
 		break;
 	default:
 		break;

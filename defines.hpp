@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/20 17:01:28 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/23 19:58:09 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/24 00:07:49 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -60,14 +60,14 @@
 # define ADMIN_CC		26 // TODO : extanding when multi server
 # define INFO_CC		27 // TODO : extanding when multi server
 # define SERVLIST_CC	28 // TODO : when server to server
-# define SQUERY_CC		29 
-# define WHO_CC			30
-# define WHOIS_CC		31
-# define WHOWAS_CC		32
-# define KILL_CC		33
-# define PING_CC		34
-# define PONG_CC		35
-# define ERROR_CC		36
+# define SQUERY_CC		29 // * only use for services (bots) so not implemented
+# define WHO_CC			30 // TODO : extanding when multi server
+# define WHOIS_CC		31 // TODO : extanding when multi server
+# define WHOWAS_CC		32 // TODO : extanding when multi server
+# define KILL_CC		33 // * done
+# define PING_CC		34 // TODO : extanding when multi server
+# define PONG_CC		35 // * Only reply
+# define ERROR_CC		36 // TODO : when server to server
 # define AWAY_CC		37
 # define REHASH_CC		38
 # define DIE_CC			39
