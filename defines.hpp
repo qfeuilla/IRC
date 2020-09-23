@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/20 17:01:28 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/23 14:41:46 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/23 19:58:09 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -32,13 +32,13 @@
 // * Command number for switch operations
 
 # define WRONG_CMD		0
-# define PASS_CC		1
-# define NICK_CC		2
-# define USER_CC		3
-# define OPER_CC		4
-# define MODE_CC		5
+# define PASS_CC		1 // * done
+# define NICK_CC		2 // * done
+# define USER_CC		3 // * done
+# define OPER_CC		4 // * done
+# define MODE_CC		5 // * done
 # define SERVICE_CC		6 // * Not implemented, used for chat bot
-# define QUIT_CC		7
+# define QUIT_CC		7 // * done
 # define SQUIT_CC		8 // TODO : When server to server will be implmented
 # define JOIN_CC		9 // TODO : When biniding channel to this branch
 # define PART_CC		10 // TODO : When binding channel to this branch
@@ -48,19 +48,19 @@
 # define INVITE_CC		14 // TODO : When binding channel to this branch
 # define KICK_CC		15 // TODO : When binding channel to this branch
 # define PRIVMSG_CC		16 // TODO : extanding when multi server
-# define NOTICE_CC		17 // TODO : same as NOTICE
-# define MOTD_CC		18
-# define LUSERS_CC		19
-# define VERSION_CC		20
-# define STATS_CC		21
-# define LINKS_CC		22
-# define TIME_CC		23
-# define CONNECT_CC		24
-# define TRACE_CC		25
-# define ADMIN_CC		26
-# define INFO_CC		27
-# define SERVLIST_CC	28
-# define SQUERY_CC		29
+# define NOTICE_CC		17 // TODO : same as PRIVMSG
+# define MOTD_CC		18 // * done
+# define LUSERS_CC		19 // TODO : extanding when multi server
+# define VERSION_CC		20 // TODO : extanding when multi server
+# define STATS_CC		21 // TODO : extanding when multi server
+# define LINKS_CC		22 // TODO : extanding when multi server
+# define TIME_CC		23 // TODO : extanding when multi server
+# define CONNECT_CC		24 // TODO : when server to server
+# define TRACE_CC		25 // TODO : when server to server
+# define ADMIN_CC		26 // TODO : extanding when multi server
+# define INFO_CC		27 // TODO : extanding when multi server
+# define SERVLIST_CC	28 // TODO : when server to server
+# define SQUERY_CC		29 
 # define WHO_CC			30
 # define WHOIS_CC		31
 # define WHOWAS_CC		32
@@ -225,8 +225,8 @@
 //	<sent Kbytes> <received messages>
 //	<received Kbytes> <time open>" // * -> one arg
 # define RPL_STATSLINKINFO     {"211", "{}", 1}
-// "<command> <count> <byte count> <remote count>"
-# define RPL_STATSCOMMANDS     {"212", "{} {} {} {}", 4}
+// "<command> <count>"
+# define RPL_STATSCOMMANDS     {"212", "{} {}", 2}
 // "<stats letter> :End of STATS report"
 # define RPL_ENDOFSTATS        {"219", "{} :End of STATS report", 1}
 // ":Server Up <days> days <hours>:<minutes>:<seconds>"
@@ -240,7 +240,7 @@
 // "<mask> <type> :End of service listing"
 # define RPL_SERVLISTEND       {"235", "{} {} :End of service listing", 2}
 // ":There are <integer> users and <integer> services on <integer> servers"
-# define RPL_LUSERCLIENT       {"251", ":There are {} users and {} services on {} servers", 3}
+# define RPL_LUSERCLIENT       {"251", ":There are {} users and {} invisible on {} servers", 3}
 // "<integer> :operator(s) online"
 # define RPL_LUSEROP           {"252", "{} :operator(s) online", 1}
 // "<integer> :unknown connection(s)"

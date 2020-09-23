@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:50:59 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/23 12:04:02 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/23 19:58:10 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,6 +36,13 @@ public:
 	void				PRIVMSG(Command *);
 	void				NOTICE(Command *);
 	void				MOTD(Command *);
+	void				LUSERS(Command *);
+	void				VERSION(Command *);
+	void				STATS(Command *);
+	void				LINKS(Command *);
+	void				TIME(Command *);
+	void				ADMIN(Command *);
+	void				INFO(Command *);
 
 	int					execute_parsed(Command *);
 
@@ -60,12 +67,17 @@ public:
 	
 	struct sockaddr_in	csin;
 
+	int					recv_ms = 0;
+	int					send_ms = 0;
+	int					sendq = 0;
+	size_t				Kb_sent = 0;
+	size_t				Kb_recv = 0;
+
 private:
 	Environment			*ev;
 	bool				pass_set;
 	bool				nick_set;
 	bool				is_setup;
-	
 };
 
 std::ostream &			operator<<( std::ostream & o, Client const & i );

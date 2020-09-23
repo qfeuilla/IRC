@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:54:23 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/23 14:38:27 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/23 19:47:59 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,21 +29,27 @@ public:
 	std::vector<Fd *>		search_list_nick(std::string);
 	std::vector<Fd *>		match_mask_serv(std::string);
 	std::vector<Fd *>		match_mask_host(std::string); 
+	
+	std::vector<Fd *>		search_list_with_mode(std::string, std::string, char);
 	// TODO : for other params
 
 	std::vector<Fd *>	clients_fd;
-	std::vector<Fd *>	client_history; 
+	std::vector<Fd *>	client_history;
 	fd_set				fd_read;
 	fd_set				fd_write;
 	int					maxfd;
 	int					clients_num;
 	std::string			*password;
-	std::string			*username_oper;
 	time_t				start;
 	bool				accept_operators;
 	std::string			*serv;
 	std::string			*version;
+	std::map<std::string, int> cmd_count;
 	struct sockaddr_in	sin;
+
+	std::vector<std::string>	emails;
+	std::string					loc1;
+	std::string					loc2;
 };
 
 #endif 

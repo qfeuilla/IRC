@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:51:25 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/23 14:46:17 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/23 20:21:07 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,6 +19,12 @@
 #include <sys/types.h>
 #include <fcntl.h>
 #include <sstream>
+
+void		custom_send(std::string ms, Client *c) {
+	c->recv_ms += 1;
+	c->Kb_recv += sizeof(ms);
+	send(c->sock, ms.c_str(), ms.length(), 0);
+}
 
 bool		check_nick(std::string nk) {
 	if (nk.length() > 9)
@@ -37,7 +43,7 @@ Client::Client(Environment *e, int s, struct sockaddr_in addr) : ev(e) {
 	type = FD_WAITC;
 	is_setup = false;
 	sock = s;
-	creation = time(0);
+	time(&creation);
 	nick = "*";
 	i_mode = false;
 	o_mode = false;
@@ -56,7 +62,7 @@ Client::~Client() {
 Client::Client(const Client &old) {
 	type = FD_CLIENT;
 	creation = old.creation;
-	last = time(0);
+	time(&last);
 	pass = old.pass;
 	nick = old.nick;
 	username = old.username;
@@ -68,6 +74,7 @@ Client::Client(const Client &old) {
 
 void	Client::PASS(Command *cmd) {
 	std::string ms;
+	ev->cmd_count["PASS"] += 1;
 
 	if (!is_setup) {
 		if (cmd->prefix.empty() && cmd->arguments.size() == 1) {
@@ -75,19 +82,18 @@ void	Client::PASS(Command *cmd) {
 			pass_set = true;
 		} else {
 			ms = reply_formating(servername.c_str(), ERR_NEEDMOREPARAMS, {cmd->line}, nick.c_str());
-			std::cout << ms;
-			send(sock, ms.c_str(), ms.size(), 0);
+			custom_send(ms, this);
 		}
 	}
 	else {
 		ms = reply_formating(servername.c_str(), ERR_ALREADYREGISTRED, {}, nick.c_str());
-		std::cout << ms;
-		send(sock, ms.c_str(), ms.size(), 0);
+		custom_send(ms, this);
 	}
 }
 
 void	Client::NICK(Command *cmd) {
 	std::string	ms;
+	ev->cmd_count["NICK"] += 1;
 
 	if (cmd->arguments.size() >= 1) {
 		if (check_nick(cmd->arguments[0])) {
@@ -105,8 +111,7 @@ void	Client::NICK(Command *cmd) {
 						ev->client_history.push_back(new Client(*this));
 					nick = cmd->arguments[0];
 
-					std::cout << ms;
-					send(sock, ms.c_str(), ms.length(), 0);
+					custom_send(ms, this);
 					if (!nick_set) {
 						nick_set = true;
 						exec_registerMS();
@@ -118,18 +123,15 @@ void	Client::NICK(Command *cmd) {
 			} else {
 				ms = reply_formating(servername.c_str(), ERR_NICKNAMEINUSE, {cmd->arguments[0]}, nick.c_str());
 				nick = cmd->arguments[0];
-				std::cout << ms;
-				send(sock, ms.c_str(), ms.size(), 0);
+				custom_send(ms, this);
 			}
 		} else {
 			ms = reply_formating(servername.c_str(), ERR_ERRONEUSNICKNAME, {cmd->arguments[0]}, nick.c_str());
-			std::cout << ms;
-			send(sock, ms.c_str(), ms.size(), 0);
+			custom_send(ms, this);
 		}
 	} else {
 		ms = reply_formating(servername.c_str(), ERR_NONICKNAMEGIVEN, {}, nick.c_str());
-		std::cout << ms;
-		send(sock, ms.c_str(), ms.size(), 0);
+		custom_send(ms, this);
 	}
 }
 
@@ -139,7 +141,7 @@ void	Client::exec_registerMS() {
 
 	// * 001
 	ms = reply_formating(servername.c_str(), RPL_WELCOME, std::vector<std::string>({nick, username, servername}), nick.c_str());
-	send(sock, ms.c_str(), ms.size(), 0);
+	custom_send(ms, this);
 
 	// * 002
 	std::string server;
@@ -150,7 +152,7 @@ void	Client::exec_registerMS() {
 	server += std::to_string(htons(ev->sin.sin_port));
 	server += "]";
 	ms = reply_formating(servername.c_str(), RPL_YOURHOST, std::vector<std::string>({server, *ev->version}), nick.c_str());
-	send(sock, ms.c_str(), ms.size(), 0);
+	custom_send(ms, this);
 	
 	// * 003
 	struct tm * timeinfo;
@@ -169,14 +171,17 @@ void	Client::exec_registerMS() {
 	date += ":";
 	date += std::to_string(timeinfo->tm_sec);
 	ms = reply_formating(servername.c_str(), RPL_CREATED, {date}, nick.c_str());
-	send(sock, ms.c_str(), ms.size(), 0);
+	custom_send(ms, this);
 	
 	// * 004
 	ms = reply_formating(servername.c_str(), RPL_MYINFO, std::vector<std::string>({servername, *ev->version, "wois", "ovptismlkqah"}), nick.c_str());
-	send(sock, ms.c_str(), ms.size(), 0);
+	custom_send(ms, this);
 	
 	type = FD_CLIENT; // * register for other user
-	tmp += "MOTD";
+	tmp = "LUSERS";
+	tmp += CR;
+	execute_parsed(parse(tmp));
+	tmp = "MOTD";
 	tmp += CR;
 	execute_parsed(parse(tmp));
 	tmp = "";
@@ -193,6 +198,7 @@ void	Client::exec_registerMS() {
 
 void	Client::USER(Command *cmd) {
 	std::string	ms;
+	ev->cmd_count["USER"] += 1;
 
 	if (!is_setup) {
 		if (cmd->prefix.empty() && cmd->arguments.size() >= 4) {
@@ -213,42 +219,37 @@ void	Client::USER(Command *cmd) {
 				exec_registerMS();
 		} else {
 			ms = reply_formating(servername.c_str(), ERR_NEEDMOREPARAMS, {cmd->line}, nick.c_str());
-			std::cout << ms;
-			send(sock, ms.c_str(), ms.size(), 0);
+			custom_send(ms, this);
 		}
 	}
 	else {
 		ms = reply_formating(servername.c_str(), ERR_ALREADYREGISTRED, {}, nick.c_str());
-		std::cout << ms;
-		send(sock, ms.c_str(), ms.size(), 0);
+		custom_send(ms, this);
 	}
 }
 
 void	Client::OPER(Command *cmd) {
 	std::string ms;
+	ev->cmd_count["OPER"] += 1;
 
 	if (cmd->arguments.size() >= 2) {
 		if (ev->accept_operators) {
 			if (*ev->password == cmd->arguments[1] 
-				&& *ev->username_oper == cmd->arguments[0]) {
+				&& *ev->serv == cmd->arguments[0]) {
 					o_mode = true;
 					ms = reply_formating(servername.c_str(), RPL_YOUREOPER, {}, nick.c_str());
-					std::cout << ms;
-					send(sock, ms.c_str(), ms.size(), 0);
+					custom_send(ms, this);
 			} else {
 				ms = reply_formating(servername.c_str(), ERR_PASSWDMISMATCH, {}, nick.c_str());
-				std::cout << ms;
-				send(sock, ms.c_str(), ms.size(), 0);
+				custom_send(ms, this);
 			}
 		} else {
 			ms = reply_formating(servername.c_str(), ERR_NOOPERHOST, {}, nick.c_str());
-			std::cout << ms;
-			send(sock, ms.c_str(), ms.size(), 0);
+			custom_send(ms, this);
 		}
 	} else {
 		ms = reply_formating(servername.c_str(), ERR_NEEDMOREPARAMS, {cmd->line}, nick.c_str());
-		std::cout << ms;
-		send(sock, ms.c_str(), ms.size(), 0);
+		custom_send(ms, this);
 	}
 	
 }
@@ -286,6 +287,7 @@ bool	Client::set_uMODE(char m, bool add) {
 
 void	Client::MODE(Command *cmd) {
 	std::string		ms;
+	ev->cmd_count["MODE"] += 1;
 
 	if (cmd->arguments.size() >= 2) {
 		if (cmd->arguments[0][0] != '#') {
@@ -315,17 +317,14 @@ void	Client::MODE(Command *cmd) {
 					ms += " ";
 					ms += cmd->arguments[1];
 					ms += CRLF;
-					std::cout << ms;
-					send(sock, ms.c_str(), ms.size(), 0);
+					custom_send(ms, this);
 				} else {
 					ms = reply_formating(servername.c_str(), ERR_UMODEUNKNOWNFLAG, {}, nick.c_str());
-					std::cout << ms;
-					send(sock, ms.c_str(), ms.size(), 0);
+					custom_send(ms, this);
 				}
 			} else {
 				ms = reply_formating(servername.c_str(), ERR_USERSDONTMATCH, {}, nick.c_str());
-				std::cout << ms;
-				send(sock, ms.c_str(), ms.size(), 0);
+				custom_send(ms, this);
 			}
 		} else {
 			// TODO : call the channell MODE with Client and Command as params if parmas[0] is a channel;
@@ -333,12 +332,10 @@ void	Client::MODE(Command *cmd) {
 	} else {
 		if (cmd->arguments.size() == 1) {
 			ms = get_userMODEs_ms();
-			std::cout << ms;
-			send(sock, ms.c_str(), ms.size(), 0);
+			custom_send(ms, this);
 		} else {
 			ms = reply_formating(servername.c_str(), ERR_NEEDMOREPARAMS, {cmd->line}, nick.c_str());
-			std::cout << ms;
-			send(sock, ms.c_str(), ms.size(), 0);
+			custom_send(ms, this);
 		}
 	}
 }
@@ -347,6 +344,7 @@ void	Client::QUIT(Command *cmd) {
 	(void)cmd;
 	std::string ans;
 	std::string ms;
+	ev->cmd_count["QUIT"] += 1;
 
 	if (cmd->arguments.size()) {
 		for (size_t i = 0; i < cmd->arguments.size(); i++) {
@@ -363,8 +361,7 @@ void	Client::QUIT(Command *cmd) {
 	ans += " QUIT :";
 	ans += ms;
 	ans += CRLF;
-	std::cout << ans;
-	send(sock, ans.c_str(), ans.size(), 0);
+	custom_send(ans, this);
 	ev->clients_fd[sock] = new Fd();
 	close(sock);
 }
@@ -373,6 +370,7 @@ void	Client::PRIVMSG(Command *cmd) {
 	std::string 		ms;
 	std::vector<Fd *> 	tmp;
 	int					good = 0;
+	ev->cmd_count["PRIVMSG"] += 1;
 	
 	if (cmd->arguments.size() >= 2) {
 		for (std::string targ : parse_comma(cmd->arguments[0])) {
@@ -394,31 +392,28 @@ void	Client::PRIVMSG(Command *cmd) {
 						ms += " ";
 					}
 					ms += CRLF;
-					send(c->sock, ms.c_str(), ms.length(), 0);
+					custom_send(ms, c);
 					good += 1;
 				} else {
 					ms = reply_formating(servername.c_str(), ERR_NOSUCHNICK, {targ}, nick.c_str());
-					std::cout << ms;
-					send(sock, ms.c_str(), ms.size(), 0);
+					custom_send(ms, this);
 				}
 			}
 		}
 		if (good == 0) {
 			ms = reply_formating(servername.c_str(), ERR_NORECIPIENT, {cmd->line}, nick.c_str());
-			std::cout << ms;
-			send(sock, ms.c_str(), ms.size(), 0);
+			custom_send(ms, this);
 		}
 	} else {
 		ms = reply_formating(servername.c_str(), ERR_NOTEXTTOSEND, {}, nick.c_str());
-		std::cout << ms;
-		send(sock, ms.c_str(), ms.size(), 0);
+		custom_send(ms, this);
 	}
 }
-
 
 void	Client::NOTICE(Command *cmd) {
 	std::string 		ms;
 	std::vector<Fd *> 	tmp;
+	ev->cmd_count["NOTICE"] += 1;
 	
 	if (cmd->arguments.size() >= 2) {
 		for (std::string targ : parse_comma(cmd->arguments[0])) {
@@ -440,7 +435,7 @@ void	Client::NOTICE(Command *cmd) {
 						ms += " ";
 					}
 					ms += CRLF;
-					send(c->sock, ms.c_str(), ms.length(), 0);
+					custom_send(ms, c);
 				}
 			}
 		}
@@ -450,6 +445,7 @@ void	Client::NOTICE(Command *cmd) {
 void	Client::MOTD(Command *cmd) {
 	(void)cmd;
 	std::string motd;
+	ev->cmd_count["MOTD"] += 1;
 
 	motd += " :::       ::: :::::::::: :::        ::::::::   ::::::::  ::::    ::::  ::::::::: \n";
 	motd += " :+:       :+: :+:        :+:       :+:    :+: :+:    :+: +:+:+: :+:+:+ :+:       \n";
@@ -475,15 +471,230 @@ void	Client::MOTD(Command *cmd) {
 	std::istringstream iss(rd);
 
 	line = reply_formating(servername.c_str(), RPL_MOTDSTART, {servername.c_str()}, nick.c_str());
-	send(sock, line.c_str(), line.length(), 0);
+	custom_send(line, this);
 
 	while (std::getline(iss, line) && !line.empty()) {
 		line = reply_formating(servername.c_str(), RPL_MOTD, {line}, nick.c_str());
-		send(sock, line.c_str(), line.length(), 0);
+		custom_send(line, this);
     }
 
 	line = reply_formating(servername.c_str(), RPL_ENDOFMOTD, {}, nick.c_str());
-	send(sock, line.c_str(), line.length(), 0);
+	custom_send(line, this);
+}
+
+void	Client::LUSERS(Command *cmd) {
+	(void)cmd;
+	std::string ms;
+	ev->cmd_count["LUSERS"] += 1;
+	
+	// * 251
+	std::string clients = std::to_string(ev->search_list_nick("*").size());
+	std::string clients_inv = std::to_string(ev->search_list_with_mode("", "", 'i').size());
+	ms = reply_formating(servername.c_str(), RPL_LUSERCLIENT, std::vector<std::string>({clients, clients_inv, "1"}), nick.c_str());
+	custom_send(ms, this);
+
+    // * 252
+	std::string clients_op = std::to_string(ev->search_list_with_mode("", "", 'o').size());
+	ms = reply_formating(servername.c_str(), RPL_LUSEROP, std::vector<std::string>({clients_op}), nick.c_str());
+	custom_send(ms, this);
+	
+    // * 253
+	ms = reply_formating(servername.c_str(), RPL_LUSERUNKNOWN, std::vector<std::string>({"0"}), nick.c_str());
+	custom_send(ms, this);
+
+    // * 254
+	// TODO : when merging channel branch
+	ms = reply_formating(servername.c_str(), RPL_LUSERCHANNELS, std::vector<std::string>({"0"}), nick.c_str());
+	custom_send(ms, this);
+	
+	// * 255
+	ms = reply_formating(servername.c_str(), RPL_LUSERME, std::vector<std::string>({clients, "1"}), nick.c_str());
+	custom_send(ms, this);
+}
+
+void	Client::VERSION(Command *cmd) {
+	std::string ms;
+	ev->cmd_count["VERSION"] += 1;
+
+	if (cmd->arguments.size() > 0) {
+		if (cmd->arguments[0] == servername || cmd->arguments[0] == "*") {
+			ms = reply_formating(servername.c_str(), RPL_VERSION, std::vector<std::string>({*ev->version, "1", servername, "first server-to-client iterations of irc for 42 project"}), nick.c_str());
+			custom_send(ms, this);
+		} else {
+			ms = reply_formating(servername.c_str(), ERR_NOSUCHSERVER, {cmd->arguments[0]}, nick.c_str());
+			custom_send(ms, this);
+		}
+	} else {
+		ms = reply_formating(servername.c_str(), RPL_VERSION, std::vector<std::string>({*ev->version, "1", servername, "first server-to-client iterations of irc for 42 project"}), nick.c_str());
+		custom_send(ms, this);
+	}
+}
+
+void	Client::STATS(Command *cmd) {
+	std::string ms;
+	ev->cmd_count["STATS"] += 1;
+
+	if (cmd->arguments.size() >= 2) {
+		if (cmd->arguments[1] == servername || cmd->arguments[1] == "*") {
+			if (cmd->arguments[0] == "m") {
+				for (std::pair<std::string, int> cm : ev->cmd_count) {
+					ms = reply_formating(servername.c_str(), RPL_STATSCOMMANDS, std::vector<std::string>({cm.first, std::to_string(cm.second)}), nick.c_str());
+					custom_send(ms, this);
+				}
+				ms = reply_formating(servername.c_str(), RPL_ENDOFSTATS, {"m"}, nick.c_str());
+				custom_send(ms, this);
+			} else if (cmd->arguments[0] == "c") {
+				ms = reply_formating(servername.c_str(), RPL_ENDOFSTATS, {"c"}, nick.c_str());
+				custom_send(ms, this);
+			} else if (cmd->arguments[0] == "h") {
+				ms = reply_formating(servername.c_str(), RPL_ENDOFSTATS, {"h"}, nick.c_str());
+				custom_send(ms, this);
+			} else if (cmd->arguments[0] == "i") {
+				ms = reply_formating(servername.c_str(), RPL_ENDOFSTATS, {"i"}, nick.c_str());
+				custom_send(ms, this);
+			} else if (cmd->arguments[0] == "k") {
+				ms = reply_formating(servername.c_str(), RPL_ENDOFSTATS, {"k"}, nick.c_str());
+				custom_send(ms, this);
+			} else if (cmd->arguments[0] == "l") {
+				for (Fd *f : ev->search_list_nick("*")) {
+					Client *c = reinterpret_cast<Client *>(f);
+					ms += c->nick;
+					ms += "!";
+					ms += c->username;
+					ms += "@";
+					ms += servername;
+					ms += " ";
+					ms += std::to_string(sendq);
+					ms += " ";
+					ms += std::to_string(send_ms);
+					ms += " ";
+					ms += std::to_string(Kb_sent / 1000);
+					ms += " ";
+					ms += std::to_string(recv_ms);
+					ms += " ";
+					ms += std::to_string(Kb_recv / 1000);
+					time_t now;
+					time(&now);
+					int diff = difftime(now, creation);
+					ms += " :";
+					ms += std::to_string(diff);
+					ms = reply_formating(servername.c_str(), RPL_STATSLINKINFO, {ms}, nick.c_str());
+					custom_send(ms, this);
+				}
+				// TODO : adding the same as above for servers when server-to-server
+				ms = reply_formating(servername.c_str(), RPL_ENDOFSTATS, {"l"}, nick.c_str());
+				custom_send(ms, this);
+			}  else if (cmd->arguments[0] == "o") {
+				ms = reply_formating(servername.c_str(), RPL_STATSOLINE, std::vector<std::string>({"", servername}), nick.c_str());
+				custom_send(ms, this);
+				ms = reply_formating(servername.c_str(), RPL_ENDOFSTATS, {"o"}, nick.c_str());
+				custom_send(ms, this);
+			} else if (cmd->arguments[0] == "y") {
+				ms = reply_formating(servername.c_str(), RPL_ENDOFSTATS, {"y"}, nick.c_str());
+				custom_send(ms, this);
+			} else if (cmd->arguments[0] == "u") {
+				time_t now;
+				time(&now);
+				double diff = difftime(now, creation);
+				std::string day = std::to_string(static_cast<long int>(diff / 86400));
+				std::string	hour = std::to_string(static_cast<int>(diff / 3600) % 24);
+				std::string	minutes = std::to_string(static_cast<int>(diff / 60) % 60);
+				std::string	secs = std::to_string(static_cast<int>(diff) % 60);
+				ms = reply_formating(servername.c_str(), RPL_STATSUPTIME, std::vector<std::string>({day, hour, minutes, secs}), nick.c_str());
+				custom_send(ms, this);
+				ms = reply_formating(servername.c_str(), RPL_ENDOFSTATS, {"u"}, nick.c_str());
+				custom_send(ms, this);
+				// TODO : test long time after solving PING
+			} else {
+				ms = reply_formating(servername.c_str(), RPL_ENDOFSTATS, {std::string(&cmd->arguments[0][0], &cmd->arguments[0][1])}, nick.c_str());
+				custom_send(ms, this); 
+			}
+		} else {
+			ms = reply_formating(servername.c_str(), ERR_NOSUCHSERVER, {cmd->arguments[0]}, nick.c_str());
+			custom_send(ms, this);
+		}
+	} else {
+		ms = reply_formating(servername.c_str(), ERR_NEEDMOREPARAMS, {cmd->line}, nick.c_str());
+		custom_send(ms, this);
+	}
+}
+
+void	Client::LINKS(Command *cmd) {
+	(void)cmd;
+	std::string ms;
+	ev->cmd_count["LINKS"] += 1;
+	
+	ms = reply_formating(servername.c_str(), RPL_ENDOFLINKS, {""}, nick.c_str());
+	custom_send(ms, this);
+}
+
+void	Client::TIME(Command *cmd) {
+	(void)cmd;
+	std::string ms;
+	ev->cmd_count["TIME"] += 1;
+	time_t		now = time(NULL);
+
+	ms += std::asctime(std::localtime(&now));
+	ms = reply_formating(servername.c_str(), RPL_TIME, std::vector<std::string>({servername, ms}), nick.c_str());
+	custom_send(ms, this);
+}
+
+void	Client::ADMIN(Command *cmd) {
+	(void)cmd;
+	std::string ms;
+	ev->cmd_count["ADMIN"] += 1;
+
+	ms = reply_formating(servername.c_str(), RPL_ADMINME, {servername}, nick.c_str());
+	custom_send(ms, this);
+	ms = reply_formating(servername.c_str(), RPL_ADMINLOC1, {ev->loc1}, nick.c_str());
+	custom_send(ms, this);
+	ms = reply_formating(servername.c_str(), RPL_ADMINLOC2, {ev->loc2}, nick.c_str());
+	custom_send(ms, this);
+	for (std::string s : ev->emails) {
+		ms = reply_formating(servername.c_str(), RPL_ADMINEMAIL, {s}, nick.c_str());
+		custom_send(ms, this);
+	}
+}
+
+void	Client::INFO(Command *cmd) {
+	(void)cmd;
+	std::string inf;
+	ev->cmd_count["INFO"] += 1;
+
+	inf += " IRC --\n";
+	inf += " Based on RFCs given on 42 subject page : \n";
+	inf += "  // ! put the online subject save on the repo \n";
+	inf += " \n";
+	inf += " This program is free software; you can redistribute it and/or\n";
+	inf += " modify it under the terms of the GNU General Public License as\n";
+	inf += " published by the Free Software Foundation; either version 2, or\n";
+	inf += " (at your option) any later version.\n";
+	inf += " \n";
+	inf += " ft_irc has been developed to meet the policy needs of the\n";
+	inf += " RFCs IRC network. \n";
+	inf += "  \n";
+	inf += " ft_irc development is currently ongoin with developpers :\n";
+	inf	+= " Quentin FEUILLADE--MONTIXI and Mayeul Le Monies De Sagazan\n";
+	inf += " see our Github : \n";
+	inf += " 	- https://github.com/qfeuilla \n";
+	inf += " 	- https://github.com/mle-moni \n";
+	inf += " \n";
+	inf += " \n";
+	inf += " On-line since:";
+	inf += std::asctime(gmtime(&(ev->start)));
+	inf += " UTC \n";
+	
+	std::string line;
+	std::string rd = std::string(inf);
+	std::istringstream iss(rd);
+
+	while (std::getline(iss, line) && !line.empty()) {
+		line = reply_formating(servername.c_str(), RPL_INFO, {line}, nick.c_str());
+		custom_send(line, this);
+    }
+
+	line = reply_formating(servername.c_str(), RPL_ENDOFINFO, {}, nick.c_str());
+	custom_send(line, this);
 }
 
 int		Client::execute_parsed(Command *parsed) {
@@ -519,6 +730,27 @@ int		Client::execute_parsed(Command *parsed) {
 	case MOTD_CC:
 		MOTD(parsed);
 		break;
+	case LUSERS_CC:
+		LUSERS(parsed);
+		break;
+	case VERSION_CC:
+		VERSION(parsed);
+		break;
+	case STATS_CC:
+		STATS(parsed);
+		break;
+	case LINKS_CC:
+		LINKS(parsed);
+		break;
+	case TIME_CC:
+		TIME(parsed);
+		break;
+	case ADMIN_CC:
+		ADMIN(parsed);
+		break;
+	case INFO_CC:
+		INFO(parsed);
+		break;
 	default:
 		break;
 	}
@@ -538,9 +770,11 @@ void	Client::read_func() {
 	std::string line;
 	std::string rd = std::string(buf_read);
 	std::istringstream iss(rd);
-	last = time(0);
+	time(&last);
 	while (std::getline(iss, line) && !line.empty()) {
+		Kb_sent += sizeof(line);
 		parsed = parse(line);
+		send_ms += 1;
 		std::cout << *parsed << std::endl;
 		execute_parsed(parsed);
     }

@@ -36,11 +36,14 @@ Server::Server() {
 	type = FD_SERVER;
 	ev = new Environment();
 	ev->password = new std::string("");
-	ev->username_oper = new std::string("superUO");
 	time(&ev->start);
 	ev->accept_operators = true;
 	ev->serv = new std::string(generate_servname(EX_NAME));
 	ev->version = new std::string("ft_irc_0.4.2b");
+	ev->loc1 = std::string("Paris, France");
+	ev->loc2 = std::string("42born2code");
+	ev->emails.push_back("quentin.feuillade33@gmail.com");
+	ev->emails.push_back("m.lemoniesdesagazan@gmail.com");
 }
 
 void		Server::load_options(int ac, char **av) {
