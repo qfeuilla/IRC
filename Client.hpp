@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:50:59 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/22 22:53:17 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/23 12:04:02 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -34,6 +34,8 @@ public:
 	void				MODE(Command *);
 	void				QUIT(Command *);
 	void				PRIVMSG(Command *);
+	void				NOTICE(Command *);
+	void				MOTD(Command *);
 
 	int					execute_parsed(Command *);
 

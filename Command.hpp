@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/20 16:41:03 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/22 23:01:41 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/23 11:11:55 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,7 @@
 # include <ostream>
 
 // TODO : implement a struct prefix for user formating (like qfeu!~qfeuilla@einstein.ft.irc)
+// TODO 	used for multi server
 
 class Command {
 public:

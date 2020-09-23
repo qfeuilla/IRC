@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:54:23 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/22 22:53:04 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/23 14:38:27 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,6 +42,8 @@ public:
 	time_t				start;
 	bool				accept_operators;
 	std::string			*serv;
+	std::string			*version;
+	struct sockaddr_in	sin;
 };
 
 #endif 

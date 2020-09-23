@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:51:25 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/22 22:59:34 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/23 14:46:17 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -34,7 +34,7 @@ bool		check_nick(std::string nk) {
 }
 
 Client::Client(Environment *e, int s, struct sockaddr_in addr) : ev(e) {
-	type = FD_CLIENT;
+	type = FD_WAITC;
 	is_setup = false;
 	sock = s;
 	creation = time(0);
@@ -100,8 +100,9 @@ void	Client::NICK(Command *cmd) {
 					ms += cmd->arguments[0];
 					ms += CRLF;
 					
-					// * save old client for histoy purpose
-					ev->client_history.push_back(new Client(*this));
+					// * save old client for history purpose
+					if (type == FD_CLIENT)
+						ev->client_history.push_back(new Client(*this));
 					nick = cmd->arguments[0];
 
 					std::cout << ms;
@@ -116,6 +117,7 @@ void	Client::NICK(Command *cmd) {
 				}
 			} else {
 				ms = reply_formating(servername.c_str(), ERR_NICKNAMEINUSE, {cmd->arguments[0]}, nick.c_str());
+				nick = cmd->arguments[0];
 				std::cout << ms;
 				send(sock, ms.c_str(), ms.size(), 0);
 			}
@@ -133,7 +135,51 @@ void	Client::NICK(Command *cmd) {
 
 void	Client::exec_registerMS() {
 	std::string tmp;
+	std::string ms;
 
+	// * 001
+	ms = reply_formating(servername.c_str(), RPL_WELCOME, std::vector<std::string>({nick, username, servername}), nick.c_str());
+	send(sock, ms.c_str(), ms.size(), 0);
+
+	// * 002
+	std::string server;
+	server += servername;
+	server += "[";
+	server += inet_ntoa(ev->sin.sin_addr);
+	server += "/";
+	server += std::to_string(htons(ev->sin.sin_port));
+	server += "]";
+	ms = reply_formating(servername.c_str(), RPL_YOURHOST, std::vector<std::string>({server, *ev->version}), nick.c_str());
+	send(sock, ms.c_str(), ms.size(), 0);
+	
+	// * 003
+	struct tm * timeinfo;
+	timeinfo = localtime(&ev->start);
+	std::vector<std::string> month = {"January", "February", "March", "April", "May", "June", "July", "August","September", "October", "November", "December"};
+	std::string date;
+	date += month[timeinfo->tm_mon];
+	date += "-";
+	date += std::to_string(timeinfo->tm_mday);
+	date += "-";
+	date += std::to_string(timeinfo->tm_year + 1900);
+	date += " ";
+	date += std::to_string(timeinfo->tm_hour);
+	date += ":";
+	date += std::to_string(timeinfo->tm_min);
+	date += ":";
+	date += std::to_string(timeinfo->tm_sec);
+	ms = reply_formating(servername.c_str(), RPL_CREATED, {date}, nick.c_str());
+	send(sock, ms.c_str(), ms.size(), 0);
+	
+	// * 004
+	ms = reply_formating(servername.c_str(), RPL_MYINFO, std::vector<std::string>({servername, *ev->version, "wois", "ovptismlkqah"}), nick.c_str());
+	send(sock, ms.c_str(), ms.size(), 0);
+	
+	type = FD_CLIENT; // * register for other user
+	tmp += "MOTD";
+	tmp += CR;
+	execute_parsed(parse(tmp));
+	tmp = "";
 	tmp += ":";
 	tmp += nick;
 	tmp += " MODE ";
@@ -141,6 +187,7 @@ void	Client::exec_registerMS() {
 	tmp += " +i";
 	tmp += CR;
 	execute_parsed(parse(tmp));
+	
 	// TODO : need more functions (i will do)
 }
 
@@ -149,7 +196,8 @@ void	Client::USER(Command *cmd) {
 
 	if (!is_setup) {
 		if (cmd->prefix.empty() && cmd->arguments.size() >= 4) {
-			username = cmd->arguments[0];
+			username = "~";
+			username += cmd->arguments[0];
 			if (cmd->arguments[1] != "0")
 				hostname = cmd->arguments[1]; // * not used deprecated
 			if (cmd->arguments[2] != "*")
@@ -308,8 +356,8 @@ void	Client::QUIT(Command *cmd) {
 	} else {
 		ms = nick;
 	}
-
-	ev->client_history.push_back(this);
+	if (type == FD_CLIENT)
+		ev->client_history.push_back(this);
 	ans += ":";
 	ans += nick;
 	ans += " QUIT :";
@@ -367,6 +415,77 @@ void	Client::PRIVMSG(Command *cmd) {
 	}
 }
 
+
+void	Client::NOTICE(Command *cmd) {
+	std::string 		ms;
+	std::vector<Fd *> 	tmp;
+	
+	if (cmd->arguments.size() >= 2) {
+		for (std::string targ : parse_comma(cmd->arguments[0])) {
+			if (targ[0] == '#') {
+				// TODO : chans
+			} else if (targ[0] == '$') {
+				// TODO : multi server
+			} else {
+				if (!(tmp = ev->search_list_nick(targ)).empty()) {
+					Client *c = reinterpret_cast<Client *>(tmp[0]);
+
+					ms += ":";
+					ms += nick;
+					ms += " NOTICE ";
+					ms += targ;
+					ms += " ";
+					for (size_t i = 1; i < cmd->arguments.size(); i++) {
+						ms += cmd->arguments[i];
+						ms += " ";
+					}
+					ms += CRLF;
+					send(c->sock, ms.c_str(), ms.length(), 0);
+				}
+			}
+		}
+	}
+}
+
+void	Client::MOTD(Command *cmd) {
+	(void)cmd;
+	std::string motd;
+
+	motd += " :::       ::: :::::::::: :::        ::::::::   ::::::::  ::::    ::::  ::::::::: \n";
+	motd += " :+:       :+: :+:        :+:       :+:    :+: :+:    :+: +:+:+: :+:+:+ :+:       \n";
+	motd += " +:+       +:+ +:+        +:+       +:+        +:+    +:+ +:+ +:+:+ +:+ +:+       \n";
+	motd += " +#+  +:+  +#+ +#++:++#   +#+       +#+        +#+    +:+ +#+  +:+  +#+ +#++:++#  \n";
+	motd += " +#+ +#+#+ +#+ +#+        +#+       +#+        +#+    +#+ +#+       +#+ +#+       \n";
+	motd += "  #+#+# #+#+#  #+#        #+#       #+#    #+# #+#    #+# #+#       #+# #+#       \n";
+	motd += "   ###   ###   ########## ########## ########   ########  ###       ### ######### \n";
+	motd += "                                                                                  \n";
+	motd += "                          Welcome to FT_IRC a 42 project                          \n";
+	motd += "                                                                                  \n";
+	motd += "                                 444    22222222                                  \n";
+    motd += "                                444    222    222                                 \n";
+    motd += "                               444 444       222                                  \n";
+    motd += "                              444  444     222                                    \n";
+    motd += "                             44444444444 222                                      \n";
+    motd += "                                   444  222                                       \n";
+    motd += "                                   444 2222222222                                 \n";
+	motd += "                                                                                  \n";
+
+	std::string line;
+	std::string rd = std::string(motd);
+	std::istringstream iss(rd);
+
+	line = reply_formating(servername.c_str(), RPL_MOTDSTART, {servername.c_str()}, nick.c_str());
+	send(sock, line.c_str(), line.length(), 0);
+
+	while (std::getline(iss, line) && !line.empty()) {
+		line = reply_formating(servername.c_str(), RPL_MOTD, {line}, nick.c_str());
+		send(sock, line.c_str(), line.length(), 0);
+    }
+
+	line = reply_formating(servername.c_str(), RPL_ENDOFMOTD, {}, nick.c_str());
+	send(sock, line.c_str(), line.length(), 0);
+}
+
 int		Client::execute_parsed(Command *parsed) {
 	switch (parsed->cmd_code())
 	{
@@ -393,6 +512,12 @@ int		Client::execute_parsed(Command *parsed) {
 		break;
 	case PRIVMSG_CC:
 		PRIVMSG(parsed);
+		break;
+	case NOTICE_CC:
+		NOTICE(parsed);
+		break;
+	case MOTD_CC:
+		MOTD(parsed);
 		break;
 	default:
 		break;

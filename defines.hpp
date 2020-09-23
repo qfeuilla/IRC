@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/20 17:01:28 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/22 21:19:48 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/23 14:41:46 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,6 +25,7 @@
 # define FD_FREE		0
 # define FD_SERVER		1
 # define FD_CLIENT		2
+# define FD_WAITC		3
 
 # define BUF_SIZE		4096
 
@@ -47,9 +48,9 @@
 # define INVITE_CC		14 // TODO : When binding channel to this branch
 # define KICK_CC		15 // TODO : When binding channel to this branch
 # define PRIVMSG_CC		16 // TODO : extanding when multi server
-# define NOTICE_CC		17
+# define NOTICE_CC		17 // TODO : same as NOTICE
 # define MOTD_CC		18
-# define LUSERS_CC		19 // TODO :
+# define LUSERS_CC		19
 # define VERSION_CC		20
 # define STATS_CC		21
 # define LINKS_CC		22
@@ -93,8 +94,8 @@
 # define RPL_YOURHOST          {"002", "Your host is {}, running version {}", 2}
 // "This server was created <date>"
 # define RPL_CREATED           {"003", "This server was created {}", 1}
-// "<servername> <version> <available user modes> <available channel modes>" // * -> one arg
-# define RPL_MYINFO            {"004", "{}", 1}
+// "<servername> <version> <available user modes> <available channel modes>"
+# define RPL_MYINFO            {"004", "{} {} {} {}", 4}
 // "Try server <server name>, port <port number>"
 # define RPL_BOUNCE            {"005", "Try server {}, port {}", 2}
 // ":*1<reply> *( " " <reply> )" // * -> one arg

@@ -37,20 +37,10 @@ Server::Server() {
 	ev = new Environment();
 	ev->password = new std::string("");
 	ev->username_oper = new std::string("superUO");
-	ev->start = time(0);
+	time(&ev->start);
 	ev->accept_operators = true;
 	ev->serv = new std::string(generate_servname(EX_NAME));
-}
-
-Server::Server(int ac, char **av) {
-	type = FD_SERVER;
-	ev = new Environment();
-	ev->password = new std::string("");
-	ev->username_oper = new std::string("superUO");
-	ev->start = time(0);
-	ev->accept_operators = true;
-	ev->serv = new std::string(generate_servname(EX_NAME));
-	load_options(ac, av);
+	ev->version = new std::string("ft_irc_0.4.2b");
 }
 
 void		Server::load_options(int ac, char **av) {
@@ -80,6 +70,7 @@ void		Server::create() {
 	X(-1, bind(sock, (struct sockaddr*)&sin, sizeof(sin)), "bind");
 	X(-1, listen(sock, 42), "listen");
 	ev->clients_fd[sock] = this;
+	ev->sin = sin;
 }
 
 void		Server::accept_srv() {
