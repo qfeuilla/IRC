@@ -1,4 +1,3 @@
-
 SRCS = 	main.cpp \
 		Client.cpp \
 		Environment.cpp \
@@ -8,30 +7,43 @@ SRCS = 	main.cpp \
 		parser.cpp \
 		Command.cpp \
 		replies.cpp \
-		checking.cpp
+		checking.cpp \
 
-OBJS = ${SRCS:.cpp=.o}
+OBJS := $(patsubst %.cpp,%.o,$(SRCS))
+DEPENDS := $(patsubst %.cpp,%.d,$(SRCS))
 
+# c++ flags
+FLAGS = -Wall -Wextra -Werror
+
+# Compiler
+CC = clang++
+
+# Output name
 NAME = bircd
 
-CPPFLAGS = -I. -g3 -Wall -Werror -Wextra
-LDFLAGS =
+# Default rule (so make, make all, and make $(NAME) are the same)
+all: $(NAME)
 
-CC = clang++
-RM = rm -f
+# Linking the executable ($@ = target) from the object files (here $^ = .o files)
+$(NAME): $(OBJS)
+	$(CC) $(FLAGS) $^ -o $@
 
-.cpp.o:
-	${CC} ${CPPFLAGS} -c $< -o ${<:.cpp=.o}
+-include $(DEPENDS)
 
-${NAME}:	${OBJS}
-		${CC} -o ${NAME} ${OBJS} ${LDFLAGS}
-
-all:		${NAME}
+# generate .d files (dependencies)
+%.o: %.cpp Makefile
+	$(CC) $(FLAGS) -MMD -MP -c $< -o $@
 
 clean:
-		${RM} ${OBJS} *~ #*#
+	$(RM) $(OBJS) $(DEPENDS)
 
 fclean:		clean
-		${RM} ${NAME}
+	$(RM) $(NAME)
 
 re:		fclean all
+
+# .PHONY means these rules get executed even if files of those names exist.
+.PHONY: all clean
+
+
+# * more info here: https://stackoverflow.com/questions/52034997/how-to-make-makefile-recompile-when-a-header-file-is-changed
