@@ -1023,22 +1023,22 @@ int		Client::execute_parsed(Command *parsed) {
 		MODE(parsed);
 		break;
 	case JOIN_CC:
-		if (parsed->prefix.empty() && parsed->arguments.size() >= 1) {
+		if (parsed->arguments.size() >= 1) {
 			ev->channels.join(nick, sock, parsed->arguments, &channels);
 		}
 		break;
 	case PART_CC:
-		if (parsed->prefix.empty() && parsed->arguments.size() >= 1) {
+		if (parsed->arguments.size() >= 1) {
 			ev->channels.leave(nick, sock, parsed->arguments);
 		}
 		break;
 	case KICK_CC:
-		if (parsed->prefix.empty() && parsed->arguments.size() >= 2) {
+		if (parsed->arguments.size() >= 2) {
 			ev->channels.kick(nick, sock, parsed->arguments);
 		}
 		break;
 	case TOPIC_CC:
-		if (parsed->prefix.empty() && parsed->arguments.size() >= 1) {
+		if (parsed->arguments.size() >= 1) {
 			ev->channels.topic(nick, sock, parsed->arguments);
 		}
 		// {

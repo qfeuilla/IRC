@@ -83,6 +83,10 @@ bool				Channel::join(std::string nick, socket_t socket, const std::string &pass
 			sendMsgToSocket(socket, "channel is invitation only\n");
 			return (false);
 		}
+		if (_modes.p) {
+			sendMsgToSocket(socket, "channel is private\n");
+			return (false);
+		}
 		_users.insert(std::pair<std::string, socket_t>(nick, socket));
 		_modes.invitation_list.remove(nick);
 		sendMsgToSocket(socket, "Channel joined\n");
