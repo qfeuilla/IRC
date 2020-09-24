@@ -20,10 +20,11 @@
 #include <fcntl.h>
 #include <sstream>
 
-void		custom_send(std::string ms, Client *c) {
+bool		custom_send(std::string ms, Client *c) {
 	c->recv_ms += 1;
 	c->Kb_recv += sizeof(ms);
 	send(c->sock, ms.c_str(), ms.length(), 0);
+	return (true);
 }
 
 bool		check_nick(std::string nk) {
@@ -336,14 +337,14 @@ void	Client::MODE(Command *cmd) {
 				custom_send(ms, this);
 			}
 		} else {
-			// TODO : set the errors messages;
-			std::cout << "CHANGING SOME MODES\n\n";
-			ev->channels.mode(nick, sock, cmd->arguments);
+			ev->channels->mode(this, cmd->arguments);
 		}
 	} else {
 		if (cmd->arguments.size() == 1) {
-			ms = get_userMODEs_ms();
-			custom_send(ms, this);
+			if (!ev->channels->getChanModes(this, cmd->arguments)) {
+				ms = get_userMODEs_ms();
+				custom_send(ms, this);
+			}
 		} else {
 			ms = reply_formating(servername.c_str(), ERR_NEEDMOREPARAMS, {cmd->line}, nick.c_str());
 			custom_send(ms, this);
@@ -1001,6 +1002,46 @@ void	Client::ISON(Command *cmd) {
 	}
 }
 
+void	Client::JOIN(Command *cmd) {
+	std::string ms;
+	if (cmd->arguments.size() >= 1) {
+		ev->channels->join(this, cmd->arguments, &channels);
+	} else {
+		ms = reply_formating(servername.c_str(), ERR_NEEDMOREPARAMS, {}, nick.c_str());
+		custom_send(ms, this);
+	}
+}
+
+void	Client::PART(Command *cmd) {
+	std::string ms;
+	if (cmd->arguments.size() >= 1) {
+		ev->channels->leave(this, cmd->arguments);
+	} else {
+		ms = reply_formating(servername.c_str(), ERR_NEEDMOREPARAMS, {}, nick.c_str());
+		custom_send(ms, this);
+	}
+}
+
+void	Client::KICK(Command *cmd) {
+	std::string ms;
+	if (cmd->arguments.size() >= 2) {
+			ev->channels->kick(this, cmd->arguments);
+	} else {
+		ms = reply_formating(servername.c_str(), ERR_NEEDMOREPARAMS, {}, nick.c_str());
+		custom_send(ms, this);
+	}
+}
+
+void	Client::TOPIC(Command *cmd) {
+	std::string ms;
+	if (cmd->arguments.size() >= 1) {
+		ev->channels->topic(this, cmd->arguments);
+	} else {
+		ms = reply_formating(servername.c_str(), ERR_NEEDMOREPARAMS, {}, nick.c_str());
+		custom_send(ms, this);
+	}
+}
+
 int		Client::execute_parsed(Command *parsed) {
 	switch (parsed->cmd_code())
 	{
@@ -1023,35 +1064,18 @@ int		Client::execute_parsed(Command *parsed) {
 		MODE(parsed);
 		break;
 	case JOIN_CC:
-		if (parsed->arguments.size() >= 1) {
-			ev->channels.join(nick, sock, parsed->arguments, &channels);
-		}
+		JOIN(parsed);
 		break;
 	case PART_CC:
-		if (parsed->arguments.size() >= 1) {
-			ev->channels.leave(nick, sock, parsed->arguments);
-		}
+		PART(parsed);
 		break;
 	case KICK_CC:
-		if (parsed->arguments.size() >= 2) {
-			ev->channels.kick(nick, sock, parsed->arguments);
-		}
+		KICK(parsed);
 		break;
 	case TOPIC_CC:
-		if (parsed->arguments.size() >= 1) {
-			ev->channels.topic(nick, sock, parsed->arguments);
-		}
-		// {
-		// 	std::list<Channel*>::iterator	current = channels.begin();
-		// 	std::list<Channel*>::iterator	end = channels.end();
-		// 	std::cout << nick << " is in the channels : \n";
-		// 	while (current != end) {
-		// 		std::cout << (*current)->getName() << ", ";
-		// 		++current;
-		// 	}
-		// 	std::cout << "\n\n";
-		// }
+		TOPIC(parsed);
 		break;
+	// ! TODO INVITE
 	case QUIT_CC:
 		QUIT(parsed);
 		break;

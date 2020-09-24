@@ -18,6 +18,9 @@
 # include "Channel.hpp"
 # include <list>
 
+class Environment;
+class Channel;
+
 class Client : public Fd {
 public:
 	Client(Environment *, int, struct sockaddr_in);
@@ -57,6 +60,10 @@ public:
 	void				WALLOPS(Command *);
 	void				USERHOST(Command *);
 	void				ISON(Command *);
+	void				JOIN(Command *cmd);
+	void				PART(Command *cmd);
+	void				KICK(Command *cmd);
+	void				TOPIC(Command *cmd);
 
 	int					execute_parsed(Command *);
 

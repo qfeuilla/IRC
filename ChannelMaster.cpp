@@ -1,11 +1,9 @@
 #include "ChannelMaster.hpp"
-ChannelMaster::ChannelMaster() {
+ChannelMaster::ChannelMaster(const std::string &srvName): _srv_name(srvName) {
 	_channels = new _channel_list();
 	_user_channels = new _user_chan_map();
-	std::cout << "created channel master\n";
 }
 ChannelMaster::~ChannelMaster() {
-	std::cout << "deleting channel master\n";
 	_channel_list::iterator	current = _channels->begin();
 	_channel_list::iterator	end = _channels->end();
 	Channel					*chan;
@@ -50,7 +48,7 @@ std::vector<std::string>	splitComma(std::string const &str)
 }
 
 
-bool	ChannelMaster::join(std::string nick, socket_t socket, const std::vector<std::string> &args, std::list<Channel*> *usrChans)
+bool	ChannelMaster::join(Client *client, const std::vector<std::string> &args, std::list<Channel*> *usrChans)
 {
 	std::map<std::string, std::string>	name_pass_map;
 	std::map<std::string, std::string>::iterator	current;
@@ -59,7 +57,7 @@ bool	ChannelMaster::join(std::string nick, socket_t socket, const std::vector<st
 	std::vector<std::string>	passwds;
 	bool	ret = true;
 
-	(*_user_channels)[nick] = usrChans;
+	(*_user_channels)[client->nick] = usrChans;
 	names = splitComma(args[0]);
 	if (args.size() > 1)
 		passwds = splitComma(args[1]);
@@ -72,40 +70,41 @@ bool	ChannelMaster::join(std::string nick, socket_t socket, const std::vector<st
 	current = name_pass_map.begin();
 	end = name_pass_map.end();
 	while (current != end) {
-		ret &= _join_channel(nick, socket, (*current).first, (*current).second);
+		ret &= _join_channel(client, (*current).first, (*current).second);
 		++current;
 	}
 	return (ret);
 }
 
-bool	ChannelMaster::_join_channel(std::string nick, socket_t socket, const std::string &channelName, const std::string &passwd)
+bool	ChannelMaster::_join_channel(Client *client, const std::string &channelName, const std::string &passwd)
 {
 	Channel	*chan = _chan_exists(channelName);
 	if (!chan) {
-		if (_testChannelName(socket, channelName))
+		if (_testChannelName(client->sock, channelName))
 			return (false);
-		Channel	*nchan = new Channel(channelName, nick, socket);
+		Channel	*nchan = new Channel(channelName, client, _srv_name);
 		_channels->push_back(nchan);
-		(*_user_channels)[nick]->push_back(nchan);
+		(*_user_channels)[client->nick]->push_back(nchan);
 		return (true);
 	}
-	if (chan->join(nick, socket, passwd)) {
-		(*_user_channels)[nick]->push_back(chan);
+	if (chan->join(client, passwd)) {
+		(*_user_channels)[client->nick]->push_back(chan);
 		return (true);
 	}
 	return (false);
 }
 
-bool	ChannelMaster::_leave_channel(std::string nick, socket_t socket, const std::string &channelName, const std::string &reason)
+bool	ChannelMaster::_leave_channel(Client *client, const std::string &channelName, const std::string &reason)
 {
 	Channel	*chan = _chan_exists(channelName);
+	std::string		ms;
 
 	if (!chan) {
-		Channel::sendMsgToSocket(socket, "There is no chan with this name\n");
-		return (false); // there is no channel with this name
+		ms = reply_formating(client->servername.c_str(), ERR_NOSUCHCHANNEL, std::vector<std::string>({channelName}), client->nick.c_str());
+		return (!custom_send(ms, client));
 	}
-	if (chan->leave(nick, socket, reason)) {
-		(*_user_channels)[nick]->remove(chan); // remove this chan from this user channels list 
+	if (chan->leave(client, reason)) {
+		(*_user_channels)[client->nick]->remove(chan); // remove this chan from this user channels list 
 		if (!chan->isEmpty())
 			return (true);
 		_channels->remove(chan); // channel is empty -> we delete it
@@ -115,29 +114,39 @@ bool	ChannelMaster::_leave_channel(std::string nick, socket_t socket, const std:
 	return (false);
 }
 
-bool	ChannelMaster::leave(std::string nick, socket_t socket, const std::vector<std::string> &args)
+bool	ChannelMaster::leave(Client *client, const std::vector<std::string> &args)
 {
 	bool	ret = true;
 	std::vector<std::string>	names = splitComma(args[0]);
-	std::string		reason = args.size() > 1 ? args[1] : std::string(); 
+	std::string		reason = args.size() > 1 ? Channel::parseArg(1, args) : std::string();
 	for (size_t i = 0; i < names.size(); ++i) {
-		ret &= _leave_channel(nick, socket, names[i], reason);
+		ret &= _leave_channel(client, names[i], reason);
 	}
 	return (ret);
 }
 
-bool	ChannelMaster::mode(std::string nick, socket_t socket, const std::vector<std::string> &args)
+bool	ChannelMaster::getChanModes(Client *client, const std::vector<std::string> &args)
+{
+	Channel					*chan;
+
+	chan = _chan_exists(args[0]);
+	if (!chan)
+		return (false);
+	chan->getModes(client);
+	return (true);
+}
+
+bool	ChannelMaster::mode(Client *client, const std::vector<std::string> &args)
 {
 	Channel					*chan;
 	std::string				operations = args[1]; // looks like "+o"
 	bool					append;
 
-	if (operations.size() < 2 || !(operations[0] == '+' || operations[0] == '-'))
+	chan = _chan_exists(args[0]);
+	
+	if (!(operations[0] == '+' || operations[0] == '-'))
 		return (false);
 	append = operations[0] == '+';
-	if (_testChannelName(socket, args[0]))
-		return (false);
-	chan = _chan_exists(args[0]);
 	if (!chan)
 		return (false);
 	for (size_t i = 1; i < operations.size(); ++i) {
@@ -146,37 +155,41 @@ bool	ChannelMaster::mode(std::string nick, socket_t socket, const std::vector<st
 		case 'o':
 			if (args.size() < 3)
 				return (false);
-			chan->mode_o(append, nick, socket, args[2]);
+			chan->mode_o(append, client, args[2]);
 			break;
 		case 'v':
 			if (args.size() < 3)
 				return (false);
-			chan->mode_v(append, nick, socket, args[2]);
+			chan->mode_v(append, client, args[2]);
 			break;
 		case 'p':
-			chan->mode_p(append, nick, socket);
+			chan->mode_p(append, client);
 			break;
 		case 's':
-			chan->mode_s(append, nick, socket);
+			chan->mode_s(append, client);
 			break;
 		case 'i':
-			chan->mode_i(append, nick, socket);
+			chan->mode_i(append, client);
 			break;
 		case 't':
-			chan->mode_t(append, nick, socket);
+			chan->mode_t(append, client);
 			break;
 		case 'm':
-			chan->mode_m(append, nick, socket);
+			chan->mode_m(append, client);
 			break;
 		case 'l':
-			if (args.size() < 3)
-				return (false);
-			chan->mode_l(append, nick, socket, std::stoi(args[2]));
+			if (args.size() == 2) {
+				if (!append)
+					chan->mode_l(append, client, -1);
+			} else
+				chan->mode_l(append, client, std::stoi(args[2]));
 			break;
 		case 'k':
-			if (args.size() < 3)
-				return (false);
-			chan->mode_k(append, nick, socket, args[2]);
+			if (args.size() == 2) {
+				if (!append) 
+					chan->mode_k(append, client, "");
+			} else
+				chan->mode_k(append, client, args[2]);
 			break;
 		default:
 			break;
@@ -198,15 +211,18 @@ Channel		*ChannelMaster::_chan_exists(const std::string &channelName)
 	return (nullptr);
 }
 
-bool	ChannelMaster::kick(std::string nick, socket_t socket, const std::vector<std::string> &args)
+bool	ChannelMaster::kick(Client *client, const std::vector<std::string> &args)
 {
+	std::string	ms;
 	Channel		*channel = _chan_exists(args[0]);
 	std::string	guyToKick = args[1];
-	std::string	reason = args.size() > 3 ? args[2] : std::string();
-	if (!channel)
-		return (!Channel::sendMsgToSocket(socket, "no chan with this name\n"));
-	if (channel->kick(nick, socket, guyToKick, reason)) {
-		(*_user_channels)[nick]->remove(channel);
+	std::string	reason = args.size() > 2 ? Channel::parseArg(2, args) : std::string();
+	if (!channel) {
+		ms = reply_formating(client->servername.c_str(), ERR_NOSUCHCHANNEL, std::vector<std::string>({args[0]}), client->nick.c_str());
+		return (!custom_send(ms, client));
+	}
+	if (channel->kick(client, guyToKick, reason)) {
+		(*_user_channels)[client->nick]->remove(channel);
 		return (true);
 	}
 	return (false);
@@ -222,15 +238,32 @@ bool	ChannelMaster::broadcastMsg(const std::string &sender, socket_t socket, con
 	return (channel->broadcastMsg(sender, socket, msg));
 }
 
-bool	ChannelMaster::topic(std::string nick, socket_t socket, const std::vector<std::string> &args)
+bool	ChannelMaster::topic(Client *client, const std::vector<std::string> &args)
 {
+	std::string	ms;
 	std::string	newTopic;
+	std::string	topicIs;
+
 	Channel		*channel = _chan_exists(args[0]);
 
-	if (!channel)
-		return (!Channel::sendMsgToSocket(socket, "no chan with this name\n"));
-	if (args.size() == 1)
-		return (!Channel::sendMsgToSocket(socket, std::string("Topic is: ") + channel->getTopic() + "\n"));
-	newTopic = args[1];
-	return (channel->setTopic(nick, socket, newTopic));
+	if (!channel) {
+		ms = reply_formating(client->servername.c_str(), ERR_NOSUCHCHANNEL, std::vector<std::string>({args[0]}), client->nick.c_str());
+		return (!custom_send(ms, client));
+	}
+	if (args.size() == 1) {
+		topicIs = channel->getTopic();
+		if (topicIs == "") {
+			ms = reply_formating(client->servername.c_str(), RPL_NOTOPIC, std::vector<std::string>({channel->getName()}), client->nick.c_str());
+			return (custom_send(ms, client));
+		}
+		ms = reply_formating(client->servername.c_str(), RPL_TOPIC, std::vector<std::string>({channel->getName(), topicIs}), client->nick.c_str());
+		return (custom_send(ms, client));
+	}
+	newTopic = Channel::parseArg(1, args);
+	return (channel->setTopic(client, newTopic));
+}
+
+void	ChannelMaster::setSrvName(const std::string &srvName)
+{
+	_srv_name = std::string(srvName);
 }

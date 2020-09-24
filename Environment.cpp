@@ -73,9 +73,13 @@ Environment::Environment() {
 	cmd_count.emplace(std::pair<std::string, int>("ISON", 0));
 	cmd_count.emplace(std::pair<std::string, int>("SERVER", 0));
 	cmd_count.emplace(std::pair<std::string, int>("NJOIN", 0));
+
+	channels = new ChannelMaster();
 }
 
-Environment::~Environment() { }
+Environment::~Environment() {
+	delete channels;
+}
 
 void Environment::init_fds() {
 	int		i;

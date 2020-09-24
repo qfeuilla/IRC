@@ -18,6 +18,8 @@
 #include <vector>
 #include "ChannelMaster.hpp"
 
+class ChannelMaster;
+
 class Environment {
 public:
 	Environment();
@@ -54,7 +56,7 @@ public:
 
 	bool						active = true;
 	
-	ChannelMaster		channels;
+	ChannelMaster				*channels;
 };
 
 #endif 

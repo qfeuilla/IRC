@@ -1,10 +1,12 @@
 #include "Channel.hpp"
+#include "defines.hpp"
 
-Channel::Channel(): _name(), _users(), _modes(), _topic() {}
-Channel::Channel(const std::string &name, std::string nick, socket_t socket): _name(name), _users(), _modes(), _topic() {
-	_modes.o.push_back(nick);
+Channel::Channel(): _name(), _users(), _modes(), _topic(), _srv_name() {}
+Channel::Channel(const std::string &name, Client *client, const std::string &srvName)
+: _name(name), _users(), _modes(), _topic(), _srv_name(srvName) {
+	_modes.o.push_back(client->nick);
 	std::cout << "Creating channel: " << _name << "\n\n";
-	join(nick, socket, "");
+	join(client, "");
 }
 Channel::~Channel() {
 	std::cout << "channel erased: " << _name << "\n\n";
@@ -25,16 +27,24 @@ const std::string	&Channel::getTopic() const
 	return (_topic);
 }
 
-bool				Channel::setTopic(std::string nick, socket_t socket, const std::string &newTopic)
+bool				Channel::setTopic(Client *client, const std::string &newTopic)
 {
-	if (!_is_in_chan(nick))
-		return (!sendMsgToSocket(socket, "You are not in this chan\n"));
-	std::cout << "T mode = " << _modes.t << "\n\n";
-	if (_modes.t && !_hasRights(nick))
-		return (!sendMsgToSocket(socket, "Topic can only be set by an operator\n"));
+	std::string	ms;
+	if (!_is_in_chan(client->nick)) {
+		ms = reply_formating(client->servername.c_str(), ERR_NOTONCHANNEL, std::vector<std::string>({getName()}), client->nick.c_str());
+		return (!custom_send(ms, client));
+	}
+	if (_modes.t && !_hasRights(client->nick)) {
+		ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
+		return (!custom_send(ms, client));
+	}
 	_topic = std::string(newTopic);
-	sendMsgToSocket(socket, std::string("Topic set to: ") + newTopic + "\n");
-	broadcastMsg(nick, socket, std::string("Topic set to: ") + newTopic + "\n");
+	ms = ":" + client->nick + "!~" + client->nick + "@" + client->servername;
+	ms += " TOPIC " + getName() + " :" +_topic;
+	ms += CRLF;
+	custom_send(ms, client);
+	broadcastMsg(client->nick, client->sock, ms);
+	// :mayeul!~mayeul@CJ-eef.m3i.5tviju.IP TOPIC #1 :oui
 	return (true);
 }
 
@@ -50,7 +60,7 @@ bool				Channel::sendMsgToUser(const std::string &userName, const std::string &m
 
 	if (user == _users.end())
 		return (false);
-	return (sendMsgToSocket((*user).second, msg));
+	return (sendMsgToSocket((*user).second->sock, msg));
 }
 
 bool				Channel::broadcastMsg(const std::string &sender, socket_t socket, const std::string &msg)
@@ -61,56 +71,72 @@ bool				Channel::broadcastMsg(const std::string &sender, socket_t socket, const 
 	_users_map::iterator	end = _users.end();
 	while (current != end) {
 		if ((*current).first != sender) { // * send msg to everyone but the sender
-			sendMsgToSocket((*current).second, msg);
+			custom_send(msg, (*current).second);
 		}
 		++current;
 	}
 	return (true);
 }
 
-bool				Channel::join(std::string nick, socket_t socket, const std::string &passwd)
+bool				Channel::join(Client *client, const std::string &passwd)
 {
-	if (!_is_in_chan(nick)) {
+	std::string	ms;
+	if (!_is_in_chan(client->nick)) {
 		if (_modes.k != passwd) {
-			sendMsgToSocket(socket, "bad password\n");
-			return (false);
+			ms = reply_formating(client->servername.c_str(), ERR_BADCHANNELKEY, std::vector<std::string>({getName()}), client->nick.c_str());
+			return (!custom_send(ms, client));
 		}
 		if (_modes.l != -1 && _modes.l >= _modes.users) {
-			sendMsgToSocket(socket, "channel is full\n");
-			return (false);
+			ms = reply_formating(client->servername.c_str(), ERR_CHANNELISFULL, std::vector<std::string>({getName()}), client->nick.c_str());
+			return (!custom_send(ms, client));
 		}
-		if (_modes.i && !_is_in_list(nick, _modes.invitation_list)) {
-			sendMsgToSocket(socket, "channel is invitation only\n");
-			return (false);
+		if (_modes.i && !_is_in_list(client->nick, _modes.invitation_list)) {
+			ms = reply_formating(client->servername.c_str(), ERR_INVITEONLYCHAN, std::vector<std::string>({getName()}), client->nick.c_str());
+			return (!custom_send(ms, client));
 		}
 		if (_modes.p) {
-			sendMsgToSocket(socket, "channel is private\n");
-			return (false);
+			ms = reply_formating(client->servername.c_str(), ERR_NOSUCHCHANNEL, std::vector<std::string>({getName()}), client->nick.c_str());
+			return (!custom_send(ms, client));
 		}
-		_users.insert(std::pair<std::string, socket_t>(nick, socket));
-		_modes.invitation_list.remove(nick);
-		sendMsgToSocket(socket, "Channel joined\n");
+		// on ajoute le client dans le channel, et on le retire de la liste d'invitations
+		_users.insert(std::pair<std::string, Client*>(client->nick, client));
+		_modes.invitation_list.remove(client->nick);
+		
+		std::string	join_msg = ":" + client->nick;
+		join_msg += "!~" + client->nick + "@" + _srv_name;
+		join_msg += " JOIN :" + getName();
+		join_msg += CRLF;
+
+		custom_send(join_msg, client);
+		broadcastMsg(client->nick, client->sock, join_msg);
+
 		// * debug only
-		_print_channel();
+		// _print_channel();
 		return (true);
 	}
-	return (!sendMsgToSocket(socket, "You are already in this channel\n"));
+	return (false);
 }
 
-// TODO broadcast leave msg (reason param)
-bool				Channel::leave(std::string nick, socket_t socket, const std::string &reason, bool kicked)
+bool				Channel::leave(Client *client, const std::string &reason)
 {
+	std::string		ms;
+
 	(void)reason;
-	_users_map::iterator	user = _users.find(nick);
-	if (user == _users.end()) // user was not in the channel
-		return (!sendMsgToSocket(socket, nick + std::string(" is not is the channel ") + getName() + "\n"));
-	if (kicked)
-		sendMsgToSocket((*user).second, "You were kicked from the channel\n");
-	else
-		sendMsgToSocket((*user).second, "Channel left\n");
+	_users_map::iterator	user = _users.find(client->nick);
+	if (user == _users.end()) {
+		ms = reply_formating(client->servername.c_str(), ERR_NOTONCHANNEL, std::vector<std::string>({getName()}), client->nick.c_str());
+		return (!custom_send(ms, client));
+	}
+	ms = ":" + client->nick + "!~a" + client->nick + "@";
+	ms += client->servername + " PART " + getName();
+	ms += (reason != "") ? " :" + reason : "";
+	ms += CRLF;
+	custom_send(ms, client);
+	broadcastMsg(client->nick, client->sock, ms);
+	// :mayeul_!~mayeul@CJ-eef.m3i.5tviju.IP PART #3 :Leaving
 	_users.erase(user);
 	// * debug only
-	_print_channel();
+	// _print_channel();
 	return (true);
 }
 
@@ -125,162 +151,278 @@ std::string Channel::badName(const std::string &name, const std::string &reason)
 }
 
 // modes
-bool	Channel::mode_o(bool append, std::string nick, socket_t socket, const std::string &target)
+bool	Channel::mode_o(bool append, Client *client, const std::string &target)
 {
-	(void)socket;
-	if (append && _hasRights(nick) && _is_in_chan(target) && !_is_in_list(target, _modes.o)) {
-		sendMsgToSocket(socket, "+o succes\n");
+	std::string ms;
+	if (!_is_in_chan(target))
+		return (true);
+	if (append && _hasRights(client->nick)) {
+		if (_is_in_list(target, _modes.o)) // target is already chanop
+			return (true);
 		_modes.o.push_back(target);
-		return (true);
+		ms = ":" + client->nick + "!~" + client->nick + "@";
+		ms += client->servername + " MODE " + getName() + " +o " + target;
+		ms += CRLF;
+		broadcastMsg(client->nick, client->sock, ms);
+		return (custom_send(ms, client));
 	}
 
-	if (!append && _hasRights(nick) && _is_in_chan(target) && _is_in_list(target, _modes.o)) {
-		sendMsgToSocket(socket, "-o succes\n");
+	if (!append && _hasRights(client->nick)) {
+		if (!_is_in_list(target, _modes.o)) // target is not chanop
+			return (true);
 		_modes.o.remove(target);
-		return (true);
+		ms = ":" + client->nick + "!~" + client->nick + "@";
+		ms += client->servername + " MODE " + getName() + " -o " + target;
+		ms += CRLF;
+		broadcastMsg(client->nick, client->sock, ms);
+		return (custom_send(ms, client));
 	}
-	
-	return (!sendMsgToSocket(socket, "You need to be chan op for this\n"));
+	ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
+	return (!custom_send(ms, client));
 }
+		// :mayeul_!~mayeul@CJ-eef.m3i.5tviju.IP MODE #2 +o mayeul
+		// :mayeul_!~mayeul@CJ-eef.m3i.5tviju.IP MODE #2 +p
 
-bool	Channel::mode_v(bool append, std::string nick, socket_t socket, const std::string &target)
+bool	Channel::mode_v(bool append, Client *client, const std::string &target)
 {
-	(void)socket;
-	if (append && _hasRights(nick) && _is_in_chan(target) && !_is_in_list(target, _modes.v)) {
-		sendMsgToSocket(socket, "+v succes\n");
+	std::string ms;
+	if (!_is_in_chan(target))
+		return (true);
+	if (append && _hasRights(client->nick)) {
+		if (_is_in_list(target, _modes.v))
+			return (true);
 		_modes.v.push_back(target);
-		return (true);
+		ms = ":" + client->nick + "!~" + client->nick + "@";
+		ms += client->servername + " MODE " + getName() + " +v " + target;
+		ms += CRLF;
+		broadcastMsg(client->nick, client->sock, ms);
+		return (custom_send(ms, client));
 	}
 
-	if (!append && _hasRights(nick) && _is_in_chan(target) && _is_in_list(target, _modes.v)) {
-		sendMsgToSocket(socket, "-v succes\n");
+	if (!append && _hasRights(client->nick)) {
+		if (!_is_in_list(target, _modes.v))
+			return (true);
 		_modes.v.remove(target);
-		return (true);
+		ms = ":" + client->nick + "!~" + client->nick + "@";
+		ms += client->servername + " MODE " + getName() + " -v " + target;
+		ms += CRLF;
+		broadcastMsg(client->nick, client->sock, ms);
+		return (custom_send(ms, client));
 	}
-	
-	return (!sendMsgToSocket(socket, "You need to be chan op for this\n"));
+	ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
+	return (!custom_send(ms, client));
 }
 
-bool	Channel::mode_p(bool append, std::string nick, socket_t socket)
+bool	Channel::mode_p(bool append, Client *client)
 {
-	(void)socket;
-	if (append && _hasRights(nick)) {
-		sendMsgToSocket(socket, "+p succes\n");
+	std::string ms;
+	if (append && _hasRights(client->nick)) {
 		_modes.p = true;
-		return (true);
+		ms = ":" + client->nick + "!~" + client->nick + "@";
+		ms += client->servername + " MODE " + getName() + " +p";
+		ms += CRLF;
+		broadcastMsg(client->nick, client->sock, ms);
+		return (custom_send(ms, client));
 	}
-	if (!append && _hasRights(nick)) {
-		sendMsgToSocket(socket, "-p succes\n");
+	if (!append && _hasRights(client->nick)) {
 		_modes.p = false;
-		return (true);
+		ms = ":" + client->nick + "!~" + client->nick + "@";
+		ms += client->servername + " MODE " + getName() + " -p";
+		ms += CRLF;
+		broadcastMsg(client->nick, client->sock, ms);
+		return (custom_send(ms, client));
 	}
-	return (!sendMsgToSocket(socket, "You need to be chan op for this\n"));
+	ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
+	return (!custom_send(ms, client));
 }
 
-bool	Channel::mode_s(bool append, std::string nick, socket_t socket)
+bool	Channel::mode_s(bool append, Client *client)
 {
-	(void)socket;
-	if (append && _hasRights(nick)) {
-		sendMsgToSocket(socket, "+s succes\n");
+	std::string ms;
+	if (append && _hasRights(client->nick)) {
 		_modes.s = true;
-		return (true);
+		ms = ":" + client->nick + "!~" + client->nick + "@";
+		ms += client->servername + " MODE " + getName() + " +s";
+		ms += CRLF;
+		broadcastMsg(client->nick, client->sock, ms);
+		return (custom_send(ms, client));
 	}
-	if (!append && _hasRights(nick)) {
-		sendMsgToSocket(socket, "-s succes\n");
+	if (!append && _hasRights(client->nick)) {
 		_modes.s = false;
-		return (true);
+		ms = ":" + client->nick + "!~" + client->nick + "@";
+		ms += client->servername + " MODE " + getName() + " -s";
+		ms += CRLF;
+		broadcastMsg(client->nick, client->sock, ms);
+		return (custom_send(ms, client));
 	}
-	return (!sendMsgToSocket(socket, "You need to be chan op for this\n"));
+	ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
+	return (!custom_send(ms, client));
 }
 
-bool	Channel::mode_i(bool append, std::string nick, socket_t socket)
+bool	Channel::mode_i(bool append, Client *client)
 {
-	(void)socket;
-	if (append && _hasRights(nick)) {
-		sendMsgToSocket(socket, "+i succes\n");
+	std::string ms;
+	if (append && _hasRights(client->nick)) {
 		_modes.i = true;
-		return (true);
+		ms = ":" + client->nick + "!~" + client->nick + "@";
+		ms += client->servername + " MODE " + getName() + " +i";
+		ms += CRLF;
+		broadcastMsg(client->nick, client->sock, ms);
+		return (custom_send(ms, client));
 	}
-	if (!append && _hasRights(nick)) {
-		sendMsgToSocket(socket, "-i succes\n");
+	if (!append && _hasRights(client->nick)) {
 		_modes.i = false;
-		return (true);
+		ms = ":" + client->nick + "!~" + client->nick + "@";
+		ms += client->servername + " MODE " + getName() + " -i";
+		ms += CRLF;
+		broadcastMsg(client->nick, client->sock, ms);
+		return (custom_send(ms, client));
 	}
-	return (!sendMsgToSocket(socket, "You need to be chan op for this\n"));
+	ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
+	return (!custom_send(ms, client));
 }
 
-bool	Channel::mode_t(bool append, std::string nick, socket_t socket)
+bool	Channel::mode_t(bool append, Client *client)
 {
-	(void)socket;
-	if (append && _hasRights(nick)) {
-		sendMsgToSocket(socket, "+t succes\n");
+	std::string ms;
+	if (append && _hasRights(client->nick)) {
 		_modes.t = true;
-		return (true);
+		ms = ":" + client->nick + "!~" + client->nick + "@";
+		ms += client->servername + " MODE " + getName() + " +t";
+		ms += CRLF;
+		broadcastMsg(client->nick, client->sock, ms);
+		return (custom_send(ms, client));
 	}
-	if (!append && _hasRights(nick)) {
-		sendMsgToSocket(socket, "-t succes\n");
+	if (!append && _hasRights(client->nick)) {
 		_modes.t = false;
-		return (true);
+		ms = ":" + client->nick + "!~" + client->nick + "@";
+		ms += client->servername + " MODE " + getName() + " -t";
+		ms += CRLF;
+		broadcastMsg(client->nick, client->sock, ms);
+		return (custom_send(ms, client));
 	}
-	return (!sendMsgToSocket(socket, "You need to be chan op for this\n"));
+	ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
+	return (!custom_send(ms, client));
 }
 
-bool	Channel::mode_m(bool append, std::string nick, socket_t socket)
+bool	Channel::mode_m(bool append, Client *client)
 {
-	(void)socket;
-	if (append && _hasRights(nick)) {
-		sendMsgToSocket(socket, "+m succes\n");
+	std::string ms;
+	if (append && _hasRights(client->nick)) {
 		_modes.m = true;
-		return (true);
+		ms = ":" + client->nick + "!~" + client->nick + "@";
+		ms += client->servername + " MODE " + getName() + " +m";
+		ms += CRLF;
+		broadcastMsg(client->nick, client->sock, ms);
+		return (custom_send(ms, client));
 	}
-	if (!append && _hasRights(nick)) {
-		sendMsgToSocket(socket, "-m succes\n");
+	if (!append && _hasRights(client->nick)) {
 		_modes.m = false;
-		return (true);
+		ms = ":" + client->nick + "!~" + client->nick + "@";
+		ms += client->servername + " MODE " + getName() + " -m";
+		ms += CRLF;
+		broadcastMsg(client->nick, client->sock, ms);
+		return (custom_send(ms, client));
 	}
-	return (!sendMsgToSocket(socket, "You need to be chan op for this\n"));
+	ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
+	return (!custom_send(ms, client));
 }
 
-bool	Channel::mode_l(bool append, std::string nick, socket_t socket, int limit)
+// :mayeul_!~mayeul@CJ-eef.m3i.5tviju.IP MODE #2 +l 1
+bool	Channel::mode_l(bool append, Client *client, int limit)
 {
-	(void)socket;
-	if (append && _hasRights(nick)) {
+	std::string ms;
+	if (append && _hasRights(client->nick)) {
 		_modes.l = limit;
-		sendMsgToSocket(socket, std::string("limit set to ") + std::to_string(limit) + "\n");
-		return (true);
+		ms = ":" + client->nick + "!~" + client->nick + "@";
+		ms += client->servername + " MODE " + getName() + " +l " + std::to_string(limit);
+		ms += CRLF;
+		broadcastMsg(client->nick, client->sock, ms);
+		return (custom_send(ms, client));
 	}
-	if (!append && _hasRights(nick)) {
-		sendMsgToSocket(socket, std::string("limit unset") + "\n");
+	if (!append && _hasRights(client->nick)) {
 		_modes.l = -1;
-		return (true);
+		ms = ":" + client->nick + "!~" + client->nick + "@";
+		ms += client->servername + " MODE " + getName() + " -l";
+		ms += CRLF;
+		broadcastMsg(client->nick, client->sock, ms);
+		return (custom_send(ms, client));
 	}
-	return (!sendMsgToSocket(socket, "You need to be chan op for this\n"));
+	ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
+	return (!custom_send(ms, client));
 }
 
-bool	Channel::mode_k(bool append, std::string nick, socket_t socket, const std::string &passwd)
+bool	Channel::mode_k(bool append, Client *client, const std::string &passwd)
 {
-	(void)socket;
-	if (append && _hasRights(nick)) {
-		sendMsgToSocket(socket, std::string("password set to ") + std::string(passwd) + "\n");
+	std::string ms;
+	if (!_hasRights(client->nick)) {
+		ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
+		return (!custom_send(ms, client));
+	}
+	std::cout << append << " = append\n\n";
+
+	if (append) {
+		if (_modes.k != "") {
+			ms = reply_formating(client->servername.c_str(), ERR_KEYSET, {getName()}, client->nick.c_str());
+			return (!custom_send(ms, client));
+		}
 		_modes.k = passwd;
-		return (true);
-	}
-	if (!append && _hasRights(nick)) {
-		sendMsgToSocket(socket, std::string("password unset ") + "\n");
+		ms = ":" + client->nick + "!~" + client->nick + "@";
+		ms += client->servername + " MODE " + getName() + " +k " + passwd;
+		ms += CRLF;
+		broadcastMsg(client->nick, client->sock, ms);
+		return (custom_send(ms, client));
+	} else {
+		std::cout << "WE ENTER HERE\n\n";
 		_modes.k = "";
-		return (true);
+		ms = ":" + client->nick + "!~" + client->nick + "@";
+		ms += client->servername + " MODE " + getName() + " -k";
+		ms += CRLF;
+		broadcastMsg(client->nick, client->sock, ms);
+		return (custom_send(ms, client));
 	}
-	return (!sendMsgToSocket(socket, "You need to be chan op for this\n"));
+	std::cout << "WE RETURN HERE (NEVER)\n\n";
 }
 
-bool	Channel::kick(std::string nick, socket_t socket, const std::string &guyToKick, const std::string &reason)
+void	Channel::getModes(Client *client)
 {
-	if (_hasRights(nick)) {
-		if (!_is_in_chan(guyToKick))
-			return (!sendMsgToSocket(socket, guyToKick + " is not in chan\n"));
-		return (leave(guyToKick, socket, reason, true));
+	// :chatjunkies.org 324 mayeul_ #2 +int
+	std::string	ms;
+	std::string	modes = "+";
+	modes += _modes.p ? "p" : "";
+	modes += _modes.s ? "s" : "";
+	modes += _modes.i ? "i" : "";
+	modes += _modes.t ? "t" : "";
+	modes += _modes.m ? "m" : "";
+	modes += _modes.l != -1 ? "l" : "";
+	modes += _modes.k != "" ? "k" : "";
+	std::vector<std::string>	params({getName(), modes, ""});
+	ms = reply_formating(client->servername.c_str(), RPL_CHANNELMODEIS, params, client->nick.c_str());
+	custom_send(ms, client);
+}
+
+bool	Channel::kick(Client *client, const std::string &guyToKick, const std::string &reason)
+{
+	std::string	ms;
+	_users_map::iterator	userToKick = _users.find(guyToKick);
+
+	if (_hasRights(client->nick)) {
+		if (userToKick == _users.end()) {
+			ms = reply_formating(client->servername.c_str(), ERR_USERNOTINCHANNEL, std::vector<std::string>({guyToKick, getName()}), client->nick.c_str());
+			return (!custom_send(ms, client));
+		}
+		ms = ":" + client->nick + "!~a" + client->nick + "@";
+		ms += client->servername + " KICK " + getName() + " " + guyToKick;
+		ms += (reason != "") ? " :" + reason : " :" + client->nick;
+		ms += CRLF;
+		custom_send(ms, client);
+		broadcastMsg(client->nick, client->sock, ms);
+		_users.erase(userToKick);
+		// :mayeul!~mayeul@CJ-eef.m3i.5tviju.IP KICK #1 mayeul_ :je te banis
+		return (true);
 	}
-	return (false);
+	ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
+	return (!custom_send(ms, client));
 }
 
 bool	Channel::invite(std::string nick, socket_t socket, const std::string &guyToInvite)
@@ -300,4 +442,17 @@ bool	Channel::invite(std::string nick, socket_t socket, const std::string &guyTo
 bool				Channel::isEmpty() const
 {
 	return (_users.empty());
+}
+
+std::string			Channel::parseArg(size_t fromIndex, const std::vector<std::string> &args) // [":a", "b", "c"]
+{
+	if (args[fromIndex] == "")
+		return ("");
+	std::string	argToReturn = args[fromIndex].substr(1);
+	++fromIndex;
+	while (fromIndex < args.size()) {
+		argToReturn += " ";
+		argToReturn += args[fromIndex++];
+	}
+	return (argToReturn);
 }

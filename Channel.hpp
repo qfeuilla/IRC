@@ -8,14 +8,19 @@
 #include <algorithm>
 #include <list>
 #include <map>
+#include "Client.hpp"
+#include "ft_irc.hpp"
 
 class Client;
+
+bool		custom_send(std::string ms, Client *c);
+
 class Channel
 {
 public:
 	typedef	int			socket_t;
 private:
-	typedef	std::map<std::string, socket_t>	_users_map;
+	typedef	std::map<std::string, Client*>	_users_map;
 	class _Chan_modes
 	{
 	public:
@@ -32,7 +37,7 @@ private:
 		int			l; // User limit
 		std::string	k; // Channel password
 		int			users;
-		_Chan_modes(): invitation_list(), o(), v(), p(false), s(false), i(false), t(false), m(false), l(-1), k(), users(0) {}
+		_Chan_modes(): invitation_list(), o(), v(), p(false), s(false), i(false), t(true), m(false), l(-1), k(), users(0) {}
 	};
 	
 	
@@ -40,6 +45,8 @@ private:
 	_users_map		_users;
 	_Chan_modes		_modes;
 	std::string		_topic;
+
+	std::string		_srv_name;
 
 	bool		_hasRights(const std::string &userName)
 	{
@@ -70,42 +77,46 @@ private:
 	}
 public:
 	Channel();
-	Channel(const std::string &name, std::string nick, socket_t socket);
+	Channel(const std::string &name, Client *client, const std::string &srvName);
 	~Channel();
 	Channel	&operator=(const Channel& other);
 
 	const std::string	&getName() const;
 	const std::string	&getTopic() const;
-	bool				setTopic(std::string nick, socket_t socket, const std::string &newTopic);
+	bool				setTopic(Client *client, const std::string &newTopic);
 	bool				isEmpty() const;
 
 	// * sendMsgToSocket always returns true
 	static bool			sendMsgToSocket(socket_t socket, const std::string &msg);
 	bool				sendMsgToUser(const std::string &userName, const std::string &msg);
+
+	static std::string	parseArg(size_t fromIndex, const std::vector<std::string> &args);
 	
 	// * send msg to everyone in the channel but the sender
 	bool				broadcastMsg(const std::string &sender, socket_t socket, const std::string &msg);
 
 	// *	join returns true on succes (false if socket was already in the channel before the call)
-	bool				join(std::string nick, socket_t socket, const std::string &passwd);
+	bool				join(Client *client, const std::string &passwd);
 	// *	leave returns true on succes
-	bool				leave(std::string nick, socket_t socket, const std::string &reason, bool kicked = false);
+	bool				leave(Client *client, const std::string &reason);
 	// *	kick returns true on succes
-	bool				kick(std::string nick, socket_t socket, const std::string &guyToKick, const std::string &reason);
+	bool				kick(Client *client, const std::string &guyToKick, const std::string &reason);
 	// *	invite returns true on succes
 	bool				invite(std::string nick, socket_t socket, const std::string &guyToInvite);
 
 	// MODES METHODS
-	bool	mode_o(bool append, std::string nick, socket_t socket, const std::string &target);
-	bool	mode_v(bool append, std::string nick, socket_t socket, const std::string &target);
+	bool	mode_o(bool append, Client *client, const std::string &target);
+	bool	mode_v(bool append, Client *client, const std::string &target);
 
-	bool	mode_p(bool append, std::string nick, socket_t socket);
-	bool	mode_s(bool append, std::string nick, socket_t socket);
-	bool	mode_i(bool append, std::string nick, socket_t socket);
-	bool	mode_t(bool append, std::string nick, socket_t socket);
-	bool	mode_m(bool append, std::string nick, socket_t socket);
-	bool	mode_l(bool append, std::string nick, socket_t socket, int limit);
-	bool	mode_k(bool append, std::string nick, socket_t socket, const std::string &passwd);
+	bool	mode_p(bool append, Client *client);
+	bool	mode_s(bool append, Client *client);
+	bool	mode_i(bool append, Client *client);
+	bool	mode_t(bool append, Client *client);
+	bool	mode_m(bool append, Client *client);
+	bool	mode_l(bool append, Client *client, int limit);
+	bool	mode_k(bool append, Client *client, const std::string &passwd);
+
+	void	getModes(Client *client);
 
 	// errors
 	static std::string	badName(const std::string &name, const std::string &reason);

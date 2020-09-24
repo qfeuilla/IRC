@@ -44,6 +44,8 @@ Server::Server() {
 	ev->loc2 = std::string("42born2code");
 	ev->emails.push_back("quentin.feuillade33@gmail.com");
 	ev->emails.push_back("m.lemoniesdesagazan@gmail.com");
+
+	ev->channels->setSrvName(*(ev->serv));
 }
 
 void		Server::load_options(int ac, char **av) {
