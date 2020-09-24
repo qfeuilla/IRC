@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 18:28:49 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/17 22:41:48 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/24 13:57:06 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,7 +16,7 @@
 
 void	main_loop(Server *se)
 {
-	while (1)
+	while (se->active())
 	{
 		se->init_fd();
 		se->serv_select();

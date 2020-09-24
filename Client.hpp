@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:50:59 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/23 23:47:00 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/24 14:55:43 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -48,6 +48,13 @@ public:
 	void				WHOWAS(Command *);
 	void				KILL(Command *);
 	void				PING(Command *);
+	void				AWAY(Command *);
+	void				DIE(Command *);
+	void				SUMMON(Command *);
+	void				USERS(Command *);
+	void				WALLOPS(Command *);
+	void				USERHOST(Command *);
+	void				ISON(Command *);
 
 	int					execute_parsed(Command *);
 
@@ -71,6 +78,9 @@ public:
 	bool				s_mode;
 	
 	struct sockaddr_in	csin;
+
+	bool				is_away = false;
+	std::string			away_ms;
 
 	int					recv_ms = 0;
 	int					send_ms = 0;

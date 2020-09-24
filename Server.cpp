@@ -122,3 +122,7 @@ void		Server::do_actions() {
 		i++;
 	}
 }
+
+bool		Server::active() {
+	return (ev->active);
+}

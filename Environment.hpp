@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:54:23 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/23 19:47:59 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/24 13:58:01 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -50,6 +50,8 @@ public:
 	std::vector<std::string>	emails;
 	std::string					loc1;
 	std::string					loc2;
+
+	bool						active = true;
 };
 
 #endif 

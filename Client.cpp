@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:51:25 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/24 00:07:52 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/24 15:03:06 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -70,6 +70,7 @@ Client::Client(const Client &old) {
 	servername = old.servername;
 	realname = old.realname;
 	ev = old.ev;
+	away_ms = "sleeping";
 }
 
 void	Client::PASS(Command *cmd) {
@@ -192,7 +193,15 @@ void	Client::exec_registerMS() {
 	tmp += " +i";
 	tmp += CR;
 	execute_parsed(parse(tmp));
-	
+	tmp = "";
+	tmp += ":";
+	tmp += servername;
+	tmp += " WALLOPS ";
+	tmp += ": new User with nick : ";
+	tmp += nick;
+	tmp += " Join the server";
+	tmp += CR;
+	execute_parsed(parse(tmp));
 	// TODO : need more functions (i will do)
 }
 
@@ -394,6 +403,10 @@ void	Client::PRIVMSG(Command *cmd) {
 					ms += CRLF;
 					custom_send(ms, c);
 					good += 1;
+					if (c->is_away) {
+						ms = reply_formating(servername.c_str(), RPL_AWAY, std::vector<std::string>({c->nick, c->away_ms}), nick.c_str());
+						custom_send(ms, this);
+					}
 				} else {
 					ms = reply_formating(servername.c_str(), ERR_NOSUCHNICK, {targ}, nick.c_str());
 					custom_send(ms, this);
@@ -859,6 +872,133 @@ void	Client::PING(Command *cmd) {
 	}
 }
 
+void	Client::AWAY(Command *cmd) {
+	std::string ms;
+	ev->cmd_count["AWAY"] += 1;
+
+	if (cmd->arguments.size() >= 1) {
+		is_away = true;
+		for (size_t i = 0; i < cmd->arguments.size(); i++) {
+			ms += cmd->arguments[i];
+			ms += " ";
+		}
+		away_ms = ms;
+		ms = reply_formating(servername.c_str(), RPL_AWAY, std::vector<std::string>({nick, ms}), nick.c_str());
+		custom_send(ms, this);
+	} else {
+		is_away = false;
+		ms = reply_formating(servername.c_str(), RPL_UNAWAY, {}, nick.c_str());
+		custom_send(ms, this);
+	}
+}
+
+void	Client::DIE(Command *cmd) {
+	(void)cmd;
+	std::string ms;
+	ev->cmd_count["DIE"] += 1;
+
+	if (o_mode) {
+		ev->active = false;
+	} else {
+		ms = reply_formating(servername.c_str(), ERR_NOPRIVILEGES, {}, nick.c_str());
+		custom_send(ms, this);
+	}
+}
+
+void	Client::SUMMON(Command *cmd) {
+	(void)cmd;
+	std::string ms;
+	ev->cmd_count["SUMMON"] += 1;
+
+	ms = reply_formating(servername.c_str(), ERR_SUMMONDISABLED, {}, nick.c_str());
+	custom_send(ms, this);
+}
+
+void	Client::USERS(Command *cmd) {
+	(void)cmd;
+	std::string ms;
+	ev->cmd_count["USERS"] += 1;
+
+	ms = reply_formating(servername.c_str(), ERR_USERSDISABLED, {}, nick.c_str());
+	custom_send(ms, this);
+}
+
+void	Client::WALLOPS(Command *cmd) {
+	std::string ms;
+	ev->cmd_count["WALLOPS"] += 1;
+
+	if (!cmd->prefix.empty() && !check_nick(cmd->prefix)) {
+		// * Command only send by a server
+		if (cmd->arguments.size() >= 1) {
+			ms = ":";
+			ms += servername;
+			ms += " WALLOPS ";
+			ms += nick;
+			ms += " ";
+			for (size_t i = 0; i < cmd->arguments.size(); i++) {
+				ms += cmd->arguments[i];
+				ms += " ";
+			}
+			for (Fd *f : ev->search_list_with_mode("", "", 'w')) {
+				Client *c = reinterpret_cast<Client *>(f);
+				ms += CRLF;
+				custom_send(ms, c);
+			}
+		}
+	} else {
+		ms = reply_formating(servername.c_str(), ERR_NOCLIENTCMD, {}, nick.c_str());
+		custom_send(ms, this);
+	}
+}
+
+void	Client::USERHOST(Command *cmd) {
+	std::string ms;
+	ev->cmd_count["USERHOST"] += 1;
+	std::vector<Fd *>		tmp;
+
+	if (cmd->arguments.size() >= 1) {
+		for (std::string targ : cmd->arguments) {
+			if (!(tmp = ev->search_list_nick(targ)).empty()) {
+				Client *c = reinterpret_cast<Client *>(tmp[0]);
+				ms += " ";
+				ms += c->nick;
+				ms += "=";
+				ms += c->username;
+				ms += "@";
+				ms += c->hostname;
+				ms += "/";
+				ms += std::to_string(htons(c->csin.sin_port));
+			}
+		}
+		ms = reply_formating(servername.c_str(), RPL_USERHOST, {ms}, nick.c_str());
+		custom_send(ms, this);
+	} else {
+		ms = reply_formating(servername.c_str(), ERR_NEEDMOREPARAMS, {cmd->line}, nick.c_str());
+		custom_send(ms, this);
+	}
+}
+
+void	Client::ISON(Command *cmd) {
+	std::string ms;
+	ev->cmd_count["ISON"] += 1;
+	std::vector<Fd *>		tmp;
+
+	if (cmd->arguments.size() >= 1) {
+		for (std::string targ : cmd->arguments) {
+			if (!(tmp = ev->search_list_nick(targ)).empty()) {
+				Client *c = reinterpret_cast<Client *>(tmp[0]);
+				ms += " ";
+				ms += c->nick;
+			}
+		}
+		ms = reply_formating(servername.c_str(), RPL_ISON, {ms}, nick.c_str());
+		custom_send(ms, this);
+	} else {
+		ms = reply_formating(servername.c_str(), ERR_NEEDMOREPARAMS, {cmd->line}, nick.c_str());
+		custom_send(ms, this);
+	}
+}
+
 int		Client::execute_parsed(Command *parsed) {
 	switch (parsed->cmd_code())
 	{
@@ -927,6 +1067,27 @@ int		Client::execute_parsed(Command *parsed) {
 		break;
 	case PING_CC:
 		PING(parsed);
+		break;
+	case AWAY_CC:
+		AWAY(parsed);
+		break;
+	case DIE_CC:
+		DIE(parsed);
+		break;
+	case SUMMON_CC:
+		SUMMON(parsed);
+		break;
+	case USERS_CC:
+		USERS(parsed);
+		break;
+	case WALLOPS_CC:
+		WALLOPS(parsed);
+		break;
+	case USERHOST_CC:
+		USERHOST(parsed);
+		break;
+	case ISON_CC:
+		ISON(parsed);
 		break;
 	default:
 		break;

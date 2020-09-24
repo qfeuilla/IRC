@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/20 17:01:28 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/24 00:07:49 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/24 15:03:03 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -68,17 +68,17 @@
 # define PING_CC		34 // TODO : extanding when multi server
 # define PONG_CC		35 // * Only reply
 # define ERROR_CC		36 // TODO : when server to server
-# define AWAY_CC		37
-# define REHASH_CC		38
-# define DIE_CC			39
-# define RESTART_CC		40
-# define SUMMON_CC		41
-# define USERS_CC		42
-# define WALLOPS_CC		43
-# define USERHOST_CC	44
-# define ISON_CC		45
-# define SERVER_CC		46
-# define NJOIN_CC		47
+# define AWAY_CC		37 // * done
+# define REHASH_CC		38 // * No config file for server 
+# define DIE_CC			39 // * done
+# define RESTART_CC		40 // * optionnal for security reason so not used
+# define SUMMON_CC		41 // * done
+# define USERS_CC		42 // * done
+# define WALLOPS_CC		43 // * done
+# define USERHOST_CC	44 // * done
+# define ISON_CC		45 // * done
+# define SERVER_CC		46 // TODO : when server to server
+# define NJOIN_CC		47 // TODO : when server to server
 
 // * Messages necessay rights to execute
 
@@ -99,9 +99,9 @@
 // "Try server <server name>, port <port number>"
 # define RPL_BOUNCE            {"005", "Try server {}, port {}", 2}
 // ":*1<reply> *( " " <reply> )" // * -> one arg
-# define RPL_USERHOST          {"302", "{}", 1}
+# define RPL_USERHOST          {"302", ":{}", 1}
 // ":*1<nick> *( " " <nick> )" // *-> one arg
-# define RPL_ISON              {"303", "{}", 1}
+# define RPL_ISON              {"303", ":{}", 1}
 //  "<nick> :<away message>"
 # define RPL_AWAY              {"301", "{} :{}", 2}
 // 
@@ -316,7 +316,7 @@
 // 
 # define ERR_SUMMONDISABLED    {"445", ":SUMMON has been disabled", 0}
 // 
-# define ERR_USERSDISABLED     {"446", ":USERS has been disabled", 0}
+# define ERR_USERSDISABLED     {"446", ":USERS has been disabled please use WHOIS to querry user informations", 0}
 // 
 # define ERR_NOTREGISTERED     {"451", ":You have not registered", 0}
 // "<command> :Not enough parameters"
@@ -357,8 +357,10 @@
 # define ERR_CANTKILLSERVER    {"483", ":You can't kill a server!", 0}
 // 
 # define ERR_RESTRICTED        {"484", ":Your connection is restricted!", 0}
-// 
+//
 # define ERR_UNIQOPPRIVSNEEDED {"485", ":You're not the original channel operator", 0}
+// 
+# define ERR_NOCLIENTCMD	   {"486", ":This Command is not allowed to be emmited by a client", 0}
 // 
 # define ERR_NOOPERHOST        {"491", ":No O-lines for your host", 0}
 // 

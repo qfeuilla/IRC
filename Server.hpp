@@ -37,6 +37,8 @@ public:
 	void			serv_select();
 	void			do_actions();
 
+	bool			active();
+
 private:
 	int					port;
 	int					action;
