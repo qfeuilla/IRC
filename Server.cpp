@@ -11,25 +11,9 @@
 /* ************************************************************************** */
 
 #include "Server.hpp"
-#include <stdlib.h>
-#include <iostream>
-#include <netdb.h>
-#include <sys/select.h>
-#include <fcntl.h>
-#include <string.h>
 
 Server::~Server() {
 	std::cout << "server destructed" << std::endl;
-}
-
-std::string		Server::generate_servname(std::string ex) {
-	std::string		gen;
-	std::vector<std::string> names = {"ampere", "archimedes", "aristote", "becquerel", "bohr", "bose", "boyle", "carson", "copernicus", "watson", "curie", "cuvier", "dalton", "darwin", "einstein", "faraday", "fermi", "feynman", "fleming", "franklin", "feuillade", "galilei", "hawking", "hershel", "hertz", "hippocrates", "hubble", "joule", "kepler", "lavoisier", "lovelace", "maxwell", "mendeleev", "newton", "nobel", "pasteur", "planck", "rutherford", "thomson", "kelvin", "volta", "wegener"};
-
-	srand(time(0));
-	gen = names[rand() % names.size()];
-	gen += ex;
-	return (gen);
 }
 
 Server::Server() {
@@ -38,7 +22,6 @@ Server::Server() {
 	ev->password = new std::string("");
 	time(&ev->start);
 	ev->accept_operators = true;
-	ev->serv = new std::string(generate_servname(EX_NAME));
 	ev->version = new std::string("ft_irc_0.4.2b");
 	ev->loc1 = std::string("Paris, France");
 	ev->loc2 = std::string("42born2code");
@@ -46,14 +29,74 @@ Server::Server() {
 	ev->emails.push_back("m.lemoniesdesagazan@gmail.com");
 }
 
+bool			Server::load_other_servs(std::string servinfo) {
+	(void)servinfo;
+	struct sockaddr_in	serv_addr;
+	int sock_serv;
+	std::string			ms;
+
+	if ((sock_serv = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+		perror("socker creation error\n");
+		return (EXIT_FAILURE);
+	}
+
+	serv_addr.sin_family = AF_INET;
+	serv_addr.sin_port = htons(6667);
+	
+	// convert address from IPv4 text to binary inside the adress struct
+	if (inet_pton(serv_addr.sin_family, "195.154.200.232", &serv_addr.sin_addr) <= 0) {
+		perror("invalid address, or not supported\n");
+		return (EXIT_FAILURE);
+	}
+
+	if (connect(sock_serv, reinterpret_cast<struct sockaddr *>(&serv_addr), sizeof(serv_addr)) < 0) {
+		perror("Connection to the server failed\n");
+		return(EXIT_FAILURE);
+	}
+
+	int			r;
+	send(sock_serv, ms.c_str(), ms.size(), 0);
+	ms = "SERVER 88.120.198.47 1 :test serv ft irc";
+	ms += CRLF;
+	send(sock_serv, ms.c_str(), ms.size(), 0);
+
+	std::cerr << "READ OTHER SERVER : " << std::endl;
+	
+	while (true) {
+		memset(&buf_read, 0, BUF_SIZE + 1);
+		r = recv(sock_serv, &buf_read, BUF_SIZE, 0);
+		std::string tmp;
+		tmp = std::string(buf_read);
+		tmp = std::string(&tmp[0], &tmp[tmp.size() - 2]);
+		std::cerr << tmp << std::endl;
+	}
+
+	delete ev->clients_fd[sock_serv];
+	ev->clients_fd[sock_serv] = new OtherServ(sock_serv);
+
+	return (true);
+}
+
 void		Server::load_options(int ac, char **av) {
-	if (ac != 3) {
-		std::cerr << "Usage: " << av[0] <<" <port> <password>" << std::endl;
+	if (ac == 3) {
+		port = std::atoi(av[1]);
+		delete ev->password;
+		ev->password = new std::string(av[2]);
+		create();
+	} else if (ac == 4) {
+		port = std::atoi(av[2]);
+		delete ev->password;
+		ev->password = new std::string(av[3]);
+		create();
+		if (!load_other_servs(av[1])) {
+			std::cerr << "Error on link server info";
+			exit(EXIT_FAILURE);
+		}
+	}
+	else {
+		std::cerr << "Usage: " << av[0] <<"[host:port:password] <port> <password>" << std::endl;
 		exit(EXIT_FAILURE);
 	}
-	port = std::atoi(av[1]);
-	delete ev->password;
-	ev->password = new std::string(av[2]);
 }
 
 void		Server::create() {
@@ -68,12 +111,13 @@ void		Server::create() {
 		exit (EXIT_FAILURE);
 	}
 	sin.sin_family = AF_INET;
-	sin.sin_addr.s_addr = inet_addr("10.0.2.15");
+	sin.sin_addr.s_addr = INADDR_ANY;
 	sin.sin_port = htons(port);
 	X(-1, bind(sock, (struct sockaddr*)&sin, sizeof(sin)), "bind");
 	X(-1, listen(sock, 42), "listen");
 	ev->clients_fd[sock] = this;
 	ev->sin = sin;
+	ev->serv = new std::string(inet_ntoa(sin.sin_addr));
 }
 
 void		Server::accept_srv() {

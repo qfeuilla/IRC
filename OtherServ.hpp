@@ -1,34 +1,29 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   main.cpp                                           :+:      :+:    :+:   */
+/*   OtherServ.hpp                                      :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2020/09/17 18:28:49 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/24 19:22:08 by qfeuilla         ###   ########.fr       */
+/*   Created: 2020/09/24 21:36:23 by qfeuilla          #+#    #+#             */
+/*   Updated: 2020/09/24 23:20:19 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
+#ifndef OTHERSERV_HPP
+# define OTHERSERV_HPP
+
 #include "ft_irc.hpp"
-#include "Server.hpp"
-#include <iostream>
+#include "Fd.hpp"
 
-void	main_loop(Server *se)
-{
-	while (se->active())
-	{
-		se->init_fd();
-		se->serv_select();
-		se->do_actions();
-	}
-}
+class OtherServ : public Fd {
+public:
+	OtherServ(int);
 
-int	main(int ac, char **av)
-{
-	Server *s = new Server();
+	~OtherServ();
 
-	s->load_options(ac, av);
-	main_loop(s);
-	return (0);
-}
+	virtual void	read_func();
+	virtual void	write_func();
+};
+
+#endif

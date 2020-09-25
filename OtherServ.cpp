@@ -1,34 +1,23 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   main.cpp                                           :+:      :+:    :+:   */
+/*   OtherServ.cpp                                      :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2020/09/17 18:28:49 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/24 19:22:08 by qfeuilla         ###   ########.fr       */
+/*   Created: 2020/09/24 21:36:03 by qfeuilla          #+#    #+#             */
+/*   Updated: 2020/09/24 23:20:27 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "ft_irc.hpp"
-#include "Server.hpp"
-#include <iostream>
+#include "OtherServ.hpp"
 
-void	main_loop(Server *se)
-{
-	while (se->active())
-	{
-		se->init_fd();
-		se->serv_select();
-		se->do_actions();
-	}
+OtherServ::OtherServ(int socket) {
+	sock = socket;
 }
 
-int	main(int ac, char **av)
-{
-	Server *s = new Server();
+OtherServ::~OtherServ() { }
 
-	s->load_options(ac, av);
-	main_loop(s);
-	return (0);
-}
+void	OtherServ::read_func() { }
+
+void	OtherServ::write_func() { }
