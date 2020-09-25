@@ -111,9 +111,6 @@ public:
 
 	void	getModes(Client *client);
 
-	// * errors (will be deleted soon) 
-	static std::string	badName(const std::string &name, const std::string &reason);
-
 	bool	isInChan(const std::string &userName);
 
 };

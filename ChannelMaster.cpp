@@ -252,8 +252,7 @@ bool	ChannelMaster::broadcastMsg(Client *client, const std::string &chanName, co
 		ms = reply_formating(client->servername.c_str(), ERR_CANNOTSENDTOCHAN, {chanName}, client->nick.c_str());
 		return (!custom_send(ms, client));
 	}
-	// :mayeul_!~creator@ip-46.net-80-236-89.joinville.rev.numericable.fr PRIVMSG #oui :-c'est super non ?
-	ms = ":" + client->nick + "!~" + channel->getCreator() + "@" + client->servername + " PRIVMSG ";
+	ms = ":" + client->nick + "!~" + client->username + "@" + client->servername + " PRIVMSG ";
 	ms += channel->getName() + " :" + msgToSend;
 	ms += CRLF;
 	return (channel->broadcastMsg(client, ms));

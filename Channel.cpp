@@ -43,12 +43,11 @@ bool				Channel::setTopic(Client *client, const std::string &newTopic)
 		return (!custom_send(ms, client));
 	}
 	_topic = std::string(newTopic);
-	ms = ":" + client->nick + "!~" + client->nick + "@" + client->servername;
+	ms = ":" + client->nick + "!~" + client->username + "@" + client->servername;
 	ms += " TOPIC " + getName() + " :" +_topic;
 	ms += CRLF;
 	custom_send(ms, client);
 	broadcastMsg(client, ms);
-	// :mayeul!~mayeul@CJ-eef.m3i.5tviju.IP TOPIC #1 :oui
 	return (true);
 }
 
@@ -92,15 +91,12 @@ bool				Channel::join(Client *client, const std::string &passwd)
 		_modes.invitation_list.remove(client->nick);
 		
 		std::string	join_msg = ":" + client->nick;
-		join_msg += "!~" + client->nick + "@" + _srv_name;
+		join_msg += "!~" + client->username + "@" + _srv_name;
 		join_msg += " JOIN :" + getName();
 		join_msg += CRLF;
 
 		custom_send(join_msg, client);
 		broadcastMsg(client, join_msg);
-
-		// * debug only
-		// _print_channel();
 		return (true);
 	}
 	return (false);
@@ -116,27 +112,14 @@ bool				Channel::leave(Client *client, const std::string &reason)
 		ms = reply_formating(client->servername.c_str(), ERR_NOTONCHANNEL, std::vector<std::string>({getName()}), client->nick.c_str());
 		return (!custom_send(ms, client));
 	}
-	ms = ":" + client->nick + "!~a" + client->nick + "@";
+	ms = ":" + client->nick + "!~a" + client->username + "@";
 	ms += client->servername + " PART " + getName();
 	ms += (reason != "") ? " :" + reason : "";
 	ms += CRLF;
 	custom_send(ms, client);
 	broadcastMsg(client, ms);
-	// :mayeul_!~mayeul@CJ-eef.m3i.5tviju.IP PART #3 :Leaving
 	_users.erase(user);
-	// * debug only
-	// _print_channel();
 	return (true);
-}
-
-// errors
-std::string Channel::badName(const std::string &name, const std::string &reason) {
-	std::string	errorMsg = "Bad channel name: ";
-	errorMsg += reason;
-	errorMsg += ": ";
-	errorMsg += name;
-	errorMsg += '\n';
-	return (errorMsg);
 }
 
 // modes
@@ -149,7 +132,7 @@ bool	Channel::mode_o(bool append, Client *client, const std::string &target)
 		if (_is_in_list(target, _modes.o)) // target is already chanop
 			return (true);
 		_modes.o.push_back(target);
-		ms = ":" + client->nick + "!~" + client->nick + "@";
+		ms = ":" + client->nick + "!~" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " +o " + target;
 		ms += CRLF;
 		broadcastMsg(client, ms);
@@ -160,7 +143,7 @@ bool	Channel::mode_o(bool append, Client *client, const std::string &target)
 		if (!_is_in_list(target, _modes.o)) // target is not chanop
 			return (true);
 		_modes.o.remove(target);
-		ms = ":" + client->nick + "!~" + client->nick + "@";
+		ms = ":" + client->nick + "!~" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " -o " + target;
 		ms += CRLF;
 		broadcastMsg(client, ms);
@@ -169,8 +152,6 @@ bool	Channel::mode_o(bool append, Client *client, const std::string &target)
 	ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
 	return (!custom_send(ms, client));
 }
-		// :mayeul_!~mayeul@CJ-eef.m3i.5tviju.IP MODE #2 +o mayeul
-		// :mayeul_!~mayeul@CJ-eef.m3i.5tviju.IP MODE #2 +p
 
 bool	Channel::mode_v(bool append, Client *client, const std::string &target)
 {
@@ -181,7 +162,7 @@ bool	Channel::mode_v(bool append, Client *client, const std::string &target)
 		if (_is_in_list(target, _modes.v))
 			return (true);
 		_modes.v.push_back(target);
-		ms = ":" + client->nick + "!~" + client->nick + "@";
+		ms = ":" + client->nick + "!~" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " +v " + target;
 		ms += CRLF;
 		broadcastMsg(client, ms);
@@ -192,7 +173,7 @@ bool	Channel::mode_v(bool append, Client *client, const std::string &target)
 		if (!_is_in_list(target, _modes.v))
 			return (true);
 		_modes.v.remove(target);
-		ms = ":" + client->nick + "!~" + client->nick + "@";
+		ms = ":" + client->nick + "!~" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " -v " + target;
 		ms += CRLF;
 		broadcastMsg(client, ms);
@@ -207,7 +188,7 @@ bool	Channel::mode_p(bool append, Client *client)
 	std::string ms;
 	if (append && _hasRights(client->nick)) {
 		_modes.p = true;
-		ms = ":" + client->nick + "!~" + client->nick + "@";
+		ms = ":" + client->nick + "!~" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " +p";
 		ms += CRLF;
 		broadcastMsg(client, ms);
@@ -215,7 +196,7 @@ bool	Channel::mode_p(bool append, Client *client)
 	}
 	if (!append && _hasRights(client->nick)) {
 		_modes.p = false;
-		ms = ":" + client->nick + "!~" + client->nick + "@";
+		ms = ":" + client->nick + "!~" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " -p";
 		ms += CRLF;
 		broadcastMsg(client, ms);
@@ -230,7 +211,7 @@ bool	Channel::mode_s(bool append, Client *client)
 	std::string ms;
 	if (append && _hasRights(client->nick)) {
 		_modes.s = true;
-		ms = ":" + client->nick + "!~" + client->nick + "@";
+		ms = ":" + client->nick + "!~" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " +s";
 		ms += CRLF;
 		broadcastMsg(client, ms);
@@ -238,7 +219,7 @@ bool	Channel::mode_s(bool append, Client *client)
 	}
 	if (!append && _hasRights(client->nick)) {
 		_modes.s = false;
-		ms = ":" + client->nick + "!~" + client->nick + "@";
+		ms = ":" + client->nick + "!~" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " -s";
 		ms += CRLF;
 		broadcastMsg(client, ms);
@@ -253,7 +234,7 @@ bool	Channel::mode_i(bool append, Client *client)
 	std::string ms;
 	if (append && _hasRights(client->nick)) {
 		_modes.i = true;
-		ms = ":" + client->nick + "!~" + client->nick + "@";
+		ms = ":" + client->nick + "!~" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " +i";
 		ms += CRLF;
 		broadcastMsg(client, ms);
@@ -261,7 +242,7 @@ bool	Channel::mode_i(bool append, Client *client)
 	}
 	if (!append && _hasRights(client->nick)) {
 		_modes.i = false;
-		ms = ":" + client->nick + "!~" + client->nick + "@";
+		ms = ":" + client->nick + "!~" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " -i";
 		ms += CRLF;
 		broadcastMsg(client, ms);
@@ -276,7 +257,7 @@ bool	Channel::mode_t(bool append, Client *client)
 	std::string ms;
 	if (append && _hasRights(client->nick)) {
 		_modes.t = true;
-		ms = ":" + client->nick + "!~" + client->nick + "@";
+		ms = ":" + client->nick + "!~" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " +t";
 		ms += CRLF;
 		broadcastMsg(client, ms);
@@ -284,7 +265,7 @@ bool	Channel::mode_t(bool append, Client *client)
 	}
 	if (!append && _hasRights(client->nick)) {
 		_modes.t = false;
-		ms = ":" + client->nick + "!~" + client->nick + "@";
+		ms = ":" + client->nick + "!~" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " -t";
 		ms += CRLF;
 		broadcastMsg(client, ms);
@@ -299,7 +280,7 @@ bool	Channel::mode_m(bool append, Client *client)
 	std::string ms;
 	if (append && _hasRights(client->nick)) {
 		_modes.m = true;
-		ms = ":" + client->nick + "!~" + client->nick + "@";
+		ms = ":" + client->nick + "!~" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " +m";
 		ms += CRLF;
 		broadcastMsg(client, ms);
@@ -307,7 +288,7 @@ bool	Channel::mode_m(bool append, Client *client)
 	}
 	if (!append && _hasRights(client->nick)) {
 		_modes.m = false;
-		ms = ":" + client->nick + "!~" + client->nick + "@";
+		ms = ":" + client->nick + "!~" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " -m";
 		ms += CRLF;
 		broadcastMsg(client, ms);
@@ -317,13 +298,12 @@ bool	Channel::mode_m(bool append, Client *client)
 	return (!custom_send(ms, client));
 }
 
-// :mayeul_!~mayeul@CJ-eef.m3i.5tviju.IP MODE #2 +l 1
 bool	Channel::mode_l(bool append, Client *client, int limit)
 {
 	std::string ms;
 	if (append && _hasRights(client->nick)) {
 		_modes.l = limit;
-		ms = ":" + client->nick + "!~" + client->nick + "@";
+		ms = ":" + client->nick + "!~" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " +l " + std::to_string(limit);
 		ms += CRLF;
 		broadcastMsg(client, ms);
@@ -331,7 +311,7 @@ bool	Channel::mode_l(bool append, Client *client, int limit)
 	}
 	if (!append && _hasRights(client->nick)) {
 		_modes.l = -1;
-		ms = ":" + client->nick + "!~" + client->nick + "@";
+		ms = ":" + client->nick + "!~" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " -l";
 		ms += CRLF;
 		broadcastMsg(client, ms);
@@ -356,7 +336,7 @@ bool	Channel::mode_k(bool append, Client *client, const std::string &passwd)
 			return (!custom_send(ms, client));
 		}
 		_modes.k = passwd;
-		ms = ":" + client->nick + "!~" + client->nick + "@";
+		ms = ":" + client->nick + "!~" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " +k " + passwd;
 		ms += CRLF;
 		broadcastMsg(client, ms);
@@ -364,7 +344,7 @@ bool	Channel::mode_k(bool append, Client *client, const std::string &passwd)
 	} else {
 		std::cout << "WE ENTER HERE\n\n";
 		_modes.k = "";
-		ms = ":" + client->nick + "!~" + client->nick + "@";
+		ms = ":" + client->nick + "!~" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " -k";
 		ms += CRLF;
 		broadcastMsg(client, ms);
@@ -375,7 +355,6 @@ bool	Channel::mode_k(bool append, Client *client, const std::string &passwd)
 
 void	Channel::getModes(Client *client)
 {
-	// :chatjunkies.org 324 mayeul_ #2 +int
 	std::string	ms;
 	std::string	modes = "+";
 	modes += _modes.p ? "p" : "";
@@ -400,14 +379,13 @@ bool	Channel::kick(Client *client, const std::string &guyToKick, const std::stri
 			ms = reply_formating(client->servername.c_str(), ERR_USERNOTINCHANNEL, std::vector<std::string>({guyToKick, getName()}), client->nick.c_str());
 			return (!custom_send(ms, client));
 		}
-		ms = ":" + client->nick + "!~a" + client->nick + "@";
+		ms = ":" + client->nick + "!~a" + client->username + "@";
 		ms += client->servername + " KICK " + getName() + " " + guyToKick;
 		ms += (reason != "") ? " :" + reason : " :" + client->nick;
 		ms += CRLF;
 		custom_send(ms, client);
 		broadcastMsg(client, ms);
 		_users.erase(userToKick);
-		// :mayeul!~mayeul@CJ-eef.m3i.5tviju.IP KICK #1 mayeul_ :je te banis
 		return (true);
 	}
 	ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
@@ -438,11 +416,9 @@ bool	Channel::invite(Client *client, const std::string &guyToInvite)
 	}
 	if (!_is_in_list(guyToInvite, _modes.invitation_list))
 		_modes.invitation_list.push_back(guyToInvite);
-	// :mayeul!~mayeul@ip-46.net-80-236-89.joinville.rev.numericable.fr INVITE mayeul_ :#oui
-	ms = ":" + client->nick + "!~" + client->nick + "@" + client->servername + " INVITE " + guyToInvite + " :" + getName();
+	ms = ":" + client->nick + "!~" + client->username + "@" + client->servername + " INVITE " + guyToInvite + " :" + getName();
 	ms += CRLF;
 	custom_send(ms, clientToInvite);
-	// :card.freenode.net 341 mayeul mayeul_ #oui
 	ms = reply_formating(client->servername.c_str(), RPL_INVITING, std::vector<std::string>({guyToInvite, getName()}), client->nick.c_str());
 	return (custom_send(ms, client));
 }
@@ -452,7 +428,7 @@ bool				Channel::isEmpty() const
 	return (_users.empty());
 }
 
-std::string			Channel::parseArg(size_t fromIndex, const std::vector<std::string> &args) // [":a", "b", "c"]
+std::string			Channel::parseArg(size_t fromIndex, const std::vector<std::string> &args)
 {
 	if (args[fromIndex] == "")
 		return ("");
