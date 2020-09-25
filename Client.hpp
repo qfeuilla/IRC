@@ -64,12 +64,15 @@ public:
 	void				PART(Command *cmd);
 	void				KICK(Command *cmd);
 	void				TOPIC(Command *cmd);
+	void				INVITE(Command *cmd);
 
 	int					execute_parsed(Command *);
 
 	void				exec_registerMS();
 	std::string			get_userMODEs_ms();
 	bool				set_uMODE(char c, bool add);
+
+	Client				*getOtherClient(const std::string &name);
 
 	time_t				creation;
 	time_t				last;

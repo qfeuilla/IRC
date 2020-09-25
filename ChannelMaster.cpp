@@ -16,18 +16,27 @@ ChannelMaster::~ChannelMaster() {
 	delete _channels;
 	delete _user_channels;
 }
-bool	ChannelMaster::_testChannelName(socket_t socket, const std::string &channelName)
+bool	ChannelMaster::_testChannelName(Client *client, const std::string &channelName)
 {
-	if (channelName.at(0) != '#' && channelName.at(0) != '&')
-		return (Channel::sendMsgToSocket(socket, Channel::badName(channelName, "Channel should start with # or &")));
-	if (channelName.length() > 200)
-		return (Channel::sendMsgToSocket(socket, Channel::badName(channelName, "Channel should not be more than 200 characters")));
+	bool badName = false;
+	std::string	ms;
+
+	if (channelName.at(0) != '#' && channelName.at(0) != '&' && channelName.at(0) != '+' && channelName.at(0) != '!')
+		badName = true;
+	if (channelName.length() > 50)
+		badName = true;
 	if (channelName.find(" ") != std::string::npos)
-		return (Channel::sendMsgToSocket(socket, Channel::badName(channelName, "Channel should not contain space (' ')")));
+		badName = true;
 	if (channelName.find(",") != std::string::npos)
-		return (Channel::sendMsgToSocket(socket, Channel::badName(channelName, "Channel should not contain comma (',')")));
+		badName = true;
 	if (channelName.find("\7") != std::string::npos)
-		return (Channel::sendMsgToSocket(socket, Channel::badName(channelName, "Channel should not contain ^G ('\\7')")));
+		badName = true;
+	if (badName) { // ! je sais pas quelle erreur mettre haha
+		// ms = reply_formating(client->servername.c_str(), ERR_NOTONCHANNEL, std::vector<std::string>({channelName}), client->nick.c_str());
+		// return (custom_send(ms, client));
+		(void)client;
+		return (true);
+	}
 	return (false); // channelName is well formatted
 }
 
@@ -80,7 +89,7 @@ bool	ChannelMaster::_join_channel(Client *client, const std::string &channelName
 {
 	Channel	*chan = _chan_exists(channelName);
 	if (!chan) {
-		if (_testChannelName(client->sock, channelName))
+		if (_testChannelName(client, channelName))
 			return (false);
 		Channel	*nchan = new Channel(channelName, client, _srv_name);
 		_channels->push_back(nchan);
@@ -229,13 +238,25 @@ bool	ChannelMaster::kick(Client *client, const std::vector<std::string> &args)
 }
 
 
-bool	ChannelMaster::broadcastMsg(const std::string &sender, socket_t socket, const std::string &chanName, const std::string &msg)
+bool	ChannelMaster::broadcastMsg(Client *client, const std::string &chanName, const std::vector<std::string> &args)
 {
+	std::string	ms;
 	Channel		*channel = _chan_exists(chanName);
+	std::string	msgToSend = Channel::parseArg(1, args);
 
-	if (!channel)
-		return (!Channel::sendMsgToSocket(socket, "no chan with this name\n"));
-	return (channel->broadcastMsg(sender, socket, msg));
+	if (!channel) {
+		ms = reply_formating(client->servername.c_str(), ERR_NOSUCHCHANNEL, {chanName}, client->nick.c_str());
+		return (!custom_send(ms, client));
+	}
+	if (!channel->isInChan(client->nick)) {
+		ms = reply_formating(client->servername.c_str(), ERR_CANNOTSENDTOCHAN, {chanName}, client->nick.c_str());
+		return (!custom_send(ms, client));
+	}
+	// :mayeul_!~creator@ip-46.net-80-236-89.joinville.rev.numericable.fr PRIVMSG #oui :-c'est super non ?
+	ms = ":" + client->nick + "!~" + channel->getCreator() + "@" + client->servername + " PRIVMSG ";
+	ms += channel->getName() + " :" + msgToSend;
+	ms += CRLF;
+	return (channel->broadcastMsg(client, ms));
 }
 
 bool	ChannelMaster::topic(Client *client, const std::vector<std::string> &args)
@@ -261,6 +282,19 @@ bool	ChannelMaster::topic(Client *client, const std::vector<std::string> &args)
 	}
 	newTopic = Channel::parseArg(1, args);
 	return (channel->setTopic(client, newTopic));
+}
+
+bool	ChannelMaster::invite(Client *client, const std::vector<std::string> &args)
+{
+	std::string	ms;
+	std::string	userName = args[0];
+	Channel		*channel = _chan_exists(args[1]);
+
+	if (!channel) {
+		ms = reply_formating(client->servername.c_str(), ERR_NOSUCHCHANNEL, std::vector<std::string>({args[1]}), client->nick.c_str());
+		return (!custom_send(ms, client));
+	}
+	return (channel->invite(client, userName));
 }
 
 void	ChannelMaster::setSrvName(const std::string &srvName)

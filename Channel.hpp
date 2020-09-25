@@ -47,6 +47,7 @@ private:
 	std::string		_topic;
 
 	std::string		_srv_name;
+	std::string		_creator;
 
 	bool		_hasRights(const std::string &userName)
 	{
@@ -58,11 +59,6 @@ private:
 	{
 		_Chan_modes::usr_list::iterator	user = std::find(listToCheck.begin(), listToCheck.end(), userName);
 		return (user != listToCheck.end());
-	}
-	bool		_is_in_chan(const std::string &userName)
-	{
-		_users_map::iterator	user = _users.find(userName);
-		return (user != _users.end());
 	}
 	void		_print_channel(void) {
 		_users_map::iterator	current = _users.begin();
@@ -82,18 +78,15 @@ public:
 	Channel	&operator=(const Channel& other);
 
 	const std::string	&getName() const;
+	const std::string	&getCreator() const;
 	const std::string	&getTopic() const;
 	bool				setTopic(Client *client, const std::string &newTopic);
 	bool				isEmpty() const;
 
-	// * sendMsgToSocket always returns true
-	static bool			sendMsgToSocket(socket_t socket, const std::string &msg);
-	bool				sendMsgToUser(const std::string &userName, const std::string &msg);
-
 	static std::string	parseArg(size_t fromIndex, const std::vector<std::string> &args);
 	
 	// * send msg to everyone in the channel but the sender
-	bool				broadcastMsg(const std::string &sender, socket_t socket, const std::string &msg);
+	bool				broadcastMsg(Client *sender, const std::string &msg);
 
 	// *	join returns true on succes (false if socket was already in the channel before the call)
 	bool				join(Client *client, const std::string &passwd);
@@ -102,7 +95,7 @@ public:
 	// *	kick returns true on succes
 	bool				kick(Client *client, const std::string &guyToKick, const std::string &reason);
 	// *	invite returns true on succes
-	bool				invite(std::string nick, socket_t socket, const std::string &guyToInvite);
+	bool				invite(Client *client, const std::string &guyToInvite);
 
 	// MODES METHODS
 	bool	mode_o(bool append, Client *client, const std::string &target);
@@ -118,8 +111,10 @@ public:
 
 	void	getModes(Client *client);
 
-	// errors
+	// * errors (will be deleted soon) 
 	static std::string	badName(const std::string &name, const std::string &reason);
+
+	bool	isInChan(const std::string &userName);
 
 };
 
