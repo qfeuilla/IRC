@@ -113,6 +113,8 @@ public:
 
 	bool	isInChan(const std::string &userName);
 
+	bool	msgErrors(Client *client);
+
 };
 
 #endif

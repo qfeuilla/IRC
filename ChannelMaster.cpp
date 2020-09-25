@@ -252,6 +252,8 @@ bool	ChannelMaster::broadcastMsg(Client *client, const std::string &chanName, co
 		ms = reply_formating(client->servername.c_str(), ERR_CANNOTSENDTOCHAN, {chanName}, client->nick.c_str());
 		return (!custom_send(ms, client));
 	}
+	if (channel->msgErrors(client))
+		return (false);
 	ms = ":" + client->nick + "!~" + client->username + "@" + client->servername + " PRIVMSG ";
 	ms += channel->getName() + " :" + msgToSend;
 	ms += CRLF;

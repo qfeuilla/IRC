@@ -446,3 +446,17 @@ bool		Channel::isInChan(const std::string &userName)
 	_users_map::iterator	user = _users.find(userName);
 	return (user != _users.end());
 }
+
+bool		Channel::msgErrors(Client *client)
+{
+	std::string	ms;
+	if (_modes.m) { // user need to be chanop OR to be in voice list
+		if (_hasRights(client->nick))
+			return (false); // he can send the message (he is a chan op)
+		if (_is_in_list(client->nick, _modes.v))
+			return (false); // he can send the message (he is in voice list)
+		ms = reply_formating(client->servername.c_str(), ERR_CANNOTSENDTOCHAN, {getName()}, client->nick.c_str());
+		return (custom_send(ms, client));
+	}
+	return (false); // user can send the message as the chan is not restricted
+}
