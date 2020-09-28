@@ -15,7 +15,7 @@
 
 #include "Environment.hpp"
 #include "Client.hpp"
-#include "OtherServ.hpp"
+#include <string>
 
 class Server : public Fd {
 public:
@@ -29,6 +29,7 @@ public:
 	void			accept_srv();
 
 	bool			load_other_servs(std::string);
+
 	void			load_options(int, char **);
 	void			create();
 
@@ -42,7 +43,6 @@ private:
 	int					port;
 	int					action;
 	Environment			*ev;
-	std::string			name;
 };
 
 #endif

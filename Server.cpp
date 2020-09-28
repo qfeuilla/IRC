@@ -11,6 +11,12 @@
 /* ************************************************************************** */
 
 #include "Server.hpp"
+#include <stdlib.h>
+#include <iostream>
+#include <netdb.h>
+#include <sys/select.h>
+#include <fcntl.h>
+#include <string.h>
 
 Server::~Server() {
 	std::cout << "server destructed" << std::endl;
@@ -31,49 +37,7 @@ Server::Server() {
 
 bool			Server::load_other_servs(std::string servinfo) {
 	(void)servinfo;
-	struct sockaddr_in	serv_addr;
-	int sock_serv;
-	std::string			ms;
-
-	if ((sock_serv = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-		perror("socker creation error\n");
-		return (EXIT_FAILURE);
-	}
-
-	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_port = htons(6667);
-	
-	// convert address from IPv4 text to binary inside the adress struct
-	if (inet_pton(serv_addr.sin_family, "195.154.200.232", &serv_addr.sin_addr) <= 0) {
-		perror("invalid address, or not supported\n");
-		return (EXIT_FAILURE);
-	}
-
-	if (connect(sock_serv, reinterpret_cast<struct sockaddr *>(&serv_addr), sizeof(serv_addr)) < 0) {
-		perror("Connection to the server failed\n");
-		return(EXIT_FAILURE);
-	}
-
-	int			r;
-	send(sock_serv, ms.c_str(), ms.size(), 0);
-	ms = "SERVER 88.120.198.47 1 :test serv ft irc";
-	ms += CRLF;
-	send(sock_serv, ms.c_str(), ms.size(), 0);
-
-	std::cerr << "READ OTHER SERVER : " << std::endl;
-	
-	while (true) {
-		memset(&buf_read, 0, BUF_SIZE + 1);
-		r = recv(sock_serv, &buf_read, BUF_SIZE, 0);
-		std::string tmp;
-		tmp = std::string(buf_read);
-		tmp = std::string(&tmp[0], &tmp[tmp.size() - 2]);
-		std::cerr << tmp << std::endl;
-	}
-
-	delete ev->clients_fd[sock_serv];
-	ev->clients_fd[sock_serv] = new OtherServ(sock_serv);
-
+	// TODO : Connecton to other server
 	return (true);
 }
 
@@ -118,6 +82,7 @@ void		Server::create() {
 	ev->clients_fd[sock] = this;
 	ev->sin = sin;
 	ev->serv = new std::string(inet_ntoa(sin.sin_addr));
+	ev->channels->setSrvName(*(ev->serv));
 }
 
 void		Server::accept_srv() {

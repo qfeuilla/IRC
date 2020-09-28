@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 18:24:57 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/24 23:16:47 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/23 17:16:02 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,10 +25,6 @@
 # include <arpa/inet.h>
 # include <map>
 # include <algorithm>
-#include <stdlib.h>
-#include <netdb.h>
-#include <fcntl.h>
-#include <cstring>
 
 # define Xv(err,res,str)	(x_void(err,res,str,__FILE__,__LINE__))
 # define X(err,res,str)		(x_int(err,res,str,__FILE__,__LINE__))
