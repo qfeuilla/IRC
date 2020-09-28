@@ -4,7 +4,10 @@
 Channel::Channel(): _name(), _users(), _modes(), _topic(), _srv_name(), _creator() {}
 Channel::Channel(const std::string &name, Client *client, const std::string &srvName)
 : _name(name), _users(), _modes(), _topic(), _srv_name(srvName), _creator(client->nick) {
-	_modes.o.push_back(client->nick);
+	if (_name.at(0) != '+') {
+		_modes.o.push_back(client->nick);
+		_modes.n = true;
+	}
 	std::cout << "Creating channel: " << _name << "\n\n";
 	join(client, "");
 }
@@ -51,12 +54,12 @@ bool				Channel::setTopic(Client *client, const std::string &newTopic)
 	return (true);
 }
 
-bool				Channel::broadcastMsg(Client *sender, const std::string &msg)
+bool				Channel::broadcastMsg(Client *sender, const std::string &msg) const
 {
-	if (!isInChan(sender->nick))
+	if (getModeN() && !isInChan(sender->nick))
 		return (false);
-	_users_map::iterator	current = _users.begin();
-	_users_map::iterator	end = _users.end();
+	_users_map::const_iterator	current = _users.begin();
+	_users_map::const_iterator	end = _users.end();
 	while (current != end) {
 		if ((*current).first != sender->nick) { // * send msg to everyone but the sender
 			custom_send(msg, (*current).second);
@@ -298,6 +301,29 @@ bool	Channel::mode_m(bool append, Client *client)
 	return (!custom_send(ms, client));
 }
 
+bool	Channel::mode_n(bool append, Client *client)
+{
+	std::string ms;
+	if (append && _hasRights(client->nick)) {
+		_modes.n = true;
+		ms = ":" + client->nick + "!" + client->username + "@";
+		ms += client->servername + " MODE " + getName() + " +n";
+		ms += CRLF;
+		broadcastMsg(client, ms);
+		return (custom_send(ms, client));
+	}
+	if (!append && _hasRights(client->nick)) {
+		_modes.n = false;
+		ms = ":" + client->nick + "!" + client->username + "@";
+		ms += client->servername + " MODE " + getName() + " -n";
+		ms += CRLF;
+		broadcastMsg(client, ms);
+		return (custom_send(ms, client));
+	}
+	ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
+	return (!custom_send(ms, client));
+}
+
 bool	Channel::mode_l(bool append, Client *client, int limit)
 {
 	std::string ms;
@@ -353,7 +379,7 @@ bool	Channel::mode_k(bool append, Client *client, const std::string &passwd)
 	std::cout << "WE RETURN HERE (NEVER)\n\n";
 }
 
-void	Channel::getModes(Client *client)
+void	Channel::getModes(Client *client) const
 {
 	std::string	ms;
 	std::string	modes = "+";
@@ -362,11 +388,17 @@ void	Channel::getModes(Client *client)
 	modes += _modes.i ? "i" : "";
 	modes += _modes.t ? "t" : "";
 	modes += _modes.m ? "m" : "";
+	modes += _modes.n ? "n" : "";
 	modes += _modes.l != -1 ? "l" : "";
 	modes += _modes.k != "" ? "k" : "";
 	std::vector<std::string>	params({getName(), modes, ""});
 	ms = reply_formating(client->servername.c_str(), RPL_CHANNELMODEIS, params, client->nick.c_str());
 	custom_send(ms, client);
+}
+
+bool	Channel::getModeN() const
+{
+	return (_modes.n);
 }
 
 bool	Channel::kick(Client *client, const std::string &guyToKick, const std::string &reason)
@@ -445,13 +477,13 @@ std::string			Channel::parseArg(size_t fromIndex, const std::vector<std::string>
 	return (argToReturn);
 }
 
-bool		Channel::isInChan(const std::string &userName)
+bool		Channel::isInChan(const std::string &userName) const
 {
-	_users_map::iterator	user = _users.find(userName);
+	_users_map::const_iterator	user = _users.find(userName);
 	return (user != _users.end());
 }
 
-bool		Channel::msgErrors(Client *client)
+bool		Channel::msgErrors(Client *client) const
 {
 	std::string	ms;
 	if (_modes.m) { // user need to be chanop OR to be in voice list

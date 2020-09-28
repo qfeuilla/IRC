@@ -395,7 +395,7 @@ void	Client::PRIVMSG(Command *cmd) {
 
 	if (cmd->arguments.size() >= 2) {
 		for (std::string targ : parse_comma(cmd->arguments[0])) {
-			if (targ[0] == '#') {
+			if (targ[0] == '#' || targ[0] == '&' || targ[0] == '+' || targ[0] == '!') {
 				good += 1;
 				ev->channels->broadcastMsg(this, targ, cmd->arguments);
 			} else if (targ[0] == '$') {

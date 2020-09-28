@@ -34,10 +34,11 @@ private:
 		bool		i; // Users can't join without invite
 		bool		t; // Topic can only be set by an operator
 		bool		m; // Only voiced users and operators can talk
+		bool		n; // Users outside channel cannot talk in channel
 		int			l; // User limit
 		std::string	k; // Channel password
 		int			users;
-		_Chan_modes(): invitation_list(), o(), v(), p(false), s(false), i(false), t(true), m(false), l(-1), k(), users(0) {}
+		_Chan_modes(): invitation_list(), o(), v(), p(false), s(false), i(false), t(true), m(false), n(false), l(-1), k(), users(0) {}
 	};
 	
 	
@@ -49,20 +50,21 @@ private:
 	std::string		_srv_name;
 	std::string		_creator;
 
-	bool		_hasRights(const std::string &userName)
+	bool		_hasRights(const std::string &userName) const
 	{
-		_Chan_modes::usr_list::iterator	user = std::find(_modes.o.begin(), _modes.o.end(), userName);
+		_Chan_modes::usr_list::const_iterator	user = std::find(_modes.o.begin(), _modes.o.end(), userName);
 		return (user != _modes.o.end());
 	}
 
-	bool		_is_in_list(const std::string &userName, _Chan_modes::usr_list &listToCheck)
+	bool		_is_in_list(const std::string &userName, const _Chan_modes::usr_list &listToCheck) const
 	{
-		_Chan_modes::usr_list::iterator	user = std::find(listToCheck.begin(), listToCheck.end(), userName);
+		_Chan_modes::usr_list::const_iterator	user = std::find(listToCheck.begin(), listToCheck.end(), userName);
 		return (user != listToCheck.end());
 	}
-	void		_print_channel(void) {
-		_users_map::iterator	current = _users.begin();
-		_users_map::iterator	end = _users.end();
+	void		_print_channel(void) const
+	{
+		_users_map::const_iterator	current = _users.begin();
+		_users_map::const_iterator	end = _users.end();
 
 		std::cout << "sockets in " << _name << "\n";
 		while (current != end) {
@@ -86,7 +88,7 @@ public:
 	static std::string	parseArg(size_t fromIndex, const std::vector<std::string> &args);
 	
 	// * send msg to everyone in the channel but the sender
-	bool				broadcastMsg(Client *sender, const std::string &msg);
+	bool				broadcastMsg(Client *sender, const std::string &msg) const;
 
 	// *	join returns true on succes (false if socket was already in the channel before the call)
 	bool				join(Client *client, const std::string &passwd);
@@ -106,14 +108,17 @@ public:
 	bool	mode_i(bool append, Client *client);
 	bool	mode_t(bool append, Client *client);
 	bool	mode_m(bool append, Client *client);
+	bool	mode_n(bool append, Client *client);
 	bool	mode_l(bool append, Client *client, int limit);
 	bool	mode_k(bool append, Client *client, const std::string &passwd);
 
-	void	getModes(Client *client);
+	bool	getModeN() const;
 
-	bool	isInChan(const std::string &userName);
+	void	getModes(Client *client) const;
 
-	bool	msgErrors(Client *client);
+	bool	isInChan(const std::string &userName) const;
+
+	bool	msgErrors(Client *client) const;
 
 	void	changeNick(const std::string &oldNick, const std::string &newNick);
 

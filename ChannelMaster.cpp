@@ -186,6 +186,9 @@ bool	ChannelMaster::mode(Client *client, const std::vector<std::string> &args)
 		case 'm':
 			chan->mode_m(append, client);
 			break;
+		case 'n':
+			chan->mode_n(append, client);
+			break;
 		case 'l':
 			if (args.size() == 2) {
 				if (!append)
@@ -248,7 +251,7 @@ bool	ChannelMaster::broadcastMsg(Client *client, const std::string &chanName, co
 		ms = reply_formating(client->servername.c_str(), ERR_NOSUCHCHANNEL, {chanName}, client->nick.c_str());
 		return (!custom_send(ms, client));
 	}
-	if (!channel->isInChan(client->nick)) {
+	if (channel->getModeN() && !channel->isInChan(client->nick)) {
 		ms = reply_formating(client->servername.c_str(), ERR_CANNOTSENDTOCHAN, {chanName}, client->nick.c_str());
 		return (!custom_send(ms, client));
 	}
