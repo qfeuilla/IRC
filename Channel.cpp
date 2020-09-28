@@ -432,7 +432,11 @@ std::string			Channel::parseArg(size_t fromIndex, const std::vector<std::string>
 {
 	if (args[fromIndex] == "")
 		return ("");
-	std::string	argToReturn = args[fromIndex].substr(1);
+	std::string	argToReturn;
+	if (args[fromIndex].at(0) == ':')
+		argToReturn = args[fromIndex].substr(1);
+	else
+		argToReturn = std::string(args[fromIndex]);
 	++fromIndex;
 	while (fromIndex < args.size()) {
 		argToReturn += " ";
