@@ -464,3 +464,22 @@ bool		Channel::msgErrors(Client *client)
 	}
 	return (false); // user can send the message as the chan is not restricted
 }
+
+void		Channel::changeNick(const std::string &oldNick, const std::string &newNick)
+{
+	Client *client;
+	if (_is_in_list(oldNick, _modes.o)) {
+		_modes.o.remove(oldNick);
+		_modes.o.push_back(newNick);
+	}
+	if (_is_in_list(oldNick, _modes.v)) {
+		_modes.v.remove(oldNick);
+		_modes.v.push_back(newNick);
+	}
+	_users_map::iterator	user = _users.find(oldNick);
+	if (user == _users.end())
+		return ; // should not happen
+	client = user->second;
+	_users.erase(user);
+	_users.insert(std::pair<std::string, Client*>(newNick, client));
+}

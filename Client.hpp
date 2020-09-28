@@ -73,6 +73,7 @@ public:
 	bool				set_uMODE(char c, bool add);
 
 	Client				*getOtherClient(const std::string &name);
+	void				updateNickInChannels(const std::string &newNick);
 
 	time_t				creation;
 	time_t				last;

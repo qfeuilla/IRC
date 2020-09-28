@@ -115,6 +115,8 @@ public:
 
 	bool	msgErrors(Client *client);
 
+	void	changeNick(const std::string &oldNick, const std::string &newNick);
+
 };
 
 #endif
