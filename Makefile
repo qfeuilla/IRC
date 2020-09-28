@@ -8,6 +8,8 @@ SRCS = 	main.cpp \
 		Command.cpp \
 		replies.cpp \
 		checking.cpp \
+		Channel.cpp \
+		ChannelMaster.cpp \
 
 OBJS := $(patsubst %.cpp,%.o,$(SRCS))
 DEPENDS := $(patsubst %.cpp,%.d,$(SRCS))

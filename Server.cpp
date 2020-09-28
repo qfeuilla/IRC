@@ -44,6 +44,8 @@ Server::Server() {
 	ev->loc2 = std::string("42born2code");
 	ev->emails.push_back("quentin.feuillade33@gmail.com");
 	ev->emails.push_back("m.lemoniesdesagazan@gmail.com");
+
+	ev->channels->setSrvName(*(ev->serv));
 }
 
 void		Server::load_options(int ac, char **av) {
@@ -68,7 +70,7 @@ void		Server::create() {
 		exit (EXIT_FAILURE);
 	}
 	sin.sin_family = AF_INET;
-	sin.sin_addr.s_addr = inet_addr("10.0.2.15");
+	sin.sin_addr.s_addr = INADDR_ANY;
 	sin.sin_port = htons(port);
 	X(-1, bind(sock, (struct sockaddr*)&sin, sizeof(sin)), "bind");
 	X(-1, listen(sock, 42), "listen");

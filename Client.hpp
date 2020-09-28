@@ -15,6 +15,11 @@
 
 # include "Fd.hpp"
 # include "Environment.hpp"
+# include "Channel.hpp"
+# include <list>
+
+class Environment;
+class Channel;
 
 class Client : public Fd {
 public:
@@ -55,12 +60,19 @@ public:
 	void				WALLOPS(Command *);
 	void				USERHOST(Command *);
 	void				ISON(Command *);
+	void				JOIN(Command *cmd);
+	void				PART(Command *cmd);
+	void				KICK(Command *cmd);
+	void				TOPIC(Command *cmd);
+	void				INVITE(Command *cmd);
 
 	int					execute_parsed(Command *);
 
 	void				exec_registerMS();
 	std::string			get_userMODEs_ms();
 	bool				set_uMODE(char c, bool add);
+
+	Client				*getOtherClient(const std::string &name);
 
 	time_t				creation;
 	time_t				last;
@@ -87,6 +99,8 @@ public:
 	int					sendq = 0;
 	size_t				Kb_sent = 0;
 	size_t				Kb_recv = 0;
+	
+	std::list<Channel*>	channels;
 
 private:
 	Environment			*ev;

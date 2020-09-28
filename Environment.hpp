@@ -3,7 +3,7 @@
 /*                                                        :::      ::::::::   */
 /*   Environment.hpp                                    :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
+/*   By: mayeul <mayeul@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:54:23 by qfeuilla          #+#    #+#             */
 /*   Updated: 2020/09/24 13:58:01 by qfeuilla         ###   ########.fr       */
@@ -16,6 +16,9 @@
 #include "Fd.hpp"
 #include <sys/select.h>
 #include <vector>
+#include "ChannelMaster.hpp"
+
+class ChannelMaster;
 
 class Environment {
 public:
@@ -52,6 +55,8 @@ public:
 	std::string					loc2;
 
 	bool						active = true;
+	
+	ChannelMaster				*channels;
 };
 
 #endif 

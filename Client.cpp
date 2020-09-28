@@ -3,7 +3,7 @@
 /*                                                        :::      ::::::::   */
 /*   Client.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
+/*   By: mayeul <mayeul@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:51:25 by qfeuilla          #+#    #+#             */
 /*   Updated: 2020/09/24 15:03:06 by qfeuilla         ###   ########.fr       */
@@ -20,10 +20,11 @@
 #include <fcntl.h>
 #include <sstream>
 
-void		custom_send(std::string ms, Client *c) {
+bool		custom_send(std::string ms, Client *c) {
 	c->recv_ms += 1;
 	c->Kb_recv += sizeof(ms);
 	send(c->sock, ms.c_str(), ms.length(), 0);
+	return (true);
 }
 
 bool		check_nick(std::string nk) {
@@ -39,7 +40,7 @@ bool		check_nick(std::string nk) {
 	return (true);
 }
 
-Client::Client(Environment *e, int s, struct sockaddr_in addr) : ev(e) {
+Client::Client(Environment *e, int s, struct sockaddr_in addr) : channels(), ev(e) {
 	type = FD_WAITC;
 	is_setup = false;
 	sock = s;
@@ -336,12 +337,14 @@ void	Client::MODE(Command *cmd) {
 				custom_send(ms, this);
 			}
 		} else {
-			// TODO : call the channell MODE with Client and Command as params if parmas[0] is a channel;
+			ev->channels->mode(this, cmd->arguments);
 		}
 	} else {
 		if (cmd->arguments.size() == 1) {
-			ms = get_userMODEs_ms();
-			custom_send(ms, this);
+			if (!ev->channels->getChanModes(this, cmd->arguments)) {
+				ms = get_userMODEs_ms();
+				custom_send(ms, this);
+			}
 		} else {
 			ms = reply_formating(servername.c_str(), ERR_NEEDMOREPARAMS, {cmd->line}, nick.c_str());
 			custom_send(ms, this);
@@ -381,10 +384,16 @@ void	Client::PRIVMSG(Command *cmd) {
 	int					good = 0;
 	ev->cmd_count["PRIVMSG"] += 1;
 	
+
+	// << PRIVMSG #oui,mayeul :c'est super non ?
+	// >> :mayeul_!~mayeul@ip-46.net-80-236-89.joinville.rev.numericable.fr PRIVMSG #oui :-c'est super non ?
+	// >> :mayeul_!~mayeul@ip-46.net-80-236-89.joinville.rev.numericable.fr PRIVMSG mayeul :-c'est super non ?
+
 	if (cmd->arguments.size() >= 2) {
 		for (std::string targ : parse_comma(cmd->arguments[0])) {
 			if (targ[0] == '#') {
-				// TODO : chans
+				good += 1;
+				ev->channels->broadcastMsg(this, targ, cmd->arguments);
 			} else if (targ[0] == '$') {
 				// TODO : multi server
 			} else {
@@ -999,6 +1008,66 @@ void	Client::ISON(Command *cmd) {
 	}
 }
 
+void	Client::JOIN(Command *cmd) {
+	std::string ms;
+	ev->cmd_count["JOIN"] += 1;
+
+	if (cmd->arguments.size() >= 1) {
+		ev->channels->join(this, cmd->arguments, &channels);
+	} else {
+		ms = reply_formating(servername.c_str(), ERR_NEEDMOREPARAMS, {cmd->line}, nick.c_str());
+		custom_send(ms, this);
+	}
+}
+
+void	Client::PART(Command *cmd) {
+	std::string ms;
+	ev->cmd_count["PART"] += 1;
+
+	if (cmd->arguments.size() >= 1) {
+		ev->channels->leave(this, cmd->arguments);
+	} else {
+		ms = reply_formating(servername.c_str(), ERR_NEEDMOREPARAMS, {cmd->line}, nick.c_str());
+		custom_send(ms, this);
+	}
+}
+
+void	Client::KICK(Command *cmd) {
+	std::string ms;
+	ev->cmd_count["KICK"] += 1;
+
+	if (cmd->arguments.size() >= 2) {
+			ev->channels->kick(this, cmd->arguments);
+	} else {
+		ms = reply_formating(servername.c_str(), ERR_NEEDMOREPARAMS, {cmd->line}, nick.c_str());
+		custom_send(ms, this);
+	}
+}
+
+void	Client::TOPIC(Command *cmd) {
+	std::string ms;
+	ev->cmd_count["TOPIC"] += 1;
+
+	if (cmd->arguments.size() >= 1) {
+		ev->channels->topic(this, cmd->arguments);
+	} else {
+		ms = reply_formating(servername.c_str(), ERR_NEEDMOREPARAMS, {cmd->line}, nick.c_str());
+		custom_send(ms, this);
+	}
+}
+
+void	Client::INVITE(Command *cmd) {
+	std::string ms;
+	ev->cmd_count["INVITE"] += 1;
+
+	if (cmd->arguments.size() >= 2) {
+		ev->channels->invite(this, cmd->arguments);
+	} else {
+		ms = reply_formating(servername.c_str(), ERR_NEEDMOREPARAMS, {cmd->line}, nick.c_str());
+		custom_send(ms, this);
+	}
+}
+
 int		Client::execute_parsed(Command *parsed) {
 	switch (parsed->cmd_code())
 	{
@@ -1019,6 +1088,21 @@ int		Client::execute_parsed(Command *parsed) {
 		break;
 	case MODE_CC:
 		MODE(parsed);
+		break;
+	case JOIN_CC:
+		JOIN(parsed);
+		break;
+	case PART_CC:
+		PART(parsed);
+		break;
+	case KICK_CC:
+		KICK(parsed);
+		break;
+	case TOPIC_CC:
+		TOPIC(parsed);
+		break;
+	case INVITE_CC:
+		INVITE(parsed);
 		break;
 	case QUIT_CC:
 		QUIT(parsed);
@@ -1130,4 +1214,16 @@ std::ostream &			operator<<( std::ostream & o, Client const & cl ) {
 	o << "IP addr : " << inet_ntoa(cl.csin.sin_addr) << "\n";
 	o << "Port : " << htons(cl.csin.sin_port) << "\n"; 
 	return (o);
+}
+
+Client	*Client::getOtherClient(const std::string &name)
+{
+	std::vector<Fd *> 	tmp;
+	
+	tmp = ev->search_list_nick(name);
+	if (!tmp.empty()) {
+		Client *c = reinterpret_cast<Client *>(tmp[0]);
+		return (c);
+	}
+	return (nullptr);
 }
