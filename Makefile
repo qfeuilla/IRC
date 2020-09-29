@@ -10,6 +10,7 @@ SRCS = 	main.cpp \
 		checking.cpp \
 		Channel.cpp \
 		ChannelMaster.cpp \
+		utils.cpp \
 
 OBJS := $(patsubst %.cpp,%.o,$(SRCS))
 DEPENDS := $(patsubst %.cpp,%.d,$(SRCS))

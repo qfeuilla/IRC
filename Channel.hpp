@@ -80,6 +80,7 @@ public:
 	Channel	&operator=(const Channel& other);
 
 	const std::string	&getName() const;
+	std::string			getUsersNum() const;
 	const std::string	&getCreator() const;
 	const std::string	&getTopic() const;
 	bool				setTopic(Client *client, const std::string &newTopic);
@@ -96,7 +97,7 @@ public:
 	bool				leave(Client *client, const std::string &reason);
 	// *	kick returns true on succes
 	bool				kick(Client *client, const std::string &guyToKick, const std::string &reason);
-	// *	invite returns true on succes
+	// *	invite returns true on succes 
 	bool				invite(Client *client, const std::string &guyToInvite);
 
 	// MODES METHODS
@@ -114,11 +115,11 @@ public:
 
 	bool	getModeN() const;
 
-	void	getModes(Client *client) const;
+	std::string	getModes() const;
 
 	bool	isInChan(const std::string &userName) const;
 
-	bool	msgErrors(Client *client) const;
+	bool	msgErrors(Client *client, bool sendErrors = true) const;
 
 	void	changeNick(const std::string &oldNick, const std::string &newNick);
 

@@ -25,6 +25,10 @@ const std::string	&Channel::getName() const
 {
 	return (_name);
 }
+std::string			Channel::getUsersNum() const
+{
+	return (std::to_string(_modes.users));
+}
 const std::string	&Channel::getCreator() const
 {
 	return (_creator);
@@ -77,7 +81,7 @@ bool				Channel::join(Client *client, const std::string &passwd)
 			ms = reply_formating(client->servername.c_str(), ERR_BADCHANNELKEY, std::vector<std::string>({getName()}), client->nick.c_str());
 			return (!custom_send(ms, client));
 		}
-		if (_modes.l != -1 && _modes.l >= _modes.users) {
+		if (_modes.l != -1 && _modes.users >= _modes.l) {
 			ms = reply_formating(client->servername.c_str(), ERR_CHANNELISFULL, std::vector<std::string>({getName()}), client->nick.c_str());
 			return (!custom_send(ms, client));
 		}
@@ -92,6 +96,7 @@ bool				Channel::join(Client *client, const std::string &passwd)
 		// on ajoute le client dans le channel, et on le retire de la liste d'invitations
 		_users.insert(std::pair<std::string, Client*>(client->nick, client));
 		_modes.invitation_list.remove(client->nick);
+		_modes.users++;
 		
 		std::string	join_msg = ":" + client->nick;
 		join_msg += "!" + client->username + "@" + _srv_name;
@@ -122,6 +127,7 @@ bool				Channel::leave(Client *client, const std::string &reason)
 	custom_send(ms, client);
 	broadcastMsg(client, ms);
 	_users.erase(user);
+	_modes.users--;
 	return (true);
 }
 
@@ -379,9 +385,8 @@ bool	Channel::mode_k(bool append, Client *client, const std::string &passwd)
 	std::cout << "WE RETURN HERE (NEVER)\n\n";
 }
 
-void	Channel::getModes(Client *client) const
+std::string	Channel::getModes() const
 {
-	std::string	ms;
 	std::string	modes = "+";
 	modes += _modes.p ? "p" : "";
 	modes += _modes.s ? "s" : "";
@@ -391,9 +396,8 @@ void	Channel::getModes(Client *client) const
 	modes += _modes.n ? "n" : "";
 	modes += _modes.l != -1 ? "l" : "";
 	modes += _modes.k != "" ? "k" : "";
-	std::vector<std::string>	params({getName(), modes, ""});
-	ms = reply_formating(client->servername.c_str(), RPL_CHANNELMODEIS, params, client->nick.c_str());
-	custom_send(ms, client);
+	return (modes);
+	
 }
 
 bool	Channel::getModeN() const
@@ -483,7 +487,7 @@ bool		Channel::isInChan(const std::string &userName) const
 	return (user != _users.end());
 }
 
-bool		Channel::msgErrors(Client *client) const
+bool		Channel::msgErrors(Client *client, bool sendErrors) const
 {
 	std::string	ms;
 	if (_modes.m) { // user need to be chanop OR to be in voice list
@@ -492,7 +496,9 @@ bool		Channel::msgErrors(Client *client) const
 		if (_is_in_list(client->nick, _modes.v))
 			return (false); // he can send the message (he is in voice list)
 		ms = reply_formating(client->servername.c_str(), ERR_CANNOTSENDTOCHAN, {getName()}, client->nick.c_str());
-		return (custom_send(ms, client));
+		if (sendErrors)
+			custom_send(ms, client);
+		return (true);
 	}
 	return (false); // user can send the message as the chan is not restricted
 }

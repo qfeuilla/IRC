@@ -8,6 +8,7 @@
 #include <string>
 #include <list>
 #include "Client.hpp"
+#include "utils.hpp"
 
 class Channel;
 class Client;
@@ -46,11 +47,14 @@ public:
 	bool	topic(Client *client, const std::vector<std::string> &args);
 	// * invite returns ture on succes
 	bool	invite(Client *client, const std::vector<std::string> &args);
+	// * list always return true
+	bool	list(Client *client, const std::vector<std::string> &args);
+
 
 	bool	getChanModes(Client *client, const std::vector<std::string> &args);
 
-	// * send msg to everyone in the channel but the sender
-	bool	broadcastMsg(Client *client, const std::string &chanName, const std::vector<std::string> &args);
+	// * send msg to everyone in the channel but the sender 
+	bool	broadcastMsg(Client *client, const std::string &chanName, const std::vector<std::string> &args, bool sendErrors = true);
 };
 
 #endif

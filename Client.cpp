@@ -443,8 +443,8 @@ void	Client::NOTICE(Command *cmd) {
 	
 	if (cmd->arguments.size() >= 2) {
 		for (std::string targ : parse_comma(cmd->arguments[0])) {
-			if (targ[0] == '#') {
-				// TODO : chans
+			if (targ[0] == '#' || targ[0] == '&' || targ[0] == '+' || targ[0] == '!') {
+				ev->channels->broadcastMsg(this, targ, cmd->arguments, false);
 			} else if (targ[0] == '$') {
 				// TODO : multi server
 			} else {
@@ -1072,6 +1072,10 @@ void	Client::INVITE(Command *cmd) {
 	}
 }
 
+void	Client::LIST(Command *cmd) {
+	ev->channels->list(this, cmd->arguments);
+}
+
 int		Client::execute_parsed(Command *parsed) {
 	switch (parsed->cmd_code())
 	{
@@ -1176,6 +1180,9 @@ int		Client::execute_parsed(Command *parsed) {
 		break;
 	case ISON_CC:
 		ISON(parsed);
+		break;
+	case LIST_CC:
+		LIST(parsed);
 		break;
 	default:
 		break;

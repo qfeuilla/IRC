@@ -65,6 +65,7 @@ public:
 	void				KICK(Command *cmd);
 	void				TOPIC(Command *cmd);
 	void				INVITE(Command *cmd);
+	void				LIST(Command *cmd);
 
 	int					execute_parsed(Command *);
 

@@ -136,19 +136,23 @@ bool	ChannelMaster::leave(Client *client, const std::vector<std::string> &args)
 
 bool	ChannelMaster::getChanModes(Client *client, const std::vector<std::string> &args)
 {
-	Channel					*chan;
+	Channel		*chan;
+	std::string	ms;
+	std::string	modes;
 
 	chan = _chan_exists(args[0]);
 	if (!chan)
 		return (false);
-	chan->getModes(client);
-	return (true);
+	modes = chan->getModes();
+	std::vector<std::string>	params({chan->getName(), modes, ""});
+	ms = reply_formating(client->servername.c_str(), RPL_CHANNELMODEIS, params, client->nick.c_str());
+	return (custom_send(ms, client));
 }
 
 bool	ChannelMaster::mode(Client *client, const std::vector<std::string> &args)
 {
 	Channel					*chan;
-	std::string				operations = args[1]; // looks like "+o"
+	std::string				operations = args[1]; // looks like "+o" 
 	bool					append;
 
 	chan = _chan_exists(args[0]);
@@ -241,7 +245,7 @@ bool	ChannelMaster::kick(Client *client, const std::vector<std::string> &args)
 }
 
 
-bool	ChannelMaster::broadcastMsg(Client *client, const std::string &chanName, const std::vector<std::string> &args)
+bool	ChannelMaster::broadcastMsg(Client *client, const std::string &chanName, const std::vector<std::string> &args, bool sendErrors)
 {
 	std::string	ms;
 	Channel		*channel = _chan_exists(chanName);
@@ -249,13 +253,17 @@ bool	ChannelMaster::broadcastMsg(Client *client, const std::string &chanName, co
 
 	if (!channel) {
 		ms = reply_formating(client->servername.c_str(), ERR_NOSUCHCHANNEL, {chanName}, client->nick.c_str());
-		return (!custom_send(ms, client));
+		if (sendErrors)
+			custom_send(ms, client);
+		return (false);
 	}
 	if (channel->getModeN() && !channel->isInChan(client->nick)) {
 		ms = reply_formating(client->servername.c_str(), ERR_CANNOTSENDTOCHAN, {chanName}, client->nick.c_str());
-		return (!custom_send(ms, client));
+		if (sendErrors)
+			custom_send(ms, client);
+		return (false);
 	}
-	if (channel->msgErrors(client))
+	if (channel->msgErrors(client, sendErrors))
 		return (false);
 	ms = ":" + client->nick + "!" + client->username + "@" + client->servername + " PRIVMSG ";
 	ms += channel->getName() + " :" + msgToSend;
@@ -304,4 +312,40 @@ bool	ChannelMaster::invite(Client *client, const std::vector<std::string> &args)
 void	ChannelMaster::setSrvName(const std::string &srvName)
 {
 	_srv_name = std::string(srvName);
+}
+
+// USER mayo 0 * :realname (pour se connecter avec nc)
+bool	ChannelMaster::list(Client *client, const std::vector<std::string> &args)
+{
+	_channel_list::iterator	current = _channels->begin();
+	_channel_list::iterator	end = _channels->end();
+	std::string	chanName;
+	std::string	numUsersVisible;
+	std::string	topic;
+
+	// :chatjunkies.org 321 adwonno Channel :Users Name
+	std::string	ms;
+	ms = ":" + client->servername + " 321 " + client->nick + " Channel :Users Name" + CRLF;
+	custom_send(ms, client);
+
+	// :chatjunkies.org 322 adwonno #linuxdojo 10 :[+nt]
+	// :chatjunkies.org 322 adwonno #trax 7 :[+nt] #trax museum : bring back the only demo art
+	while (current != end) {
+		chanName = (*current)->getName();
+		numUsersVisible = (*current)->getUsersNum();
+		topic = "[" + (*current)->getModes() + "]";
+		if ((*current)->getTopic() != "") {
+			topic += " " + (*current)->getTopic();
+		}
+		std::vector<std::string> params({chanName, numUsersVisible, topic});
+		ms = reply_formating(client->servername.c_str(), RPL_LIST, params, client->nick.c_str());
+		if (args.size() < 1 || utils::strMatch(args[0], chanName))
+			custom_send(ms, client);
+		++current;
+	}
+
+	// :chatjunkies.org 323 adwonno :End of channel list
+	ms = ":" + client->servername + " 323 " + client->nick + " :End of channel list" + CRLF;
+	custom_send(ms, client);
+	return (true);
 }
