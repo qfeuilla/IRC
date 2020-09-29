@@ -109,6 +109,10 @@ private:
 	bool				pass_set;
 	bool				nick_set;
 	bool				is_setup;
+
+	std::string			_stream;
+
+	bool	_thereIsAFullCmd(size_t &pos, size_t& charsToJump);
 };
 
 std::ostream &			operator<<( std::ostream & o, Client const & i );

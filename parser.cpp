@@ -27,9 +27,8 @@ Command		*parse(std::string cmd) {
 		}
 	}
 	if (last < i - 1)
-		container.push_back(std::string(&cmd[last], &cmd[i - 1]));
-		// ! removing the "- 1" part seems to solve the problem (when using netcat as a client)
-	return (new Command(container, std::string(&cmd[0], &cmd[cmd.length() - 1])));
+		container.push_back(cmd.substr(last));
+	return (new Command(container, std::string(cmd)));
 }
 
 std::vector<std::string>	parse_comma(std::string cmd) {

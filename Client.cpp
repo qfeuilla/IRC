@@ -40,7 +40,7 @@ bool		check_nick(std::string nk) {
 	return (true);
 }
 
-Client::Client(Environment *e, int s, struct sockaddr_in addr) : channels(), ev(e) {
+Client::Client(Environment *e, int s, struct sockaddr_in addr) : channels(), ev(e), _stream() {
 	type = FD_WAITC;
 	is_setup = false;
 	sock = s;
@@ -1190,27 +1190,53 @@ int		Client::execute_parsed(Command *parsed) {
 	return (0);
 }
 
+bool	Client::_thereIsAFullCmd(size_t &pos, size_t& charsToJump) {
+	charsToJump = 2;
+	pos = _stream.find(CRLF);
+	if (pos == std::string::npos) {
+		pos = _stream.find("\n");
+		charsToJump = 1;
+	}
+	return (pos != std::string::npos);
+}
+
 void	Client::read_func() {
-	int			r;
-	std::string resp;
-	std::string resps;
-	std::string dt;
 	Command		*parsed;
+	std::string line;
+	size_t		pos;
+	size_t		charsToJump;
+
+	int error = 0;
+	socklen_t len = sizeof (error);
+	getsockopt(sock, SOL_SOCKET, SO_ERROR, &error, &len);
+	if (error) { // socket has an error
+		std::cout << "socket error: " << strerror(error) << "\n";
+		if (type == FD_CLIENT)
+			ev->client_history.push_back(this);
+		ev->clients_fd[sock] = new Fd();
+		close(sock);
+		return ;
+	}
 
 	fcntl(sock, F_SETFL, O_NONBLOCK);
 	memset(&buf_read, 0, BUF_SIZE + 1);
-	r = recv(sock, &buf_read, BUF_SIZE, 0);
-	std::string line;
-	std::string rd = std::string(buf_read);
-	std::istringstream iss(rd);
+	recv(sock, &buf_read, BUF_SIZE, 0);
 	time(&last);
-	while (std::getline(iss, line) && !line.empty()) {
+	_stream += std::string(buf_read);
+
+	std::cout << "now _stream is: " << _stream << "\n\n";
+	
+	while (_thereIsAFullCmd(pos, charsToJump)) {
+		line = _stream.substr(0, pos);
+		_stream = _stream.substr(pos + charsToJump);
+
 		Kb_sent += sizeof(line);
 		parsed = parse(line);
 		send_ms += 1;
 		std::cout << *parsed << std::endl;
 		execute_parsed(parsed);
-    }
+		delete parsed;
+	}
 }
 
 void	Client::write_func() { }
