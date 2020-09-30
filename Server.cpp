@@ -66,7 +66,7 @@ void		Server::create() {
 	pe = reinterpret_cast<struct protoent*>(Xv(NULL, getprotobyname("tcp"), "getprotobyname"));
 	sock = X(-1, socket(PF_INET, SOCK_STREAM, pe->p_proto), "socket");
 	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt))) {
-		perror("socket opt change failed\n");
+		std::cout << "socket opt change failed\n";
 		exit (EXIT_FAILURE);
 	}
 	sin.sin_family = AF_INET;

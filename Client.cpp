@@ -11,11 +11,9 @@
 /* ************************************************************************** */
 
 #include "Client.hpp"
-#include <stdio.h>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <iostream>
-#include <cstring>
 #include <sys/types.h>
 #include <fcntl.h>
 
@@ -29,10 +27,10 @@ bool		custom_send(std::string ms, Client *c) {
 bool		check_nick(std::string nk) {
 	if (nk.length() > 9)
 		return (false);
-	if (!(is_special(nk[0]) || std::isalpha(nk[0])))
+	if (!(is_special(nk[0]) || utils::isalpha(nk[0])))
 		return (false);
 	for (char c : nk) {
-		if (!(is_special(c) || std::isalnum(c)
+		if (!(is_special(c) || utils::isalnum(c)
 				|| c == '-'))
 			return (false);
 	}
@@ -1252,7 +1250,6 @@ void	Client::read_func() {
 	socklen_t len = sizeof (error);
 	getsockopt(sock, SOL_SOCKET, SO_ERROR, &error, &len);
 	if (error) { // socket has an error
-		std::cout << "socket error: " << strerror(error) << "\n";
 		std::list<Channel*>::iterator	current = channels.begin();
 		std::list<Channel*>::iterator	end = channels.end();
 
@@ -1268,7 +1265,7 @@ void	Client::read_func() {
 	}
 
 	fcntl(sock, F_SETFL, O_NONBLOCK);
-	memset(&buf_read, 0, BUF_SIZE + 1);
+	utils::memset(&buf_read, 0, BUF_SIZE + 1);
 	recv(sock, &buf_read, BUF_SIZE, 0);
 	time(&last);
 	_stream += std::string(buf_read);

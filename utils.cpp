@@ -74,3 +74,46 @@ std::string	utils::ircLowerCase(const std::string &str)
 	}
 	return (newStr);
 }
+
+// uppercase letters (ABCDEFGHIJKLMNOPQRSTUVWXYZ)
+// lowercase letters (abcdefghijklmnopqrstuvwxyz
+int		utils::isalpha( int ch )
+{
+	if (ch >= 'a' && ch <= 'z')
+		return (ch);
+	if (ch >= 'A' && ch <= 'Z')
+		return (ch);
+	return (0);
+}
+
+// digits (0123456789)
+int		utils::isdigit( int ch )
+{
+	if (ch >= '0' && ch <= '9')
+		return (ch);
+	return (0);
+}
+
+// digits (0123456789)
+// uppercase letters (ABCDEFGHIJKLMNOPQRSTUVWXYZ)
+// lowercase letters (abcdefghijklmnopqrstuvwxyz
+int		utils::isalnum( int ch )
+{
+	return (utils::isalpha(ch) || utils::isdigit(ch));
+}
+
+// void* dest, int ch, std::size_t count
+void	*utils::memset(void *dest, int ch, std::size_t count)
+{
+	std::size_t	i;
+	char		*str;
+
+	str = (char*)dest;
+	i = 0;
+	while (i < count)
+	{
+		str[i] = (unsigned char)ch;
+		++i;
+	}
+	return (dest);
+}
