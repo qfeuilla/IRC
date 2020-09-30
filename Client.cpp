@@ -111,10 +111,11 @@ void	Client::NICK(Command *cmd) {
 					if (type == FD_CLIENT)
 						ev->client_history.push_back(new Client(*this));
 					
-					// we need to update the nick in all of client's channels
-					updateNickInChannels(cmd->arguments[0]);
-
+					std::string	oldNick = nick;
 					nick = cmd->arguments[0];
+					// we need to update the nick in all of client's channels
+					updateNickInChannels(oldNick, nick);
+
 
 					custom_send(ms, this);
 					if (!nick_set) {
@@ -1296,12 +1297,12 @@ Client	*Client::getOtherClient(const std::string &name)
 	return (nullptr);
 }
 
-void	Client::updateNickInChannels(const std::string &newNick)
+void	Client::updateNickInChannels(const std::string &oldNick, const std::string &newNick)
 {
 	std::list<Channel *>::iterator	current = channels.begin();
 	std::list<Channel *>::iterator	end = channels.end();
 	while (current != end) {
-		(*current)->changeNick(nick, newNick);
+		(*current)->changeNick(oldNick, newNick);
 		++current;
 	}
 }

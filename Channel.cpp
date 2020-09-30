@@ -510,7 +510,8 @@ bool		Channel::msgErrors(Client *client, bool sendErrors) const
 
 void		Channel::changeNick(const std::string &oldNick, const std::string &newNick)
 {
-	Client *client;
+	Client		*client;
+	std::string	ms;
 	if (_is_in_list(oldNick, _modes.o)) {
 		_modes.o.remove(oldNick);
 		_modes.o.push_back(newNick);
@@ -525,6 +526,11 @@ void		Channel::changeNick(const std::string &oldNick, const std::string &newNick
 	client = user->second;
 	_users.erase(user);
 	_users.insert(std::pair<std::string, Client*>(newNick, client));
+	// * not in RFC but usefull
+	// :paprika!~pokemon@ip-46.net-80-236-89.joinville.rev.numericable.fr NICK :patrick-2
+	ms = ":" + oldNick + "!" + client->username + "@" + client->servername;
+	ms += " NICK :" + newNick + CRLF;
+	broadcastMsg(client, ms);
 }
 
 bool		Channel::quit(Client *client, const std::vector<std::string> &args)
