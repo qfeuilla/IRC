@@ -216,11 +216,16 @@ void	Client::USER(Command *cmd) {
 				hostname = cmd->arguments[1]; // * not used deprecated
 			if (cmd->arguments[2] != "*")
 				servername = cmd->arguments[2];
+			realname = "";
 			for (size_t i = 3; i < cmd->arguments.size() - 1; i++) {
 				realname += cmd->arguments[i];
 				realname += " ";
 			}
 			realname += cmd->arguments[cmd->arguments.size() - 1];
+
+			// * RFC 1459, 4.1.3 User message - > [...] must be prefixed with a colon (':')
+			if (realname[0] != ':')
+				return ;
 			realname = std::string(&realname[1], &realname[realname.length()]);
 			is_setup = true;
 			if (nick_set)
@@ -355,7 +360,9 @@ void	Client::MODE(Command *cmd) {
 			ev->channels->mode(this, cmd->arguments);
 		}
 	} else {
+		std::cout << "args size = " << cmd->arguments.size() << "\n\n";
 		if (cmd->arguments.size() == 1) {
+			std::cout << "la ?\n\n";
 			if (!ev->channels->getChanModes(this, cmd->arguments)) {
 				ms = get_userMODEs_ms();
 				custom_send(ms, this);

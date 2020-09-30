@@ -129,8 +129,10 @@ bool				Channel::leave(Client *client, const std::string &reason, bool muted)
 		custom_send(ms, client);
 		broadcastMsg(client, ms);
 	}
-	_modes.o.remove(user->first);
-	_modes.v.remove(user->first);
+	if (_is_in_list(user->first, _modes.o))
+		_modes.o.remove(user->first);
+	if (_is_in_list(user->first, _modes.v))
+		_modes.v.remove(user->first);
 	_users.erase(user);
 	_modes.users--;
 	return (true);

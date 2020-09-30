@@ -28,6 +28,7 @@
 # define FD_WAITC		3
 
 # define BUF_SIZE		4096
+# define CLIENTS_MAX	512
 
 // * Command number for switch operations
 

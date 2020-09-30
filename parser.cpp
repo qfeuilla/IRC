@@ -24,6 +24,8 @@ Command		*parse(std::string cmd) {
 			while (cmd[i] == ' ') 
 				i++;
 			last = i;
+			if (i >= cmd.size())
+				break ; // so we keep last == i
 		}
 	}
 	if (last < i)

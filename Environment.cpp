@@ -18,10 +18,7 @@
 #include "Client.hpp"
 
 Environment::Environment() {
-	struct rlimit	rlp;
-
-	X(-1, getrlimit(RLIMIT_NOFILE, &rlp), "getrlimit");
-	clients_num = rlp.rlim_cur;
+	clients_num = CLIENTS_MAX;
 	clients_fd = std::vector<Fd *>(clients_num);
 	for (int i = 0; i < clients_num ; i++) {
 		clients_fd[i] = new Fd();
