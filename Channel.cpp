@@ -110,22 +110,27 @@ bool				Channel::join(Client *client, const std::string &passwd)
 	return (false);
 }
 
-bool				Channel::leave(Client *client, const std::string &reason)
+bool				Channel::leave(Client *client, const std::string &reason, bool muted)
 {
 	std::string		ms;
 
-	(void)reason;
 	_users_map::iterator	user = _users.find(client->nick);
 	if (user == _users.end()) {
 		ms = reply_formating(client->servername.c_str(), ERR_NOTONCHANNEL, std::vector<std::string>({getName()}), client->nick.c_str());
-		return (!custom_send(ms, client));
+		if (!muted)
+			custom_send(ms, client);
+		return (false);
 	}
 	ms = ":" + client->nick + "!a" + client->username + "@";
 	ms += client->servername + " PART " + getName();
 	ms += (reason != "") ? " :" + reason : "";
 	ms += CRLF;
-	custom_send(ms, client);
-	broadcastMsg(client, ms);
+	if (!muted) {
+		custom_send(ms, client);
+		broadcastMsg(client, ms);
+	}
+	_modes.o.remove(user->first);
+	_modes.v.remove(user->first);
 	_users.erase(user);
 	_modes.users--;
 	return (true);
@@ -520,4 +525,21 @@ void		Channel::changeNick(const std::string &oldNick, const std::string &newNick
 	client = user->second;
 	_users.erase(user);
 	_users.insert(std::pair<std::string, Client*>(newNick, client));
+}
+
+bool		Channel::quit(Client *client, const std::vector<std::string> &args)
+{
+	// QUIT :allez salut
+	// :sdlfjJFFFF!~Oui_eneffet@CJ-eef.m3i.5tviju.IP QUIT :Quit: allez a +
+	std::string	ms = ":" + client->nick + "!" + client->username + "@" + client->servername;
+	ms += " QUIT ";
+	for (size_t i = 0; i < args.size(); i++) {
+		ms += args[i];
+		if (i + 1 < args.size())
+			ms += " ";
+	}
+	ms += CRLF;
+	broadcastMsg(client, ms);
+	leave(client, "", true);
+	return (true);
 }

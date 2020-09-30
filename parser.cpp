@@ -26,7 +26,7 @@ Command		*parse(std::string cmd) {
 			last = i;
 		}
 	}
-	if (last < i - 1)
+	if (last < i)
 		container.push_back(cmd.substr(last));
 	return (new Command(container, std::string(cmd)));
 }

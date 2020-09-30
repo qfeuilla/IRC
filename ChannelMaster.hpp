@@ -45,7 +45,7 @@ public:
 	bool	kick(Client *client, const std::vector<std::string> &args);
 	// * topic returns true on succes
 	bool	topic(Client *client, const std::vector<std::string> &args);
-	// * invite returns ture on succes
+	// * invite returns true on succes
 	bool	invite(Client *client, const std::vector<std::string> &args);
 	// * list always return true
 	bool	list(Client *client, const std::vector<std::string> &args);

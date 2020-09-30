@@ -94,11 +94,13 @@ public:
 	// *	join returns true on succes (false if socket was already in the channel before the call)
 	bool				join(Client *client, const std::string &passwd);
 	// *	leave returns true on succes
-	bool				leave(Client *client, const std::string &reason);
+	bool				leave(Client *client, const std::string &reason, bool muted = false);
 	// *	kick returns true on succes
 	bool				kick(Client *client, const std::string &guyToKick, const std::string &reason);
 	// *	invite returns true on succes 
 	bool				invite(Client *client, const std::string &guyToInvite);
+	// *	quit returns true on succes, should always return true in practice
+	bool				quit(Client *client, const std::vector<std::string> &args);
 
 	// MODES METHODS
 	bool	mode_o(bool append, Client *client, const std::string &target);

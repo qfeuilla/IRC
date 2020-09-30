@@ -373,6 +373,13 @@ void	Client::QUIT(Command *cmd) {
 	ans += ms;
 	ans += CRLF;
 	custom_send(ans, this);
+	std::list<Channel*>::iterator	current = channels.begin();
+	std::list<Channel*>::iterator	end = channels.end();
+
+	while (current != end) {
+		(*current)->quit(this, cmd->arguments);
+		++current;
+	}
 	ev->clients_fd[sock] = new Fd();
 	close(sock);
 }
@@ -1228,6 +1235,13 @@ void	Client::read_func() {
 	getsockopt(sock, SOL_SOCKET, SO_ERROR, &error, &len);
 	if (error) { // socket has an error
 		std::cout << "socket error: " << strerror(error) << "\n";
+		std::list<Channel*>::iterator	current = channels.begin();
+		std::list<Channel*>::iterator	end = channels.end();
+
+		while (current != end) {
+			(*current)->quit(this, std::vector<std::string>({":Leaving"}));
+			++current;
+		}
 		if (type == FD_CLIENT)
 			ev->client_history.push_back(this);
 		ev->clients_fd[sock] = new Fd();

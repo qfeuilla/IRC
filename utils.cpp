@@ -44,3 +44,33 @@ bool	utils::strMatch(const std::string &filter, const std::string &str)
 		return (false);
 	return (true);
 }
+
+bool	utils::strCmp(const std::string &str1, const std::string &str2)
+{
+	std::string lowStr1 = utils::ircLowerCase(str1);
+	std::string lowStr2 = utils::ircLowerCase(str2);
+
+	return (lowStr1 == lowStr2);
+}
+
+std::string	utils::ircLowerCase(const std::string &str)
+{
+	std::string	newStr = "";
+	size_t		i = 0;
+
+	while (i < str.size())
+	{
+		if (str[i] >= 'A' && str[i] <= 'Z')
+			newStr += str[i] + ('a' - 'A');
+		else if (str[i] == '[')
+			newStr += '{';
+		else if (str[i] == ']')
+			newStr += '}';
+		else if (str[i] == '\\')
+			newStr += '|';
+		else
+			newStr += str[i];
+		++i;
+	}
+	return (newStr);
+}
