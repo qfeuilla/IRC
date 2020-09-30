@@ -18,7 +18,6 @@
 #include <cstring>
 #include <sys/types.h>
 #include <fcntl.h>
-#include <sstream>
 
 bool		custom_send(std::string ms, Client *c) {
 	c->recv_ms += 1;
@@ -185,10 +184,8 @@ void	Client::exec_registerMS() {
 	
 	type = FD_CLIENT; // * register for other user
 	tmp = "LUSERS";
-	tmp += CR;
 	execute_parsed(parse(tmp));
 	tmp = "MOTD";
-	tmp += CR;
 	execute_parsed(parse(tmp));
 	tmp = "";
 	tmp += ":";
@@ -196,7 +193,6 @@ void	Client::exec_registerMS() {
 	tmp += " MODE ";
 	tmp += nick;
 	tmp += " +i";
-	tmp += CR;
 	execute_parsed(parse(tmp));
 	tmp = "";
 	tmp += ":";
@@ -205,7 +201,6 @@ void	Client::exec_registerMS() {
 	tmp += ": new User with nick : ";
 	tmp += nick;
 	tmp += " Join the server";
-	tmp += CR;
 	execute_parsed(parse(tmp));
 	// TODO : need more functions (i will do)
 }
@@ -470,38 +465,44 @@ void	Client::NOTICE(Command *cmd) {
 
 void	Client::MOTD(Command *cmd) {
 	(void)cmd;
-	std::string motd;
+	std::list<std::string>	motd;
+	std::list<std::string>::iterator	current;
+	std::list<std::string>::iterator	end;
+
 	ev->cmd_count["MOTD"] += 1;
 
-	motd += " :::       ::: :::::::::: :::        ::::::::   ::::::::  ::::    ::::  ::::::::: \n";
-	motd += " :+:       :+: :+:        :+:       :+:    :+: :+:    :+: +:+:+: :+:+:+ :+:       \n";
-	motd += " +:+       +:+ +:+        +:+       +:+        +:+    +:+ +:+ +:+:+ +:+ +:+       \n";
-	motd += " +#+  +:+  +#+ +#++:++#   +#+       +#+        +#+    +:+ +#+  +:+  +#+ +#++:++#  \n";
-	motd += " +#+ +#+#+ +#+ +#+        +#+       +#+        +#+    +#+ +#+       +#+ +#+       \n";
-	motd += "  #+#+# #+#+#  #+#        #+#       #+#    #+# #+#    #+# #+#       #+# #+#       \n";
-	motd += "   ###   ###   ########## ########## ########   ########  ###       ### ######### \n";
-	motd += "                                                                                  \n";
-	motd += "                          Welcome to FT_IRC a 42 project                          \n";
-	motd += "                                                                                  \n";
-	motd += "                                 444    22222222                                  \n";
-    motd += "                                444    222    222                                 \n";
-    motd += "                               444 444       222                                  \n";
-    motd += "                              444  444     222                                    \n";
-    motd += "                             44444444444 222                                      \n";
-    motd += "                                   444  222                                       \n";
-    motd += "                                   444 2222222222                                 \n";
-	motd += "                                                                                  \n";
+	motd.push_back(" :::       ::: :::::::::: :::        ::::::::   ::::::::  ::::    ::::  :::::::::");
+	motd.push_back(" :+:       :+: :+:        :+:       :+:    :+: :+:    :+: +:+:+: :+:+:+ :+:      ");
+	motd.push_back(" +:+       +:+ +:+        +:+       +:+        +:+    +:+ +:+ +:+:+ +:+ +:+      ");
+	motd.push_back(" +#+  +:+  +#+ +#++:++#   +#+       +#+        +#+    +:+ +#+  +:+  +#+ +#++:++# ");
+	motd.push_back(" +#+ +#+#+ +#+ +#+        +#+       +#+        +#+    +#+ +#+       +#+ +#+      ");
+	motd.push_back("  #+#+# #+#+#  #+#        #+#       #+#    #+# #+#    #+# #+#       #+# #+#      ");
+	motd.push_back("   ###   ###   ########## ########## ########   ########  ###       ### #########");
+	motd.push_back("                                                                                 ");
+	motd.push_back("                          Welcome to FT_IRC a 42 project                         ");
+	motd.push_back("                                                                                 ");
+	motd.push_back("                                 444    22222222                                 ");
+    motd.push_back("                                444    222    222                                ");
+    motd.push_back("                               444 444       222                                 ");
+    motd.push_back("                              444  444     222                                   ");
+    motd.push_back("                             44444444444 222                                     ");
+    motd.push_back("                                   444  222                                      ");
+    motd.push_back("                                   444 2222222222                                ");
+	motd.push_back("                                                                                 ");
 
 	std::string line;
-	std::string rd = std::string(motd);
-	std::istringstream iss(rd);
 
 	line = reply_formating(servername.c_str(), RPL_MOTDSTART, {servername.c_str()}, nick.c_str());
 	custom_send(line, this);
 
-	while (std::getline(iss, line) && !line.empty()) {
+	current = motd.begin();
+	end = motd.end();
+
+	while (current != end) {
+		line = *current;
 		line = reply_formating(servername.c_str(), RPL_MOTD, {line}, nick.c_str());
 		custom_send(line, this);
+		++current;
     }
 
 	line = reply_formating(servername.c_str(), RPL_ENDOFMOTD, {}, nick.c_str());
@@ -685,41 +686,45 @@ void	Client::ADMIN(Command *cmd) {
 
 void	Client::INFO(Command *cmd) {
 	(void)cmd;
-	std::string inf;
+	std::list<std::string>	inf;
+	std::list<std::string>::iterator	current;
+	std::list<std::string>::iterator	end;
 	std::string buf;
 	ev->cmd_count["INFO"] += 1;
 
-	inf += " IRC --\n";
-	inf += " Based on RFCs given on 42 subject page : \n";
-	inf += " https://github.com/qfeuilla/ft_irc/blob/master/en.subject.pdf \n";
-	inf += " \n";
-	inf += " This program is free software; you can redistribute it and/or\n";
-	inf += " modify it under the terms of the GNU General Public License as\n";
-	inf += " published by the Free Software Foundation; either version 2, or\n";
-	inf += " (at your option) any later version.\n";
-	inf += " \n";
-	inf += " ft_irc has been developed to meet the policy needs of the\n";
-	inf += " RFCs IRC network. \n";
-	inf += "  \n";
-	inf += " ft_irc development is currently ongoin with developpers :\n";
-	inf	+= " Quentin FEUILLADE--MONTIXI and Mayeul Le Monies De Sagazan\n";
-	inf += " see our Github : \n";
-	inf += " 	- https://github.com/qfeuilla \n";
-	inf += " 	- https://github.com/mle-moni \n";
-	inf += " \n";
-	inf += " \n";
-	inf += " On-line since:";
+	inf.push_back(" IRC --");
+	inf.push_back(" Based on RFCs given on 42 subject page : ");
+	inf.push_back(" https://github.com/qfeuilla/ft_irc/blob/master/en.subject.pdf ");
+	inf.push_back(" ");
+	inf.push_back(" This program is free software; you can redistribute it and/or");
+	inf.push_back(" modify it under the terms of the GNU General Public License as");
+	inf.push_back(" published by the Free Software Foundation; either version 2, or");
+	inf.push_back(" (at your option) any later version.");
+	inf.push_back(" ");
+	inf.push_back(" ft_irc has been developed to meet the policy needs of the");
+	inf.push_back(" RFCs IRC network. ");
+	inf.push_back("  ");
+	inf.push_back(" ft_irc development is currently ongoin with developpers :");
+	inf.push_back(" Quentin FEUILLADE--MONTIXI and Mayeul Le Monies De Sagazan");
+	inf.push_back(" see our Github : ");
+	inf.push_back(" 	- https://github.com/qfeuilla ");
+	inf.push_back(" 	- https://github.com/mle-moni ");
+	inf.push_back(" ");
+	inf.push_back(" ");
+	inf.push_back(" On-line since:");
 	buf = std::asctime(gmtime(&(ev->start)));
-	inf += std::string(&buf[0], &buf[buf.size() - 1]);
-	inf += " UTC \n";
+	inf.push_back(std::string(&buf[0], &buf[buf.size() - 1]));
+	inf.push_back(" UTC \n");
 	
 	std::string line;
-	std::string rd = std::string(inf);
-	std::istringstream iss(rd);
+	current = inf.begin();
+	end = inf.end();
 
-	while (std::getline(iss, line) && !line.empty()) {
+	while (current != end) {
+		line = *current;
 		line = reply_formating(servername.c_str(), RPL_INFO, {line}, nick.c_str());
 		custom_send(line, this);
+		++current;
     }
 
 	line = reply_formating(servername.c_str(), RPL_ENDOFINFO, {}, nick.c_str());
@@ -847,7 +852,6 @@ void	Client::KILL(Command *cmd) {
 					ms += cmd->arguments[i];
 					ms += " ";
 				}
-				ms += CR;
 				c->execute_parsed(parse(ms));
 			} else {
 				ms = reply_formating(servername.c_str(), ERR_NOSUCHNICK, {}, nick.c_str());
@@ -1076,8 +1080,21 @@ void	Client::LIST(Command *cmd) {
 	ev->channels->list(this, cmd->arguments);
 }
 
+bool	Client::_cmdNeedAuth(int cmdCode) const
+{
+	if (cmdCode == PASS_CC || cmdCode == NICK_CC
+	|| cmdCode == USER_CC || cmdCode == SERVER_CC) {
+		return (false);
+	}
+	return (true);
+}
+
 int		Client::execute_parsed(Command *parsed) {
-	switch (parsed->cmd_code())
+	int		cmdCode = parsed->cmd_code();
+
+	if (!is_setup && _cmdNeedAuth(cmdCode))
+		return (1);
+	switch (cmdCode)
 	{
 	case PASS_CC:
 		PASS(parsed);

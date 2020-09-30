@@ -113,6 +113,7 @@ private:
 	std::string			_stream;
 
 	bool	_thereIsAFullCmd(size_t &pos, size_t& charsToJump);
+	bool	_cmdNeedAuth(int cmdCode) const;
 };
 
 std::ostream &			operator<<( std::ostream & o, Client const & i );
