@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:50:59 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/24 14:55:43 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/29 14:29:12 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -60,11 +60,12 @@ public:
 	void				WALLOPS(Command *);
 	void				USERHOST(Command *);
 	void				ISON(Command *);
-	void				JOIN(Command *cmd);
-	void				PART(Command *cmd);
-	void				KICK(Command *cmd);
-	void				TOPIC(Command *cmd);
-	void				INVITE(Command *cmd);
+	void				JOIN(Command *);
+	void				PART(Command *);
+	void				KICK(Command *);
+	void				TOPIC(Command *);
+	void				INVITE(Command *);
+	void				SERVER(Command *);
 
 	int					execute_parsed(Command *);
 
@@ -102,10 +103,11 @@ public:
 	
 	std::list<Channel*>	channels;
 
+	bool				nick_set;
+
 private:
 	Environment			*ev;
 	bool				pass_set;
-	bool				nick_set;
 	bool				is_setup;
 };
 

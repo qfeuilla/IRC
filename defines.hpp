@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/20 17:01:28 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/24 15:03:03 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/29 14:28:00 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,6 +26,7 @@
 # define FD_SERVER		1
 # define FD_CLIENT		2
 # define FD_WAITC		3
+# define FD_OTHER		4
 
 # define BUF_SIZE		4096
 

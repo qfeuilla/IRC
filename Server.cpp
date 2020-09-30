@@ -38,6 +38,76 @@ Server::Server() {
 bool			Server::load_other_servs(std::string servinfo) {
 	(void)servinfo;
 	// TODO : Connecton to other server
+	// 1 : connect
+	// 2 : send SERVER message
+	// 3 : stock the socket as a OtherServ
+	unsigned int		port;
+	std::string			addr;
+	std::string			pass;
+	unsigned int		last = 0;
+	int					tp = 0;
+	std::string			ms;
+	int					_sock = 0;
+	struct sockaddr_in	serv_addr;
+	
+	for (size_t i = 0; i < servinfo.length(); i++) {
+		if (servinfo[i] == ':') {
+			switch (tp)
+			{
+			case 0:
+				addr = std::string(&servinfo[0], &servinfo[i]);
+				break;
+			case 1:
+				port = std::atoi(std::string(&servinfo[last], &servinfo[i]).c_str());
+				break;
+			default:
+				break;
+			}
+			last = i + 1;
+			tp += 1;
+		}
+	}
+	pass = std::string(&servinfo[last], &servinfo[servinfo.length()]);
+	if (tp != 2) {
+		return (false);
+	}
+
+	if ((_sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+		return (false);
+	}
+
+	serv_addr.sin_family = AF_INET;
+	serv_addr.sin_port = htons(port);
+
+	if (inet_pton(serv_addr.sin_family, addr.c_str(), &serv_addr.sin_addr) <= 0) {
+		return (false);
+	}
+
+	if (connect(_sock, reinterpret_cast<struct sockaddr *>(&serv_addr), sizeof(serv_addr)) < 0) {
+		return (false);
+	}
+
+	ms += "SERVER ";
+	ms += inet_ntoa(ev->sin.sin_addr);
+	ms += " ";
+	ms += "1";
+	ms += " ";
+	ms += "42";
+	ms += " ";
+	ms += pass;
+	ms += CRLF;
+	send(_sock, ms.c_str(), ms.length(), 0);
+
+	OtherServ *other = new OtherServ(_sock, false, ev);
+	other->name = addr;
+	other->hop_count = 1;
+	other->token = 42;
+	other->info = "";
+	delete ev->clients_fd[_sock];
+	ev->clients_fd[_sock] = other;
+	std::cerr << "Fd adding Ok" << std::endl;
+	ev->otherServers.push_back(other);
+	std::cerr << "OtherServ adding Ok" << std::endl;
 	return (true);
 }
 
@@ -53,7 +123,8 @@ void		Server::load_options(int ac, char **av) {
 		ev->password = new std::string(av[3]);
 		create();
 		if (!load_other_servs(av[1])) {
-			std::cerr << "Error on link server info";
+			std::cerr << "Error on link server info" << std::endl;
+			std::cerr << "Usage: " << av[0] <<"[host:port:password] <port> <password>" << std::endl;
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -95,7 +166,6 @@ void		Server::accept_srv() {
 	std::cout << "New client fd:" << cs << " from " 
 		<< inet_ntoa(csin.sin_addr) << ":"
 		<< ntohs(csin.sin_port) << std::endl;
-
 	delete ev->clients_fd[cs];
 	ev->clients_fd[cs] = new Client(ev, cs, csin);
 }

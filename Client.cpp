@@ -3,22 +3,15 @@
 /*                                                        :::      ::::::::   */
 /*   Client.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mayeul <mayeul@student.42.fr>              +#+  +:+       +#+        */
+/*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:51:25 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/24 15:03:06 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/30 00:51:28 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Client.hpp"
-#include <stdio.h>
-#include <unistd.h>
-#include <sys/socket.h>
-#include <iostream>
-#include <cstring>
-#include <sys/types.h>
-#include <fcntl.h>
-#include <sstream>
+#include "OtherServ.hpp"
 
 bool		custom_send(std::string ms, Client *c) {
 	c->recv_ms += 1;
@@ -99,15 +92,20 @@ void	Client::NICK(Command *cmd) {
 
 	if (cmd->arguments.size() >= 1) {
 		if (check_nick(cmd->arguments[0])) {
-			if (ev->search_list_nick(cmd->arguments[0]).empty()) {
+			if (ev->search_list_nick(cmd->arguments[0]).empty() && ev->search_othersrv_nick(cmd->arguments[0]).empty()) {
 				// * if client is setup so it is a nick change
 				if (is_setup) {
 					ms += ":";
 					ms += nick;
-					ms += " NICK :";
+					ms += " NICK ";
 					ms += cmd->arguments[0];
 					ms += CRLF;
 					
+					for (OtherServ *serv : ev->otherServers) {
+						serv->change_nick(nick, cmd->arguments[0]);
+						send(serv->sock, ms.c_str(), ms.length(), 0);
+					}
+
 					// * save old client for history purpose
 					if (type == FD_CLIENT)
 						ev->client_history.push_back(new Client(*this));
@@ -119,6 +117,12 @@ void	Client::NICK(Command *cmd) {
 						exec_registerMS();
 					}
 				} else {
+					for (OtherServ *serv : ev->otherServers) {
+						ms = "NICK ";
+						ms += cmd->arguments[0];
+						ms += CRLF;
+						send(serv->sock, ms.c_str(), ms.length(), 0);
+					}
 					nick = cmd->arguments[0];
 					nick_set = true;
 				}
@@ -373,6 +377,13 @@ void	Client::QUIT(Command *cmd) {
 	ans += " QUIT :";
 	ans += ms;
 	ans += CRLF;
+	for (OtherServ *serv : ev->otherServers) {
+		ms = ":";
+		ms += nick;
+		ms += " QUIT";
+		ms += CRLF;
+		send(serv->sock, ms.c_str(), ms.length(), 0);
+	}
 	custom_send(ans, this);
 	ev->clients_fd[sock] = new Fd();
 	close(sock);
@@ -383,7 +394,7 @@ void	Client::PRIVMSG(Command *cmd) {
 	std::vector<Fd *> 	tmp;
 	int					good = 0;
 	ev->cmd_count["PRIVMSG"] += 1;
-	
+	std::vector<OtherServ *>	tmpo;
 
 	// << PRIVMSG #oui,mayeul :c'est super non ?
 	// >> :mayeul_!~mayeul@ip-46.net-80-236-89.joinville.rev.numericable.fr PRIVMSG #oui :-c'est super non ?
@@ -397,25 +408,27 @@ void	Client::PRIVMSG(Command *cmd) {
 			} else if (targ[0] == '$') {
 				// TODO : multi server
 			} else {
+				ms = ":";
+				ms += nick;
+				ms += " PRIVMSG ";
+				ms += targ;
+				ms += " ";
+				for (size_t i = 1; i < cmd->arguments.size(); i++) {
+					ms += cmd->arguments[i];
+					ms += " ";
+				}
+				ms += CRLF;
 				if (!(tmp = ev->search_list_nick(targ)).empty()) {
 					Client *c = reinterpret_cast<Client *>(tmp[0]);
-
-					ms += ":";
-					ms += nick;
-					ms += " PRIVMSG ";
-					ms += targ;
-					ms += " ";
-					for (size_t i = 1; i < cmd->arguments.size(); i++) {
-						ms += cmd->arguments[i];
-						ms += " ";
-					}
-					ms += CRLF;
 					custom_send(ms, c);
 					good += 1;
 					if (c->is_away) {
 						ms = reply_formating(servername.c_str(), RPL_AWAY, std::vector<std::string>({c->nick, c->away_ms}), nick.c_str());
 						custom_send(ms, this);
 					}
+				} else if (!(tmpo = ev->search_othersrv_nick(targ)).empty()) {
+					good += 1;
+					send(tmpo[0]->sock, ms.c_str(), ms.length(), 0);
 				} else {
 					ms = reply_formating(servername.c_str(), ERR_NOSUCHNICK, {targ}, nick.c_str());
 					custom_send(ms, this);
@@ -435,6 +448,7 @@ void	Client::PRIVMSG(Command *cmd) {
 void	Client::NOTICE(Command *cmd) {
 	std::string 		ms;
 	std::vector<Fd *> 	tmp;
+	std::vector<OtherServ *> 	tmpo;
 	ev->cmd_count["NOTICE"] += 1;
 	
 	if (cmd->arguments.size() >= 2) {
@@ -444,20 +458,21 @@ void	Client::NOTICE(Command *cmd) {
 			} else if (targ[0] == '$') {
 				// TODO : multi server
 			} else {
+				ms = ":";
+				ms += nick;
+				ms += " NOTICE ";
+				ms += targ;
+				ms += " ";
+				for (size_t i = 1; i < cmd->arguments.size(); i++) {
+					ms += cmd->arguments[i];
+					ms += " ";
+				}
+				ms += CRLF;
 				if (!(tmp = ev->search_list_nick(targ)).empty()) {
 					Client *c = reinterpret_cast<Client *>(tmp[0]);
-
-					ms += ":";
-					ms += nick;
-					ms += " NOTICE ";
-					ms += targ;
-					ms += " ";
-					for (size_t i = 1; i < cmd->arguments.size(); i++) {
-						ms += cmd->arguments[i];
-						ms += " ";
-					}
-					ms += CRLF;
 					custom_send(ms, c);
+				} else if (!(tmpo = ev->search_othersrv_nick(targ)).empty()) {
+					send(tmpo[0]->sock, ms.c_str(), ms.length(), 0);
 				}
 			}
 		}
@@ -1068,6 +1083,36 @@ void	Client::INVITE(Command *cmd) {
 	}
 }
 
+void	Client::SERVER(Command *cmd) {
+	std::string ms;
+	ev->cmd_count["SERVER"] += 1;
+	OtherServ *other = new OtherServ(sock, true, ev);
+
+	if (!is_setup) {
+		if (cmd->arguments.size() >= 1) {
+			other->name = cmd->arguments[0];
+		} if (cmd->arguments.size() >= 2) {
+			other->hop_count = std::atoi(cmd->arguments[1].c_str());
+		} if (cmd->arguments.size() >= 3) {
+			other->token = std::atoi(cmd->arguments[2].c_str());
+		} if (cmd->arguments.size() >= 4) {
+			for (size_t i = 3; i < cmd->arguments.size(); i++) {
+				ms += cmd->arguments[i];
+				ms += " ";
+			}
+			other->info = cmd->arguments[0];
+		}
+		delete ev->clients_fd[sock];
+		ev->clients_fd[sock] = other;
+		std::cerr << "Fd adding Ok" << std::endl;
+		ev->otherServers.push_back(other);
+		std::cerr << "OtherServ adding Ok" << std::endl;
+	} else {
+		ms = reply_formating(servername.c_str(), ERR_ALREADYREGISTRED, {}, nick.c_str());
+		custom_send(ms, this);
+	}
+}
+
 int		Client::execute_parsed(Command *parsed) {
 	switch (parsed->cmd_code())
 	{
@@ -1172,6 +1217,9 @@ int		Client::execute_parsed(Command *parsed) {
 		break;
 	case ISON_CC:
 		ISON(parsed);
+		break;
+	case SERVER_CC:
+		SERVER(parsed);
 		break;
 	default:
 		break;
