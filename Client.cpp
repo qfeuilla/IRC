@@ -302,11 +302,28 @@ void	Client::MODE(Command *cmd) {
 	if (cmd->arguments.size() >= 2) {
 		if (cmd->arguments[0][0] != '#') {
 			if (cmd->arguments[0] == nick) {
-				size_t	i = 0;
+				size_t	i;
 				bool	add = false;
+				char	c;
+				bool	goodFormat = true;
 
+				// check format before setting flags to follow advice of RFC 1459: 4.2.3.1 Channel modes
+				for (i = 0; i < cmd->arguments[1].length() && i < 4; i++) {
+					c = cmd->arguments[1][i];
+					if (i == 0) {
+						if (c != '-' && c != '+') {
+							goodFormat = false;
+							break;
+						}
+					} else if (c != 'i' && c != 's' && c != 'w' && c != 'o') {
+						goodFormat = false;
+						break;
+					}
+				}
 				// * set flags
-				for (; i < cmd->arguments[1].length() && i < 4; i++) {
+				for (i = 0; i < cmd->arguments[1].length() && i < 4; i++) {
+					if (!goodFormat)
+						break ;
 					if (i == 0) {
 						if (cmd->arguments[1][i] == '-')
 							;
