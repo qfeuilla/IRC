@@ -263,7 +263,8 @@ bool	ChannelMaster::broadcastMsg(Client *client, const std::string &chanName, co
 	}
 	if (channel->msgErrors(client, sendErrors))
 		return (false);
-	ms = ":" + client->nick + "!" + client->username + "@" + client->servername + " PRIVMSG ";
+	ms = ":" + client->nick + "!" + client->username + "@" + client->servername;
+	ms += sendErrors ? " PRIVMSG " : " NOTICE ";
 	ms += channel->getName() + " :" + msgToSend;
 	ms += CRLF;
 	return (channel->broadcastMsg(client, ms));

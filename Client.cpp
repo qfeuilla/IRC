@@ -475,7 +475,7 @@ void	Client::NOTICE(Command *cmd) {
 					Client *c = reinterpret_cast<Client *>(tmp[0]);
 
 					ms += ":";
-					ms += nick;
+					ms += nick + "!" + username + "@" + servername;
 					ms += " NOTICE ";
 					ms += targ;
 					ms += " ";
