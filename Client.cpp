@@ -360,9 +360,7 @@ void	Client::MODE(Command *cmd) {
 			ev->channels->mode(this, cmd->arguments);
 		}
 	} else {
-		std::cout << "args size = " << cmd->arguments.size() << "\n\n";
 		if (cmd->arguments.size() == 1) {
-			std::cout << "la ?\n\n";
 			if (!ev->channels->getChanModes(this, cmd->arguments)) {
 				ms = get_userMODEs_ms();
 				custom_send(ms, this);

@@ -9,6 +9,7 @@ namespace utils
 	bool	strMatchToLower(const std::string &filter, const std::string &str);
 	bool	strCmp(const std::string &str1, const std::string &str2);
 	std::string	ircLowerCase(const std::string &str);
+	std::string	ircUpperCase(const std::string &str);
 
 	int isalpha( int ch );
 	int isdigit( int ch );

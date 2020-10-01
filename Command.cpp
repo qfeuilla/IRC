@@ -12,6 +12,7 @@
 
 #include "Command.hpp"
 #include "defines.hpp"
+#include "utils.hpp"
 
 Command::~Command() { }
 
@@ -34,99 +35,101 @@ Command::Command(std::vector<std::string> cmd, std::string ln) {
 }
 
 int		Command::cmd_code() const {
-	if (command == "PASS" || command == ":PASS")	
+	std::string upperCaseCommand = utils::ircUpperCase(command);
+
+	if (upperCaseCommand == "PASS" || upperCaseCommand == ":PASS")	
 		return (PASS_CC);
-	else if (command == "NICK" || command == ":NICK")
+	else if (upperCaseCommand == "NICK" || upperCaseCommand == ":NICK")
 		return (NICK_CC);
-	else if (command == "USER" || command == ":USER")
+	else if (upperCaseCommand == "USER" || upperCaseCommand == ":USER")
 		return (USER_CC);
-	else if (command == "OPER" || command == ":OPER")	
+	else if (upperCaseCommand == "OPER" || upperCaseCommand == ":OPER")	
 		return (OPER_CC);
-	else if (command == "MODE" || command == ":MODE")	
+	else if (upperCaseCommand == "MODE" || upperCaseCommand == ":MODE")	
 		return (MODE_CC);
-	else if (command == "SERVICE" || command == ":SERVICE")	
+	else if (upperCaseCommand == "SERVICE" || upperCaseCommand == ":SERVICE")	
 		return (SERVICE_CC);
-	else if (command == "QUIT" || command == ":QUIT")	
+	else if (upperCaseCommand == "QUIT" || upperCaseCommand == ":QUIT")	
 		return (QUIT_CC);
-	else if (command == "SQUIT" || command == ":SQUIT")	
+	else if (upperCaseCommand == "SQUIT" || upperCaseCommand == ":SQUIT")	
 		return (SQUIT_CC);
-	else if (command == "JOIN" || command == ":JOIN")	
+	else if (upperCaseCommand == "JOIN" || upperCaseCommand == ":JOIN")	
 		return (JOIN_CC);
-	else if (command == "PART" || command == ":PART")	
+	else if (upperCaseCommand == "PART" || upperCaseCommand == ":PART")	
 		return (PART_CC);
-	else if (command == "TOPIC" || command == ":TOPIC")	
+	else if (upperCaseCommand == "TOPIC" || upperCaseCommand == ":TOPIC")	
 		return (TOPIC_CC);
-	else if (command == "NAMES" || command == ":NAMES")	
+	else if (upperCaseCommand == "NAMES" || upperCaseCommand == ":NAMES")	
 		return (NAMES_CC);
-	else if (command == "LIST" || command == ":LIST")	
+	else if (upperCaseCommand == "LIST" || upperCaseCommand == ":LIST")	
 		return (LIST_CC);
-	else if (command == "INVITE" || command == ":INVITE")	
+	else if (upperCaseCommand == "INVITE" || upperCaseCommand == ":INVITE")	
 		return (INVITE_CC);
-	else if (command == "KICK" || command == ":KICK")	
+	else if (upperCaseCommand == "KICK" || upperCaseCommand == ":KICK")	
 		return (KICK_CC);
-	else if (command == "PRIVMSG" || command == ":PRIVMSG")	
+	else if (upperCaseCommand == "PRIVMSG" || upperCaseCommand == ":PRIVMSG")	
 		return (PRIVMSG_CC);
-	else if (command == "NOTICE" || command == ":NOTICE")	
+	else if (upperCaseCommand == "NOTICE" || upperCaseCommand == ":NOTICE")	
 		return (NOTICE_CC);
-	else if (command == "MOTD" || command == ":MOTD")	
+	else if (upperCaseCommand == "MOTD" || upperCaseCommand == ":MOTD")	
 		return (MOTD_CC);
-	else if (command == "LUSERS" || command == ":LUSERS")	
+	else if (upperCaseCommand == "LUSERS" || upperCaseCommand == ":LUSERS")	
 		return (LUSERS_CC);
-	else if (command == "VERSION" || command == ":VERSION")	
+	else if (upperCaseCommand == "VERSION" || upperCaseCommand == ":VERSION")	
 		return (VERSION_CC);
-	else if (command == "STATS" || command == ":STATS")	
+	else if (upperCaseCommand == "STATS" || upperCaseCommand == ":STATS")	
 		return (STATS_CC);
-	else if (command == "LINKS" || command == ":LINKS")	
+	else if (upperCaseCommand == "LINKS" || upperCaseCommand == ":LINKS")	
 		return (LINKS_CC);
-	else if (command == "TIME" || command == ":TIME")	
+	else if (upperCaseCommand == "TIME" || upperCaseCommand == ":TIME")	
 		return (TIME_CC);
-	else if (command == "CONNECT" || command == ":CONNECT")	
+	else if (upperCaseCommand == "CONNECT" || upperCaseCommand == ":CONNECT")	
 		return (CONNECT_CC);
-	else if (command == "TRACE" || command == ":TRACE")	
+	else if (upperCaseCommand == "TRACE" || upperCaseCommand == ":TRACE")	
 		return (TRACE_CC);
-	else if (command == "ADMIN" || command == ":ADMIN")	
+	else if (upperCaseCommand == "ADMIN" || upperCaseCommand == ":ADMIN")	
 		return (ADMIN_CC);
-	else if (command == "INFO" || command == ":INFO")	
+	else if (upperCaseCommand == "INFO" || upperCaseCommand == ":INFO")	
 		return (INFO_CC);
-	else if (command == "SERVLIST" || command == ":SERVLIST")	
+	else if (upperCaseCommand == "SERVLIST" || upperCaseCommand == ":SERVLIST")	
 		return (SERVLIST_CC);
-	else if (command == "SQUERY" || command == ":SQUERY")	
+	else if (upperCaseCommand == "SQUERY" || upperCaseCommand == ":SQUERY")	
 		return (SQUERY_CC);
-	else if (command == "WHO" || command == ":WHO")	
+	else if (upperCaseCommand == "WHO" || upperCaseCommand == ":WHO")	
 		return (WHO_CC);
-	else if (command == "WHOIS" || command == ":WHOIS")	
+	else if (upperCaseCommand == "WHOIS" || upperCaseCommand == ":WHOIS")	
 		return (WHOIS_CC);
-	else if (command == "WHOWAS" || command == ":WHOWAS")	
+	else if (upperCaseCommand == "WHOWAS" || upperCaseCommand == ":WHOWAS")	
 		return (WHOWAS_CC);
-	else if (command == "KILL" || command == ":KILL")	
+	else if (upperCaseCommand == "KILL" || upperCaseCommand == ":KILL")	
 		return (KILL_CC);
-	else if (command == "PING" || command == ":PING")	
+	else if (upperCaseCommand == "PING" || upperCaseCommand == ":PING")	
 		return (PING_CC);
-	else if (command == "PONG" || command == ":PONG")	
+	else if (upperCaseCommand == "PONG" || upperCaseCommand == ":PONG")	
 		return (PONG_CC);
-	else if (command == "ERROR" || command == ":ERROR")	
+	else if (upperCaseCommand == "ERROR" || upperCaseCommand == ":ERROR")	
 		return (ERROR_CC);
-	else if (command == "AWAY" || command == ":AWAY")
+	else if (upperCaseCommand == "AWAY" || upperCaseCommand == ":AWAY")
 		return (AWAY_CC);
-	else if (command == "REHASH" || command == ":REHASH")	
+	else if (upperCaseCommand == "REHASH" || upperCaseCommand == ":REHASH")	
 		return (REHASH_CC);
-	else if (command == "DIE" || command == ":DIE")	
+	else if (upperCaseCommand == "DIE" || upperCaseCommand == ":DIE")	
 		return (DIE_CC);
-	else if (command == "RESTART" || command == ":RESTART")	
+	else if (upperCaseCommand == "RESTART" || upperCaseCommand == ":RESTART")	
 		return (RESTART_CC);
-	else if (command == "SUMMON" || command == ":SUMMON")	
+	else if (upperCaseCommand == "SUMMON" || upperCaseCommand == ":SUMMON")	
 		return (SUMMON_CC);
-	else if (command == "USERS" || command == ":USERS")	
+	else if (upperCaseCommand == "USERS" || upperCaseCommand == ":USERS")	
 		return (USERS_CC);
-	else if (command == "WALLOPS" || command == ":WALLOPS")	
+	else if (upperCaseCommand == "WALLOPS" || upperCaseCommand == ":WALLOPS")	
 		return (WALLOPS_CC);
-	else if (command == "USERHOST" || command == ":USERHOST")	
+	else if (upperCaseCommand == "USERHOST" || upperCaseCommand == ":USERHOST")	
 		return (USERHOST_CC);
-	else if (command == "ISON" || command == ":ISON")	
+	else if (upperCaseCommand == "ISON" || upperCaseCommand == ":ISON")	
 		return (ISON_CC);
-	else if (command == "SERVER" || command == ":SERVER")	
+	else if (upperCaseCommand == "SERVER" || upperCaseCommand == ":SERVER")	
 		return (SERVER_CC);
-	else if (command == "NJOIN" || command == ":NJOIN")	
+	else if (upperCaseCommand == "NJOIN" || upperCaseCommand == ":NJOIN")	
 		return (NJOIN_CC);
 	else
 		return (WRONG_CMD);

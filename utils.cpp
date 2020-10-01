@@ -75,6 +75,28 @@ std::string	utils::ircLowerCase(const std::string &str)
 	return (newStr);
 }
 
+std::string	utils::ircUpperCase(const std::string &str)
+{
+	std::string	newStr = "";
+	size_t		i = 0;
+
+	while (i < str.size())
+	{
+		if (str[i] >= 'a' && str[i] <= 'z')
+			newStr += str[i] - ('a' - 'A');
+		else if (str[i] == '{')
+			newStr += '[';
+		else if (str[i] == '}')
+			newStr += ']';
+		else if (str[i] == '|')
+			newStr += '\\';
+		else
+			newStr += str[i];
+		++i;
+	}
+	return (newStr);
+}
+
 // uppercase letters (ABCDEFGHIJKLMNOPQRSTUVWXYZ)
 // lowercase letters (abcdefghijklmnopqrstuvwxyz
 int		utils::isalpha( int ch )
