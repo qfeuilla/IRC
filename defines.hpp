@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/20 17:01:28 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/29 14:28:00 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/01 17:46:14 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,6 +27,7 @@
 # define FD_CLIENT		2
 # define FD_WAITC		3
 # define FD_OTHER		4
+# define FD_OCLIENT		5
 
 # define BUF_SIZE		4096
 
@@ -80,6 +81,9 @@
 # define ISON_CC		45 // * done
 # define SERVER_CC		46 // TODO : when server to server
 # define NJOIN_CC		47 // TODO : when server to server
+# define ADDS_CC		48 // * Command used to notify adding of a new server
+# define NSERV_CC		49 // * Command to notify entrying server of num of SERVERS
+# define DELS_CC		50 // * Command used to notify deleting of a new server
 
 // * Messages necessay rights to execute
 
@@ -228,6 +232,8 @@
 # define RPL_STATSLINKINFO     {"211", "{}", 1}
 // "<command> <count>"
 # define RPL_STATSCOMMANDS     {"212", "{} {}", 2}
+// "C <name> <port>"
+#define RPL_STATSCLINE		   {"213", "C {}:{}", 2}
 // "<stats letter> :End of STATS report"
 # define RPL_ENDOFSTATS        {"219", "{} :End of STATS report", 1}
 // ":Server Up <days> days <hours>:<minutes>:<seconds>"

@@ -37,11 +37,10 @@ Server::Server() {
 
 bool			Server::load_other_servs(std::string servinfo) {
 	(void)servinfo;
-	// TODO : Connecton to other server
 	// 1 : connect
 	// 2 : send SERVER message
 	// 3 : stock the socket as a OtherServ
-	unsigned int		port;
+	unsigned int		porti;
 	std::string			addr;
 	std::string			pass;
 	unsigned int		last = 0;
@@ -58,7 +57,7 @@ bool			Server::load_other_servs(std::string servinfo) {
 				addr = std::string(&servinfo[0], &servinfo[i]);
 				break;
 			case 1:
-				port = std::atoi(std::string(&servinfo[last], &servinfo[i]).c_str());
+				porti = std::atoi(std::string(&servinfo[last], &servinfo[i]).c_str());
 				break;
 			default:
 				break;
@@ -77,7 +76,7 @@ bool			Server::load_other_servs(std::string servinfo) {
 	}
 
 	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_port = htons(port);
+	serv_addr.sin_port = htons(porti);
 
 	if (inet_pton(serv_addr.sin_family, addr.c_str(), &serv_addr.sin_addr) <= 0) {
 		return (false);
@@ -94,6 +93,8 @@ bool			Server::load_other_servs(std::string servinfo) {
 	ms += " ";
 	ms += "42";
 	ms += " ";
+	ms += std::to_string(port);
+	ms += " ";
 	ms += pass;
 	ms += CRLF;
 	send(_sock, ms.c_str(), ms.length(), 0);
@@ -103,6 +104,7 @@ bool			Server::load_other_servs(std::string servinfo) {
 	other->hop_count = 1;
 	other->token = 42;
 	other->info = "";
+	other->port = std::to_string(porti);
 	delete ev->clients_fd[_sock];
 	ev->clients_fd[_sock] = other;
 	std::cerr << "Fd adding Ok" << std::endl;

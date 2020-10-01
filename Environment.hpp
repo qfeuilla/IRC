@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:54:23 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/29 23:55:47 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/01 23:53:32 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,6 +33,7 @@ public:
 	std::vector<Fd *>		search_history_nick(std::string);
 	std::vector<Fd *>		search_list_nick(std::string);
 	std::vector<OtherServ *>	search_othersrv_nick(std::string);
+	std::vector<OtherServ *>	search_othersrv_history_nick(std::string);
 	std::vector<Fd *>		match_mask_serv(std::string);
 	std::vector<Fd *>		match_mask_host(std::string); 
 	

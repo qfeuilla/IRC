@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:52:01 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/29 23:56:44 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/02 00:16:42 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -127,15 +127,29 @@ std::vector<OtherServ *>	Environment::search_othersrv_nick(std::string nk) {
 	std::vector<OtherServ *> buff;
 
 	for (OtherServ *srv : otherServers) {
-		for (std::string nick : srv->nicks) {
-			if (nick == nk) {
+		for (Client *c : srv->clients) {
+			if (c->nick == nk) {
 				buff.push_back(srv);
+				return (buff);
 			}
 		}
 	}
 	return (buff);
 }
 
+std::vector<OtherServ *>	Environment::search_othersrv_history_nick(std::string nk) {
+	std::vector<OtherServ *> buff;
+
+	for (OtherServ *srv : otherServers) {
+		for (Client *c : srv->clients_history) {
+			if (c->nick == nk) {
+				buff.push_back(srv);
+				return (buff);
+			}
+		}
+	}
+	return (buff);
+}
 
 std::vector<Fd *>	Environment::search_list_with_mode(std::string mask, std::string targ, char c) {
 	(void)mask;

@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:50:59 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/29 14:29:12 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/09/30 18:27:19 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,6 +24,8 @@ class Channel;
 class Client : public Fd {
 public:
 	Client(Environment *, int, struct sockaddr_in);
+	// Constructor for multi serv
+	Client(std::string);
 	~Client();
 
 	Client(const Client &);
@@ -32,48 +34,50 @@ public:
 	virtual void		write_func();
 
 	// * Functions Client
-	void				PASS(Command *);
-	void				NICK(Command *);
-	void				USER(Command *);
-	void				OPER(Command *);
-	void				MODE(Command *);
-	void				QUIT(Command *);
-	void				PRIVMSG(Command *);
-	void				NOTICE(Command *);
-	void				MOTD(Command *);
-	void				LUSERS(Command *);
-	void				VERSION(Command *);
-	void				STATS(Command *);
-	void				LINKS(Command *);
-	void				TIME(Command *);
-	void				ADMIN(Command *);
-	void				INFO(Command *);
-	void				WHO(Command *);
-	void				WHOIS(Command *);
-	void				WHOWAS(Command *);
-	void				KILL(Command *);
-	void				PING(Command *);
-	void				AWAY(Command *);
-	void				DIE(Command *);
-	void				SUMMON(Command *);
-	void				USERS(Command *);
-	void				WALLOPS(Command *);
-	void				USERHOST(Command *);
-	void				ISON(Command *);
-	void				JOIN(Command *);
-	void				PART(Command *);
-	void				KICK(Command *);
-	void				TOPIC(Command *);
-	void				INVITE(Command *);
-	void				SERVER(Command *);
+	void			PASS(Command *);
+	void			NICK(Command *);
+	void			USER(Command *);
+	void			OPER(Command *);
+	void			MODE(Command *);
+	void			QUIT(Command *);
+	void			PRIVMSG(Command *);
+	void			NOTICE(Command *);
+	void			MOTD(Command *);
+	void			LUSERS(Command *);
+	void			VERSION(Command *);
+	void			STATS(Command *);
+	void			LINKS(Command *);
+	void			TIME(Command *);
+	void			ADMIN(Command *);
+	void			INFO(Command *);
+	void			WHO(Command *);
+	void			WHOIS(Command *);
+	void			WHOWAS(Command *);
+	void			KILL(Command *);
+	void			PING(Command *);
+	void			AWAY(Command *);
+	void			DIE(Command *);
+	void			SUMMON(Command *);
+	void			USERS(Command *);
+	void			WALLOPS(Command *);
+	void			USERHOST(Command *);
+	void			ISON(Command *);
+	void			JOIN(Command *);
+	void			PART(Command *);
+	void			KICK(Command *);
+	void			TOPIC(Command *);
+	void			INVITE(Command *);
+	void			SERVER(Command *);
 
-	int					execute_parsed(Command *);
+	int				execute_parsed(Command *);
 
-	void				exec_registerMS();
-	std::string			get_userMODEs_ms();
-	bool				set_uMODE(char c, bool add);
+	void			exec_registerMS();
+	std::string		get_userMODEs_ms(bool);
+	bool			set_uMODE(char c, bool add);
 
-	Client				*getOtherClient(const std::string &name);
+	Client			*getOtherClient(const std::string &name);
+
+	void			share_Client(int socket);
 
 	time_t				creation;
 	time_t				last;

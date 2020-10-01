@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/20 16:41:00 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/24 14:15:58 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/01 14:44:01 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -128,6 +128,12 @@ int		Command::cmd_code() const {
 		return (SERVER_CC);
 	else if (command == "NJOIN" || command == ":NJOIN")	
 		return (NJOIN_CC);
+	else if (command == "ADDS" || command == ":ADDS")
+		return (ADDS_CC);
+	else if (command == "NSERV" || command == ":NSERV")
+		return (NSERV_CC);
+	else if (command == "DELS" || command == ":DELS")
+		return (DELS_CC);
 	else
 		return (WRONG_CMD);
 }
