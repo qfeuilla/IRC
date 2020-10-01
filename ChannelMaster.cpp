@@ -38,7 +38,7 @@ bool	ChannelMaster::_testChannelName(Client *client, const std::string &channelN
 	return (false); // channelName is well formatted
 }
 
-std::vector<std::string>	splitComma(std::string const &str)
+std::vector<std::string>	splitComma(std::string const &str, bool asLowerCase = false)
 {
 	std::vector<std::string>	ret;
 	size_t startPos;
@@ -49,7 +49,10 @@ std::vector<std::string>	splitComma(std::string const &str)
 	{
 		endPos = str.find(',', startPos);
 		chunk = str.substr(startPos, endPos - startPos);
-		ret.push_back(chunk);
+		if (asLowerCase)
+			ret.push_back(utils::ircLowerCase(chunk));
+		else
+			ret.push_back(chunk);
 	}
 	return (ret);
 }
@@ -318,34 +321,45 @@ void	ChannelMaster::setSrvName(const std::string &srvName)
 // USER mayo 0 * :realname (pour se connecter avec nc)
 bool	ChannelMaster::list(Client *client, const std::vector<std::string> &args)
 {
-	_channel_list::iterator	current = _channels->begin();
-	_channel_list::iterator	end = _channels->end();
 	std::string	chanName;
 	std::string	numUsersVisible;
 	std::string	topic;
+	std::string	chanModes;
+	std::vector<std::string>	names;
+	
+	if (args.size() >= 1)
+		names = splitComma(args[0], true);
 
-	// :chatjunkies.org 321 adwonno Channel :Users Name
+	// begin list
 	std::string	ms;
 	ms = ":" + client->servername + " 321 " + client->nick + " Channel :Users Name" + CRLF;
 	custom_send(ms, client);
 
 	// :chatjunkies.org 322 adwonno #linuxdojo 10 :[+nt]
 	// :chatjunkies.org 322 adwonno #trax 7 :[+nt] #trax museum : bring back the only demo art
-	while (current != end) {
-		chanName = (*current)->getName();
-		numUsersVisible = (*current)->getUsersNum();
-		topic = "[" + (*current)->getModes() + "]";
-		if ((*current)->getTopic() != "") {
-			topic += " " + (*current)->getTopic();
+	for (Channel *chan : *_channels) {
+		chanModes = chan->getModes();
+		if (chanModes.find("s") != std::string::npos)
+			continue ; // this chan is secret: skip it
+		if (chanModes.find("p") != std::string::npos)
+			continue ; // this chan is private: skip it
+		chanName = chan->getName();
+		numUsersVisible = chan->getUsersNum();
+		topic = "[" + chanModes + "]";
+		if (chan->getTopic() != "") {
+			topic += " " + chan->getTopic();
 		}
 		std::vector<std::string> params({chanName, numUsersVisible, topic});
 		ms = reply_formating(client->servername.c_str(), RPL_LIST, params, client->nick.c_str());
-		if (args.size() < 1 || utils::strMatch(args[0], chanName))
+		if (args.size() < 1)
 			custom_send(ms, client);
-		++current;
+		else {
+			if (std::find(names.begin(), names.end(), utils::ircLowerCase(chanName)) != names.end())
+				custom_send(ms, client);
+		}
 	}
 
-	// :chatjunkies.org 323 adwonno :End of channel list
+	// end list
 	ms = ":" + client->servername + " 323 " + client->nick + " :End of channel list" + CRLF;
 	custom_send(ms, client);
 	return (true);
