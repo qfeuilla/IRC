@@ -5,7 +5,7 @@ Channel::Channel(): _name(), _users(), _modes(), _topic(), _srv_name(), _creator
 Channel::Channel(const std::string &name, Client *client, const std::string &srvName)
 : _name(name), _users(), _modes(), _topic(), _srv_name(srvName), _creator(client->nick) {
 	if (_name.at(0) != '+') {
-		_modes.o.push_back(client->nick);
+		_modes.o.push_back(utils::ircLowerCase(client->nick));
 		_modes.n = true;
 	}
 	std::cout << "Creating channel: " << _name << "\n\n";
@@ -65,7 +65,7 @@ bool				Channel::broadcastMsg(Client *sender, const std::string &msg) const
 	_users_map::const_iterator	current = _users.begin();
 	_users_map::const_iterator	end = _users.end();
 	while (current != end) {
-		if ((*current).first != sender->nick) { // * send msg to everyone but the sender
+		if (!utils::strCmp((*current).first, sender->nick)) { // * send msg to everyone but the sender
 			custom_send(msg, (*current).second);
 		}
 		++current;
@@ -94,8 +94,8 @@ bool				Channel::join(Client *client, const std::string &passwd)
 			return (!custom_send(ms, client));
 		}
 		// on ajoute le client dans le channel, et on le retire de la liste d'invitations
-		_users.insert(std::pair<std::string, Client*>(client->nick, client));
-		_modes.invitation_list.remove(client->nick);
+		_users.insert(std::pair<std::string, Client*>(utils::ircLowerCase(client->nick), client));
+		_modes.invitation_list.remove(utils::ircLowerCase(client->nick));
 		_modes.users++;
 		
 		std::string	join_msg = ":" + client->nick;
@@ -114,7 +114,7 @@ bool				Channel::leave(Client *client, const std::string &reason, bool muted)
 {
 	std::string		ms;
 
-	_users_map::iterator	user = _users.find(client->nick);
+	_users_map::iterator	user = _users.find(utils::ircLowerCase(client->nick));
 	if (user == _users.end()) {
 		ms = reply_formating(client->servername.c_str(), ERR_NOTONCHANNEL, std::vector<std::string>({getName()}), client->nick.c_str());
 		if (!muted)
@@ -130,9 +130,9 @@ bool				Channel::leave(Client *client, const std::string &reason, bool muted)
 		broadcastMsg(client, ms);
 	}
 	if (_is_in_list(user->first, _modes.o))
-		_modes.o.remove(user->first);
+		_modes.o.remove(utils::ircLowerCase(user->first));
 	if (_is_in_list(user->first, _modes.v))
-		_modes.v.remove(user->first);
+		_modes.v.remove(utils::ircLowerCase(user->first));
 	_users.erase(user);
 	_modes.users--;
 	return (true);
@@ -147,9 +147,9 @@ bool	Channel::mode_o(bool append, Client *client, const std::string &target)
 	if (append && _hasRights(client->nick)) {
 		if (_is_in_list(target, _modes.o)) // target is already chanop
 			return (true);
-		_modes.o.push_back(target);
+		_modes.o.push_back(utils::ircLowerCase(target));
 		ms = ":" + client->nick + "!" + client->username + "@";
-		ms += client->servername + " MODE " + getName() + " +o " + target;
+		ms += client->servername + " MODE " + getName() + " +o " + utils::ircLowerCase(target);
 		ms += CRLF;
 		broadcastMsg(client, ms);
 		return (custom_send(ms, client));
@@ -158,9 +158,9 @@ bool	Channel::mode_o(bool append, Client *client, const std::string &target)
 	if (!append && _hasRights(client->nick)) {
 		if (!_is_in_list(target, _modes.o)) // target is not chanop
 			return (true);
-		_modes.o.remove(target);
+		_modes.o.remove(utils::ircLowerCase(target));
 		ms = ":" + client->nick + "!" + client->username + "@";
-		ms += client->servername + " MODE " + getName() + " -o " + target;
+		ms += client->servername + " MODE " + getName() + " -o " + utils::ircLowerCase(target);
 		ms += CRLF;
 		broadcastMsg(client, ms);
 		return (custom_send(ms, client));
@@ -177,9 +177,9 @@ bool	Channel::mode_v(bool append, Client *client, const std::string &target)
 	if (append && _hasRights(client->nick)) {
 		if (_is_in_list(target, _modes.v))
 			return (true);
-		_modes.v.push_back(target);
+		_modes.v.push_back(utils::ircLowerCase(target));
 		ms = ":" + client->nick + "!" + client->username + "@";
-		ms += client->servername + " MODE " + getName() + " +v " + target;
+		ms += client->servername + " MODE " + getName() + " +v " + utils::ircLowerCase(target);
 		ms += CRLF;
 		broadcastMsg(client, ms);
 		return (custom_send(ms, client));
@@ -188,9 +188,9 @@ bool	Channel::mode_v(bool append, Client *client, const std::string &target)
 	if (!append && _hasRights(client->nick)) {
 		if (!_is_in_list(target, _modes.v))
 			return (true);
-		_modes.v.remove(target);
+		_modes.v.remove(utils::ircLowerCase(target));
 		ms = ":" + client->nick + "!" + client->username + "@";
-		ms += client->servername + " MODE " + getName() + " -v " + target;
+		ms += client->servername + " MODE " + getName() + " -v " + utils::ircLowerCase(target);
 		ms += CRLF;
 		broadcastMsg(client, ms);
 		return (custom_send(ms, client));
@@ -415,7 +415,7 @@ bool	Channel::getModeN() const
 bool	Channel::kick(Client *client, const std::string &guyToKick, const std::string &reason)
 {
 	std::string	ms;
-	_users_map::iterator	userToKick = _users.find(guyToKick);
+	_users_map::iterator	userToKick = _users.find(utils::ircLowerCase(guyToKick));
 
 	if (_hasRights(client->nick)) {
 		if (userToKick == _users.end()) {
@@ -438,7 +438,7 @@ bool	Channel::kick(Client *client, const std::string &guyToKick, const std::stri
 bool	Channel::invite(Client *client, const std::string &guyToInvite)
 {
 	std::string	ms;
-	_users_map::iterator	userToInvite = _users.find(guyToInvite);
+	_users_map::iterator	userToInvite = _users.find(utils::ircLowerCase(guyToInvite));
 	Client		*clientToInvite = client->getOtherClient(guyToInvite);
 
 	if (!clientToInvite) {
@@ -458,11 +458,13 @@ bool	Channel::invite(Client *client, const std::string &guyToInvite)
 		return (!custom_send(ms, client));
 	}
 	if (!_is_in_list(guyToInvite, _modes.invitation_list))
-		_modes.invitation_list.push_back(guyToInvite);
-	ms = ":" + client->nick + "!" + client->username + "@" + client->servername + " INVITE " + guyToInvite + " :" + getName();
+		_modes.invitation_list.push_back(utils::ircLowerCase(guyToInvite));
+	ms = ":" + client->nick + "!" + client->username + "@" + client->servername;
+	ms += " INVITE " + utils::ircLowerCase(guyToInvite) + " :" + getName();
 	ms += CRLF;
 	custom_send(ms, clientToInvite);
-	ms = reply_formating(client->servername.c_str(), RPL_INVITING, std::vector<std::string>({guyToInvite, getName()}), client->nick.c_str());
+	ms = reply_formating(client->servername.c_str(), RPL_INVITING,
+	std::vector<std::string>({utils::ircLowerCase(guyToInvite), getName()}), client->nick.c_str());
 	return (custom_send(ms, client));
 }
 
@@ -490,7 +492,7 @@ std::string			Channel::parseArg(size_t fromIndex, const std::vector<std::string>
 
 bool		Channel::isInChan(const std::string &userName) const
 {
-	_users_map::const_iterator	user = _users.find(userName);
+	_users_map::const_iterator	user = _users.find(utils::ircLowerCase(userName));
 	return (user != _users.end());
 }
 
@@ -515,19 +517,19 @@ void		Channel::changeNick(const std::string &oldNick, const std::string &newNick
 	Client		*client;
 	std::string	ms;
 	if (_is_in_list(oldNick, _modes.o)) {
-		_modes.o.remove(oldNick);
-		_modes.o.push_back(newNick);
+		_modes.o.remove(utils::ircLowerCase(oldNick));
+		_modes.o.push_back(utils::ircLowerCase(newNick));
 	}
 	if (_is_in_list(oldNick, _modes.v)) {
-		_modes.v.remove(oldNick);
-		_modes.v.push_back(newNick);
+		_modes.v.remove(utils::ircLowerCase(oldNick));
+		_modes.v.push_back(utils::ircLowerCase(newNick));
 	}
-	_users_map::iterator	user = _users.find(oldNick);
+	_users_map::iterator	user = _users.find(utils::ircLowerCase(oldNick));
 	if (user == _users.end())
 		return ; // should not happen
 	client = user->second;
 	_users.erase(user);
-	_users.insert(std::pair<std::string, Client*>(newNick, client));
+	_users.insert(std::pair<std::string, Client*>(utils::ircLowerCase(newNick), client));
 	// * not in RFC but usefull
 	// :paprika!~pokemon@ip-46.net-80-236-89.joinville.rev.numericable.fr NICK :patrick-2
 	ms = ":" + oldNick + "!" + client->username + "@" + client->servername;

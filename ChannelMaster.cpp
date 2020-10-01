@@ -31,9 +31,7 @@ bool	ChannelMaster::_testChannelName(Client *client, const std::string &channelN
 		badName = true;
 	if (channelName.find("\7") != std::string::npos)
 		badName = true;
-	if (badName) { // ! je sais pas quelle erreur mettre haha
-		// ms = reply_formating(client->servername.c_str(), ERR_NOTONCHANNEL, std::vector<std::string>({channelName}), client->nick.c_str());
-		// return (custom_send(ms, client));
+	if (badName) {
 		(void)client;
 		return (true);
 	}
@@ -220,7 +218,7 @@ Channel		*ChannelMaster::_chan_exists(const std::string &channelName)
 	_channel_list::iterator	end = _channels->end();
 
 	while (current != end) {
-		if ((*current)->getName() == channelName)
+		if (utils::strCmp(channelName, (*current)->getName()))
 			return (*current);
 		++current;
 	}

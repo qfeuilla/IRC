@@ -10,6 +10,7 @@
 #include <map>
 #include "Client.hpp"
 #include "ft_irc.hpp"
+#include "utils.hpp"
 
 class Client;
 
@@ -52,26 +53,14 @@ private:
 
 	bool		_hasRights(const std::string &userName) const
 	{
-		_Chan_modes::usr_list::const_iterator	user = std::find(_modes.o.begin(), _modes.o.end(), userName);
+		_Chan_modes::usr_list::const_iterator	user = std::find(_modes.o.begin(), _modes.o.end(), utils::ircLowerCase(userName));
 		return (user != _modes.o.end());
 	}
 
 	bool		_is_in_list(const std::string &userName, const _Chan_modes::usr_list &listToCheck) const
 	{
-		_Chan_modes::usr_list::const_iterator	user = std::find(listToCheck.begin(), listToCheck.end(), userName);
+		_Chan_modes::usr_list::const_iterator	user = std::find(listToCheck.begin(), listToCheck.end(), utils::ircLowerCase(userName));
 		return (user != listToCheck.end());
-	}
-	void		_print_channel(void) const
-	{
-		_users_map::const_iterator	current = _users.begin();
-		_users_map::const_iterator	end = _users.end();
-
-		std::cout << "sockets in " << _name << "\n";
-		while (current != end) {
-			std::cout << "fd num = " << (*current).second << "(" << (*current).first << "), "; 
-			++current;
-		}
-		std::cout << "\n\n";
 	}
 public:
 	Channel();
