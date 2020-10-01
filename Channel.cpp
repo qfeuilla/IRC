@@ -104,7 +104,8 @@ bool				Channel::join(Client *client, const std::string &passwd)
 		join_msg += CRLF;
 
 		custom_send(join_msg, client);
-		broadcastMsg(client, join_msg);
+		if (!_modes.q)
+			broadcastMsg(client, join_msg);
 		return (true);
 	}
 	return (false);
@@ -127,7 +128,8 @@ bool				Channel::leave(Client *client, const std::string &reason, bool muted)
 	ms += CRLF;
 	if (!muted) {
 		custom_send(ms, client);
-		broadcastMsg(client, ms);
+		if (!_modes.q)
+			broadcastMsg(client, ms);
 	}
 	if (_is_in_list(user->first, _modes.o))
 		_modes.o.remove(utils::ircLowerCase(user->first));
@@ -337,6 +339,29 @@ bool	Channel::mode_n(bool append, Client *client)
 	return (!custom_send(ms, client));
 }
 
+bool	Channel::mode_q(bool append, Client *client)
+{
+	std::string ms;
+	if (append && _hasRights(client->nick)) {
+		_modes.q = true;
+		ms = ":" + client->nick + "!" + client->username + "@";
+		ms += client->servername + " MODE " + getName() + " +q";
+		ms += CRLF;
+		broadcastMsg(client, ms);
+		return (custom_send(ms, client));
+	}
+	if (!append && _hasRights(client->nick)) {
+		_modes.q = false;
+		ms = ":" + client->nick + "!" + client->username + "@";
+		ms += client->servername + " MODE " + getName() + " -q";
+		ms += CRLF;
+		broadcastMsg(client, ms);
+		return (custom_send(ms, client));
+	}
+	ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
+	return (!custom_send(ms, client));
+}
+
 bool	Channel::mode_l(bool append, Client *client, int limit)
 {
 	std::string ms;
@@ -534,7 +559,8 @@ void		Channel::changeNick(const std::string &oldNick, const std::string &newNick
 	// :paprika!~pokemon@ip-46.net-80-236-89.joinville.rev.numericable.fr NICK :patrick-2
 	ms = ":" + oldNick + "!" + client->username + "@" + client->servername;
 	ms += " NICK :" + newNick + CRLF;
-	broadcastMsg(client, ms);
+	if (!_modes.q)
+		broadcastMsg(client, ms);
 }
 
 bool		Channel::quit(Client *client, const std::vector<std::string> &args)

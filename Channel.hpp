@@ -36,10 +36,11 @@ private:
 		bool		t; // Topic can only be set by an operator
 		bool		m; // Only voiced users and operators can talk
 		bool		n; // Users outside channel cannot talk in channel
+		bool		q; // Quiet channel
 		int			l; // User limit
 		std::string	k; // Channel password
 		int			users;
-		_Chan_modes(): invitation_list(), o(), v(), p(false), s(false), i(false), t(true), m(false), n(false), l(-1), k(), users(0) {}
+		_Chan_modes(): invitation_list(), o(), v(), p(false), s(false), i(false), t(true), m(false), n(false), q(false), l(-1), k(), users(0) {}
 	};
 	
 	
@@ -101,6 +102,7 @@ public:
 	bool	mode_t(bool append, Client *client);
 	bool	mode_m(bool append, Client *client);
 	bool	mode_n(bool append, Client *client);
+	bool	mode_q(bool append, Client *client);
 	bool	mode_l(bool append, Client *client, int limit);
 	bool	mode_k(bool append, Client *client, const std::string &passwd);
 

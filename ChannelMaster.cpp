@@ -190,6 +190,8 @@ bool	ChannelMaster::mode(Client *client, const std::vector<std::string> &args)
 			break;
 		case 'n':
 			chan->mode_n(append, client);
+		case 'q':
+			chan->mode_q(append, client);
 			break;
 		case 'l':
 			if (args.size() == 2) {
