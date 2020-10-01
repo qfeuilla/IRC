@@ -16,6 +16,7 @@
 #include <sys/resource.h>
 #include <iostream>
 #include "Client.hpp"
+#include "utils.hpp"
 
 Environment::Environment() {
 	clients_num = CLIENTS_MAX;
@@ -101,7 +102,7 @@ std::vector<Fd *>	Environment::search_history_nick(std::string nk) {
 	
 	for (Fd *f : client_history) {
 		Client *c = reinterpret_cast<Client *>(f);
-		if (c->nick == nk || nk == "*") 
+		if (utils::strMatchToLower(nk, c->nick) || nk == "*") 
 			buff.push_back(c);
 	}
 	return buff;
@@ -113,7 +114,7 @@ std::vector<Fd *>	Environment::search_list_nick(std::string nk) {
 	for (Fd *f : clients_fd) {
 		if (f->type == FD_CLIENT) {
 			Client *c = reinterpret_cast<Client *>(f);
-			if (c->nick == nk || nk == "*") 
+			if (utils::strMatchToLower(nk, c->nick) || nk == "*") 
 				buff.push_back(c);
 		}
 	}

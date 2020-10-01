@@ -117,3 +117,12 @@ void	*utils::memset(void *dest, int ch, std::size_t count)
 	}
 	return (dest);
 }
+
+//
+bool	utils::strMatchToLower(const std::string &filter, const std::string &str)
+{
+	std::string	str1 = utils::ircLowerCase(filter);
+	std::string	str2 = utils::ircLowerCase(str);
+
+	return (utils::strMatch(str1, str2));
+}
