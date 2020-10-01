@@ -350,3 +350,16 @@ bool	ChannelMaster::list(Client *client, const std::vector<std::string> &args)
 	custom_send(ms, client);
 	return (true);
 }
+
+size_t	ChannelMaster::size() const
+{
+	_channel_list::const_iterator	current = _channels->begin();
+	_channel_list::const_iterator	end = _channels->end();
+	size_t	size = 0;
+
+	while (current != end) {
+		++current;
+		++size;
+	}
+	return (size);
+}

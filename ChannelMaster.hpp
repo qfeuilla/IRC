@@ -53,6 +53,8 @@ public:
 
 	bool	getChanModes(Client *client, const std::vector<std::string> &args);
 
+	size_t	size() const;
+
 	// * send msg to everyone in the channel but the sender 
 	bool	broadcastMsg(Client *client, const std::string &chanName, const std::vector<std::string> &args, bool sendErrors = true);
 };

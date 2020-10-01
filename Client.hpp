@@ -17,6 +17,7 @@
 # include "Environment.hpp"
 # include "Channel.hpp"
 # include <list>
+# include <map>
 
 class Environment;
 class Channel;

@@ -558,8 +558,9 @@ void	Client::LUSERS(Command *cmd) {
 	custom_send(ms, this);
 
     // * 254
-	// TODO : when merging channel branch
-	ms = reply_formating(servername.c_str(), RPL_LUSERCHANNELS, std::vector<std::string>({"0"}), nick.c_str());
+	size_t	channelNumber = ev->channels->size();
+	ms = reply_formating(servername.c_str(), RPL_LUSERCHANNELS,
+	std::vector<std::string>({std::to_string(channelNumber)}), nick.c_str());
 	custom_send(ms, this);
 	
 	// * 255
@@ -764,11 +765,25 @@ void	Client::WHO(Command *cmd) {
 	ev->cmd_count["WHO"] += 1;
 
 	if (cmd->arguments.size() >= 1) {
-		for (Fd *f: ev->search_list_nick(cmd->arguments[0])) {
-			Client *c = reinterpret_cast<Client *>(f);
-			// TODO : addind same channel checking
-			if (c->o_mode || cmd->arguments.size() == 1
-				|| cmd->arguments[1] != "o") {
+		std::map<std::string, Fd*>	matchMap;
+		std::string			mask = cmd->arguments[0];
+
+		// collect all visible clients that match the mask, using their realname and their nickname
+		// I use a map to efficiently avoid to collect the same user twice
+		for (Fd *f: ev->clients_fd) {
+			if (f->type == FD_CLIENT) {
+				Client *c = reinterpret_cast<Client *>(f);
+				if (utils::strMatchToLower(mask, c->realname) && !c->i_mode)
+					matchMap[c->nick] = c;
+				else if (utils::strMatchToLower(mask, c->nick) && !c->i_mode)
+					matchMap[c->nick] = c;
+			}
+		}
+		for (std::pair<std::string, Fd*> pair : matchMap) {
+			Client *c = reinterpret_cast<Client *>(pair.second);
+			
+			if (nick != c->nick && (c->o_mode || cmd->arguments.size() == 1
+				|| cmd->arguments[1] != "o")) {
 				ms = c->username;
 				ms += " ";
 				ms += c->hostname;
@@ -778,7 +793,7 @@ void	Client::WHO(Command *cmd) {
 				ms += c->nick;
 				ms += " H :0 ";
 				ms += c->realname;
-				ms = reply_formating(servername.c_str(), RPL_WHOREPLY, {ms},nick.c_str());
+				ms = reply_formating(servername.c_str(), RPL_WHOREPLY, {ms}, nick.c_str());
 				custom_send(ms, this);
 			}
 		}
@@ -786,8 +801,17 @@ void	Client::WHO(Command *cmd) {
 		for (Fd *f: ev->clients_fd) {
 			if (f->type == FD_CLIENT) {
 				Client *c = reinterpret_cast<Client *>(f);
-				// TODO : addind same channel checking
-				if (!c->i_mode) {
+				bool	noCommonChannels = true;
+				std::list<Channel*>::iterator	current = channels.begin();
+				std::list<Channel*>::iterator	end = channels.end();
+				while (current != end) {
+					if ((*current)->isInChan(c->nick)) {
+						noCommonChannels = false;
+						break ;
+					}
+					++current;
+				}
+				if (nick != c->nick && noCommonChannels && !c->i_mode) {
 					ms += c->username;
 					ms += " ";
 					ms += c->hostname;
