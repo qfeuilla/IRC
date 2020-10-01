@@ -543,9 +543,10 @@ void	Client::LUSERS(Command *cmd) {
 	ev->cmd_count["LUSERS"] += 1;
 	
 	// * 251
-	std::string clients = std::to_string(ev->search_list_nick("*").size());
-	std::string clients_inv = std::to_string(ev->search_list_with_mode("", "", 'i').size());
-	ms = reply_formating(servername.c_str(), RPL_LUSERCLIENT, std::vector<std::string>({clients, clients_inv, "1"}), nick.c_str());
+	size_t clients_inv = ev->search_list_with_mode("", "", 'i').size();
+	size_t clients = ev->search_list_nick("*").size() - clients_inv;
+	ms = reply_formating(servername.c_str(), RPL_LUSERCLIENT,
+	std::vector<std::string>({std::to_string(clients), std::to_string(clients_inv), "1"}), nick.c_str());
 	custom_send(ms, this);
 
     // * 252
@@ -554,7 +555,13 @@ void	Client::LUSERS(Command *cmd) {
 	custom_send(ms, this);
 	
     // * 253
-	ms = reply_formating(servername.c_str(), RPL_LUSERUNKNOWN, std::vector<std::string>({"0"}), nick.c_str());
+	size_t	unknownUsers = 0;
+	for (Fd *f : ev->clients_fd) {
+		if (f->type == FD_WAITC)
+			++unknownUsers;
+	}
+	ms = reply_formating(servername.c_str(), RPL_LUSERUNKNOWN,
+	std::vector<std::string>({std::to_string(unknownUsers)}), nick.c_str());
 	custom_send(ms, this);
 
     // * 254
@@ -564,7 +571,7 @@ void	Client::LUSERS(Command *cmd) {
 	custom_send(ms, this);
 	
 	// * 255
-	ms = reply_formating(servername.c_str(), RPL_LUSERME, std::vector<std::string>({clients, "1"}), nick.c_str());
+	ms = reply_formating(servername.c_str(), RPL_LUSERME, std::vector<std::string>({std::to_string(clients), "1"}), nick.c_str());
 	custom_send(ms, this);
 }
 
