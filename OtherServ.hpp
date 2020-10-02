@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/24 21:36:23 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/02 13:53:45 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/02 20:12:09 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,6 +40,7 @@ public:
 	void			KILL(Command *);
 	void			TRACE(Command *);
 	void			TRACEUP(Command *);
+	void			SQUIT(Command *);
 
 	virtual void	read_func();
 	virtual void	write_func();

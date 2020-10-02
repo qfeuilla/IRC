@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Client.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mayeul <mayeul@student.42.fr>              +#+  +:+       +#+        */
+/*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:51:25 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/24 15:03:06 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/02 20:11:04 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -491,8 +491,6 @@ void	Client::PRIVMSG(Command *cmd) {
 			if (targ[0] == '#' || targ[0] == '&' || targ[0] == '+' || targ[0] == '!') {
 				good += 1;
 				ev->channels->broadcastMsg(this, targ, cmd->arguments);
-			} else if (targ[0] == '$') {
-				// TODO : multi server
 			} else {
 				ms = ":";
 				ms += nick;
@@ -1443,6 +1441,41 @@ void	Client::TRACE(Command *cmd) {
 	}
 }
 
+void	Client::SQUIT(Command *cmd) {
+	// * SQUIT servname port comment
+	std::string ms;
+	ev->cmd_count["SQUIT"] += 1;
+
+	if (cmd->arguments.size() >= 2) {
+		if (o_mode) {
+			if (servername == cmd->arguments[0] && std::to_string(htons(ev->sin.sin_port)) == cmd->arguments[1]) {
+				ev->active = false;
+			} else {
+				for (OtherServ *sv : ev->otherServers) {
+					ms = cmd->line;
+					ms += CRLF;
+					send(sv->sock, ms.c_str(), ms.length(), 0);
+				}
+			}
+		} else {
+			ms = reply_formating(servername.c_str(), ERR_NOPRIVILEGES, {}, nick.c_str());
+			custom_send(ms, this);
+		}
+	} else {
+		ms = reply_formating(servername.c_str(), ERR_NEEDMOREPARAMS, {cmd->line}, nick.c_str());
+		custom_send(ms, this);
+	}
+}
+
+void	Client::CONNECT(Command *cmd) {
+	(void)cmd;
+	std::string ms;
+	ev->cmd_count["CONNECT"] += 1;
+
+	ms = reply_formating(servername.c_str(), ERR_CONNECTDISABLED, {}, nick.c_str());
+	custom_send(ms, this);
+}
+
 void	Client::LIST(Command *cmd) {
 	ev->channels->list(this, cmd->arguments);
 }
@@ -1573,6 +1606,12 @@ int		Client::execute_parsed(Command *parsed) {
 		break;
 	case TRACE_CC:
 		TRACE(parsed);
+		break;
+	case SQUIT_CC:
+		SQUIT(parsed);
+		break;
+	case CONNECT_CC:
+		CONNECT(parsed);
 		break;
 	default:
 		break;

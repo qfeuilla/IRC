@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/20 17:01:28 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/24 15:03:03 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/02 20:10:53 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -328,6 +328,8 @@
 // 
 # define ERR_USERSDISABLED     {"446", ":USERS has been disabled please use WHOIS to querry user informations", 0}
 // 
+# define ERR_CONNECTDISABLED   {"447", ":CONNECT has been disabled for security reasons", 0}
+//
 # define ERR_NOTREGISTERED     {"451", ":You have not registered", 0}
 // "<command> :Not enough parameters"
 # define ERR_NEEDMOREPARAMS    {"461", "{} :Not enough parameters", 1}

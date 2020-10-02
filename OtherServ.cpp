@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/24 21:36:03 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/02 15:04:51 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/02 20:16:16 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -469,6 +469,22 @@ void	OtherServ::TRACEUP(Command *cmd) {
 	}
 }
 
+void	OtherServ::SQUIT(Command *cmd) {
+	std::string ms;
+
+	if (*ev->serv == cmd->arguments[0] && std::to_string(htons(ev->sin.sin_port)) == cmd->arguments[1]) {
+		ev->active = false;
+	} else {
+		for (OtherServ *sv : ev->otherServers) {
+			if (sv != this) {
+				ms = cmd->line;
+				ms += CRLF;
+				send(sv->sock, ms.c_str(), ms.length(), 0);
+			}
+		}
+	}
+} 
+
 int		OtherServ::execute_parsed(Command *parsed) {
 	switch (parsed->cmd_code()) {
 	case NICK_CC:
@@ -512,6 +528,9 @@ int		OtherServ::execute_parsed(Command *parsed) {
 		break;
 	case TRACEUP_CC:
 		TRACEUP(parsed);
+		break;
+	case SQUIT_CC:
+		SQUIT(parsed);
 		break;
 	default:
 		break;
