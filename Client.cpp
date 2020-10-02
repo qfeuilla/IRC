@@ -358,7 +358,7 @@ void	Client::MODE(Command *cmd) {
 
 	if (cmd->arguments.size() >= 2) {
 		if (cmd->arguments[0][0] != '#') {
-			if (cmd->arguments[0] == nick) {
+			if (utils::strMatchToLower(cmd->arguments[0], nick)) {
 				size_t	i;
 				bool	add = false;
 				char	c;
@@ -912,9 +912,28 @@ void	Client::WHO(Command *cmd) {
 	ev->cmd_count["WHO"] += 1;
 
 	if (cmd->arguments.size() >= 1) {
-		for (Fd *f: ev->search_list_nick(cmd->arguments[0])) {
-			Client *c = reinterpret_cast<Client *>(f);
-			// TODO : addind same channel checking
+		std::map<std::string, Fd *>	matchMap;
+		std::string					mask = cmd->arguments[0];
+
+		for (Fd *f: ev->clients_fd) {
+			if (f->type == FD_CLIENT) {
+				Client *c = reinterpret_cast<Client *>(f);
+				if (utils::strMatchToLower(mask, c->realname) && !c->i_mode)
+					matchMap[c->nick] = c;
+				if (utils::strMatchToLower(mask, c->nick) && !c->i_mode)
+					matchMap[c->nick] = c;
+			}
+		}
+		for (OtherServ *sv: ev->otherServers) {
+			for (Client *c : sv->clients) {
+				if (utils::strMatchToLower(mask, c->realname) && !c->i_mode)
+					matchMap[c->nick] = c;
+				if (utils::strMatchToLower(mask, c->nick) && !c->i_mode)
+					matchMap[c->nick] = c;
+			}
+		}
+		for (std::pair<std::string, Fd *> pair : matchMap) {
+			Client *c = reinterpret_cast<Client *>(pair.second);
 			if (c->o_mode || cmd->arguments.size() == 1
 				|| cmd->arguments[1] != "o") {
 				ms = c->username;
@@ -930,29 +949,11 @@ void	Client::WHO(Command *cmd) {
 				custom_send(ms, this);
 			}
 		}
-		for (OtherServ *sv: ev->otherServers) {
-			for (Client *c : sv->clients) { // ! ???? search_list_nick(cmd->arguments[0])
-				if (c->o_mode || cmd->arguments.size() == 1
-					|| cmd->arguments[1] != "o") {
-					ms = c->username;
-					ms += " ";
-					ms += c->hostname;
-					ms += " ";
-					ms += c->servername;
-					ms += " ";
-					ms += c->nick;
-					ms += " H :0 ";
-					ms += c->realname;
-					ms = reply_formating(servername.c_str(), RPL_WHOREPLY, {ms},nick.c_str());
-					custom_send(ms, this);
-				}
-			}
-		}
 	} else {
 		for (Fd *f: ev->clients_fd) {
 			if (f->type == FD_CLIENT) {
 				Client *c = reinterpret_cast<Client *>(f);
-				// TODO : addind same channel checking
+				// TODO : addind same channel checking (WHEN MULTISERV CHANNELS WILL BE DONE)
 				if (!c->i_mode) {
 					ms += c->username;
 					ms += " ";
