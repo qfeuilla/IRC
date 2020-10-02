@@ -102,7 +102,7 @@ std::vector<Fd *>	Environment::search_history_nick(std::string nk) {
 	
 	for (Fd *f : client_history) {
 		Client *c = reinterpret_cast<Client *>(f);
-		if (utils::strMatchToLower(nk, c->nick) || nk == "*") 
+		if (utils::strMatchToLower(nk, c->nick)) 
 			buff.push_back(c);
 	}
 	return buff;
@@ -114,11 +114,39 @@ std::vector<Fd *>	Environment::search_list_nick(std::string nk) {
 	for (Fd *f : clients_fd) {
 		if (f->type == FD_CLIENT) {
 			Client *c = reinterpret_cast<Client *>(f);
-			if (utils::strMatchToLower(nk, c->nick) || nk == "*") 
+			if (utils::strMatchToLower(nk, c->nick)) 
 				buff.push_back(c);
 		}
 	}
 	return buff;
+}
+
+std::vector<OtherServ *>	Environment::search_othersrv_nick(std::string nk) {
+	std::vector<OtherServ *> buff;
+
+	for (OtherServ *srv : otherServers) {
+		for (Client *c : srv->clients) {
+			if (c->nick == nk) {
+				buff.push_back(srv);
+				return (buff);
+			}
+		}
+	}
+	return (buff);
+}
+
+std::vector<OtherServ *>	Environment::search_othersrv_history_nick(std::string nk) {
+	std::vector<OtherServ *> buff;
+
+	for (OtherServ *srv : otherServers) {
+		for (Client *c : srv->clients_history) {
+			if (c->nick == nk) {
+				buff.push_back(srv);
+				return (buff);
+			}
+		}
+	}
+	return (buff);
 }
 
 std::vector<Fd *>	Environment::search_list_with_mode(std::string mask, std::string targ, char c) {

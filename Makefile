@@ -11,6 +11,7 @@ SRCS = 	main.cpp \
 		Channel.cpp \
 		ChannelMaster.cpp \
 		utils.cpp \
+		OtherServ.cpp
 
 OBJS := $(patsubst %.cpp,%.o,$(SRCS))
 DEPENDS := $(patsubst %.cpp,%.d,$(SRCS))

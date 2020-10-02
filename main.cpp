@@ -29,7 +29,6 @@ int	main(int ac, char **av)
 	Server *s = new Server();
 
 	s->load_options(ac, av);
-	s->create();
 	main_loop(s);
 	return (0);
 }

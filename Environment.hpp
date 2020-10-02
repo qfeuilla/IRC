@@ -17,8 +17,10 @@
 #include <sys/select.h>
 #include <vector>
 #include "ChannelMaster.hpp"
+#include "OtherServ.hpp"
 
 class ChannelMaster;
+class OtherServ;
 
 class Environment {
 public:
@@ -30,11 +32,12 @@ public:
 	// * search return the list of Fd that match conditions
 	std::vector<Fd *>		search_history_nick(std::string);
 	std::vector<Fd *>		search_list_nick(std::string);
+	std::vector<OtherServ *>	search_othersrv_nick(std::string);
+	std::vector<OtherServ *>	search_othersrv_history_nick(std::string);
 	std::vector<Fd *>		match_mask_serv(std::string);
 	std::vector<Fd *>		match_mask_host(std::string); 
 	
 	std::vector<Fd *>		search_list_with_mode(std::string, std::string, char);
-	// TODO : for other params
 
 	std::vector<Fd *>	clients_fd;
 	std::vector<Fd *>	client_history;
@@ -53,6 +56,8 @@ public:
 	std::vector<std::string>	emails;
 	std::string					loc1;
 	std::string					loc2;
+
+	std::vector<OtherServ *>	otherServers;
 
 	bool						active = true;
 	

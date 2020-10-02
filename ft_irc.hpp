@@ -26,6 +26,15 @@
 # include <map>
 # include <algorithm>
 
+// TODO check what we can withdraw from the list of includes
+# include <sstream>
+# include <stdio.h>
+# include <unistd.h>
+# include <sys/socket.h>
+# include <cstring>
+# include <sys/types.h>
+# include <fcntl.h>
+
 # define Xv(err,res,str)	(x_void(err,res,str,__FILE__,__LINE__))
 # define X(err,res,str)		(x_int(err,res,str,__FILE__,__LINE__))
 # define MAX(a,b)			((a > b) ? a : b)
