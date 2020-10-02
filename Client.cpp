@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:51:25 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/02 20:11:04 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/02 21:52:43 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -1349,44 +1349,43 @@ void	Client::SERVER(Command *cmd) {
 	OtherServ *other = new OtherServ(sock, true, ev);
 
 	if (!is_setup) {
-		if (cmd->arguments.size() >= 1) {
+		if (cmd->arguments.size() >= 5 && cmd->arguments[4] == *ev->password) {
 			other->name = cmd->arguments[0];
-		} if (cmd->arguments.size() >= 2) {
 			other->hop_count = std::atoi(cmd->arguments[1].c_str());
-		} if (cmd->arguments.size() >= 3) {
 			other->token = std::atoi(cmd->arguments[2].c_str());
-		} if (cmd->arguments.size() >= 4) {
 			other->port = cmd->arguments[3];
-		} if (cmd->arguments.size() >= 5) {
-			for (size_t i = 4; i < cmd->arguments.size(); i++) {
+			for (size_t i = 5; i < cmd->arguments.size(); i++) {
 				ms += cmd->arguments[i];
 				ms += " ";
 			}
-			other->info = cmd->arguments[0];
+			other->info = ms;
+			delete ev->clients_fd[sock];
+			ev->clients_fd[sock] = other;
+
+			int tmp = 1;
+			for (OtherServ *sv : ev->otherServers) {
+				tmp += sv->connected;
+			}
+			// Notify incoming server of number of servers
+			ms = "NSERV ";
+			ms += std::to_string(tmp);
+			ms += CRLF;
+			send(sock, ms.c_str(), ms.length(), 0);
+
+			// Notify other serv that a new server as been add
+			ms = "ADDS";
+			ms += CRLF;
+			for (OtherServ *sv : ev->otherServers) {
+				send(sv->sock, ms.c_str(), ms.length(), 0);
+			}
+
+			std::cerr << "Fd adding Ok" << std::endl;
+			ev->otherServers.push_back(other);
+			std::cerr << "OtherServ adding Ok" << std::endl;
+		} else {
+			ev->clients_fd[sock] = new Fd();
+			close(sock);
 		}
-		delete ev->clients_fd[sock];
-		ev->clients_fd[sock] = other;
-
-		int tmp = 1;
-		for (OtherServ *sv : ev->otherServers) {
-			tmp += sv->connected;
-		} 
-		// Notify incoming server of number of servers
-		ms = "NSERV ";
-		ms += std::to_string(tmp);
-		ms += CRLF;
-		send(sock, ms.c_str(), ms.length(), 0);
-
-		// Notify other serv that a new server as been add
-		ms = "ADDS";
-		ms += CRLF;
-		for (OtherServ *sv : ev->otherServers) {
-			send(sv->sock, ms.c_str(), ms.length(), 0);
-		}
-
-		std::cerr << "Fd adding Ok" << std::endl;
-		ev->otherServers.push_back(other);
-		std::cerr << "OtherServ adding Ok" << std::endl;
 	} else {
 		ms = reply_formating(servername.c_str(), ERR_ALREADYREGISTRED, {}, nick.c_str());
 		custom_send(ms, this);
