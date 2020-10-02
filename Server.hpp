@@ -28,7 +28,7 @@ public:
 	virtual void	write_func();
 	void			accept_srv();
 
-	std::string		generate_servname(std::string);
+	bool			load_other_servs(std::string);
 
 	void			load_options(int, char **);
 	void			create();

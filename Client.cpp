@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Client.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mayeul <mayeul@student.42.fr>              +#+  +:+       +#+        */
+/*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:51:25 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/24 15:03:06 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/02 20:11:04 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,6 +16,7 @@
 #include <iostream>
 #include <sys/types.h>
 #include <fcntl.h>
+#include "OtherServ.hpp"
 
 bool		custom_send(std::string ms, Client *c) {
 	c->recv_ms += 1;
@@ -41,15 +42,22 @@ Client::Client(Environment *e, int s, struct sockaddr_in addr) : channels(), ev(
 	type = FD_WAITC;
 	is_setup = false;
 	sock = s;
-	time(&creation);
 	nick = "*";
 	i_mode = false;
 	o_mode = false;
 	s_mode = false;
 	w_mode = false;
 	servername = *e->serv;
+	time(&creation);
 	csin = addr;
 	hostname = std::string(inet_ntoa(csin.sin_addr)); // * ip of the user if not specified
+}
+
+Client::Client(std::string nc) {
+	type = FD_OCLIENT;
+	is_setup = false;
+	sock = -1;
+	nick = nc;
 }
 
 Client::~Client() {
@@ -96,7 +104,7 @@ void	Client::NICK(Command *cmd) {
 
 	if (cmd->arguments.size() >= 1) {
 		if (check_nick(cmd->arguments[0])) {
-			if (ev->search_list_nick(cmd->arguments[0]).empty()) {
+			if (ev->search_list_nick(cmd->arguments[0]).empty() && ev->search_othersrv_nick(cmd->arguments[0]).empty()) {
 				// * if client is setup so it is a nick change
 				if (is_setup) {
 					ms += ":";
@@ -105,6 +113,11 @@ void	Client::NICK(Command *cmd) {
 					ms += cmd->arguments[0];
 					ms += CRLF;
 					
+					for (OtherServ *serv : ev->otherServers) {
+						serv->change_nick(nick, cmd->arguments[0]);
+						send(serv->sock, ms.c_str(), ms.length(), 0);
+					}
+
 					// * save old client for history purpose
 					if (type == FD_CLIENT)
 						ev->client_history.push_back(new Client(*this));
@@ -114,13 +127,18 @@ void	Client::NICK(Command *cmd) {
 					// we need to update the nick in all of client's channels
 					updateNickInChannels(oldNick, nick);
 
-
 					custom_send(ms, this);
 					if (!nick_set) {
 						nick_set = true;
 						exec_registerMS();
 					}
 				} else {
+					for (OtherServ *serv : ev->otherServers) {
+						ms = "NICK ";
+						ms += cmd->arguments[0];
+						ms += CRLF;
+						send(serv->sock, ms.c_str(), ms.length(), 0);
+					}
 					nick = cmd->arguments[0];
 					nick_set = true;
 				}
@@ -142,6 +160,18 @@ void	Client::NICK(Command *cmd) {
 void	Client::exec_registerMS() {
 	std::string tmp;
 	std::string ms;
+
+	time(&creation);
+	ms = ":";
+	ms += nick;
+	ms += " TIME ";
+	ms += std::to_string(creation);
+	ms += " ";
+	ms += std::to_string(last);
+	ms += CRLF;
+	for (OtherServ *sv: ev->otherServers) {
+		send(sv->sock, ms.c_str(), ms.length(), 0);
+	}
 
 	// * 001
 	ms = reply_formating(servername.c_str(), RPL_WELCOME, std::vector<std::string>({nick, username, servername}), nick.c_str());
@@ -228,8 +258,23 @@ void	Client::USER(Command *cmd) {
 				return ;
 			realname = std::string(&realname[1], &realname[realname.length()]);
 			is_setup = true;
-			if (nick_set)
+			if (nick_set) {
+				for (OtherServ *serv : ev->otherServers) {
+					ms = ":";
+					ms += nick;
+					ms += " USER ";
+					ms += username;
+					ms += " ";
+					ms += hostname;
+					ms += " ";
+					ms += servername;
+					ms += " :";
+					ms += realname;
+					ms += CRLF;
+					send(serv->sock, ms.c_str(), ms.length(), 0);
+				}
 				exec_registerMS();
+			}
 		} else {
 			ms = reply_formating(servername.c_str(), ERR_NEEDMOREPARAMS, {cmd->line}, nick.c_str());
 			custom_send(ms, this);
@@ -252,6 +297,14 @@ void	Client::OPER(Command *cmd) {
 					o_mode = true;
 					ms = reply_formating(servername.c_str(), RPL_YOUREOPER, {}, nick.c_str());
 					custom_send(ms, this);
+					for (OtherServ *sv : ev->otherServers) {
+						ms = ":";
+						ms += nick;
+						ms += " MODE ";
+						ms += get_userMODEs_ms(false);
+						ms += CRLF;
+						send(sv->sock, ms.c_str(), ms.length(), 0);
+					}
 			} else {
 				ms = reply_formating(servername.c_str(), ERR_PASSWDMISMATCH, {}, nick.c_str());
 				custom_send(ms, this);
@@ -267,7 +320,7 @@ void	Client::OPER(Command *cmd) {
 	
 }
 
-std::string		Client::get_userMODEs_ms() {
+std::string		Client::get_userMODEs_ms(bool format) {
 	std::string	ms;
 
 	if (w_mode || o_mode || i_mode || s_mode)
@@ -280,7 +333,8 @@ std::string		Client::get_userMODEs_ms() {
 		ms += "i";
 	if (s_mode)
 		ms += "s";
-	ms = reply_formating(servername.c_str(), RPL_UMODEIS, {ms}, nick.c_str());
+	if (format)
+		ms = reply_formating(servername.c_str(), RPL_UMODEIS, {ms}, nick.c_str());
 	return (ms);
 }
 
@@ -348,6 +402,14 @@ void	Client::MODE(Command *cmd) {
 					ms += cmd->arguments[1];
 					ms += CRLF;
 					custom_send(ms, this);
+					for (OtherServ *sv : ev->otherServers) {
+						ms = ":";
+						ms += nick;
+						ms += " MODE ";
+						ms += get_userMODEs_ms(false);
+						ms += CRLF;
+						send(sv->sock, ms.c_str(), ms.length(), 0);
+					}
 				} else {
 					ms = reply_formating(servername.c_str(), ERR_UMODEUNKNOWNFLAG, {}, nick.c_str());
 					custom_send(ms, this);
@@ -362,7 +424,7 @@ void	Client::MODE(Command *cmd) {
 	} else {
 		if (cmd->arguments.size() == 1) {
 			if (!ev->channels->getChanModes(this, cmd->arguments)) {
-				ms = get_userMODEs_ms();
+				ms = get_userMODEs_ms(true);
 				custom_send(ms, this);
 			}
 		} else {
@@ -390,9 +452,16 @@ void	Client::QUIT(Command *cmd) {
 		ev->client_history.push_back(this);
 	ans += ":";
 	ans += nick;
-	ans += " QUIT :";
+	ans += " You have been kick of the server with the message : ";
 	ans += ms;
 	ans += CRLF;
+	for (OtherServ *serv : ev->otherServers) {
+		ms = ":";
+		ms += nick;
+		ms += " QUIT 1";
+		ms += CRLF;
+		send(serv->sock, ms.c_str(), ms.length(), 0);
+	}
 	custom_send(ans, this);
 	std::list<Channel*>::iterator	current = channels.begin();
 	std::list<Channel*>::iterator	end = channels.end();
@@ -410,6 +479,7 @@ void	Client::PRIVMSG(Command *cmd) {
 	std::vector<Fd *> 	tmp;
 	int					good = 0;
 	ev->cmd_count["PRIVMSG"] += 1;
+	std::vector<OtherServ *>	tmpo;
 	
 
 	// << PRIVMSG #oui,mayeul :c'est super non ?
@@ -421,23 +491,28 @@ void	Client::PRIVMSG(Command *cmd) {
 			if (targ[0] == '#' || targ[0] == '&' || targ[0] == '+' || targ[0] == '!') {
 				good += 1;
 				ev->channels->broadcastMsg(this, targ, cmd->arguments);
-			} else if (targ[0] == '$') {
-				// TODO : multi server
 			} else {
+				ms = ":";
+				ms += nick;
+				ms += " PRIVMSG ";
+				ms += targ;
+				ms += " ";
+				for (size_t i = 1; i < cmd->arguments.size(); i++) {
+					ms += cmd->arguments[i];
+					ms += " ";
+				}
+				ms += CRLF;
 				if (!(tmp = ev->search_list_nick(targ)).empty()) {
 					Client *c = reinterpret_cast<Client *>(tmp[0]);
-
-					ms += ":";
-					ms += nick;
-					ms += " PRIVMSG ";
-					ms += targ;
-					ms += " ";
-					for (size_t i = 1; i < cmd->arguments.size(); i++) {
-						ms += cmd->arguments[i];
-						ms += " ";
-					}
-					ms += CRLF;
 					custom_send(ms, c);
+					good += 1;
+					if (c->is_away) {
+						ms = reply_formating(servername.c_str(), RPL_AWAY, std::vector<std::string>({c->nick, c->away_ms}), nick.c_str());
+						custom_send(ms, this);
+					}
+				} else if (!(tmpo = ev->search_othersrv_nick(targ)).empty()) {
+					send(tmpo[0]->sock, ms.c_str(), ms.length(), 0);
+					Client *c = *(tmpo[0]->search_nick(targ));
 					good += 1;
 					if (c->is_away) {
 						ms = reply_formating(servername.c_str(), RPL_AWAY, std::vector<std::string>({c->nick, c->away_ms}), nick.c_str());
@@ -462,6 +537,7 @@ void	Client::PRIVMSG(Command *cmd) {
 void	Client::NOTICE(Command *cmd) {
 	std::string 		ms;
 	std::vector<Fd *> 	tmp;
+	std::vector<OtherServ *> 	tmpo;
 	ev->cmd_count["NOTICE"] += 1;
 	
 	if (cmd->arguments.size() >= 2) {
@@ -471,20 +547,21 @@ void	Client::NOTICE(Command *cmd) {
 			} else if (targ[0] == '$') {
 				// TODO : multi server
 			} else {
+				ms += ":";
+				ms += nick + "!" + username + "@" + servername;
+				ms += " NOTICE ";
+				ms += targ;
+				ms += " ";
+				for (size_t i = 1; i < cmd->arguments.size(); i++) {
+					ms += cmd->arguments[i];
+					ms += " ";
+				}
+				ms += CRLF;
 				if (!(tmp = ev->search_list_nick(targ)).empty()) {
 					Client *c = reinterpret_cast<Client *>(tmp[0]);
-
-					ms += ":";
-					ms += nick + "!" + username + "@" + servername;
-					ms += " NOTICE ";
-					ms += targ;
-					ms += " ";
-					for (size_t i = 1; i < cmd->arguments.size(); i++) {
-						ms += cmd->arguments[i];
-						ms += " ";
-					}
-					ms += CRLF;
 					custom_send(ms, c);
+				} else if (!(tmpo = ev->search_othersrv_nick(targ)).empty()) {
+					send(tmpo[0]->sock, ms.c_str(), ms.length(), 0);
 				}
 			}
 		}
@@ -541,16 +618,30 @@ void	Client::LUSERS(Command *cmd) {
 	(void)cmd;
 	std::string ms;
 	ev->cmd_count["LUSERS"] += 1;
+	int					tmpu = 0;
+	int					tmpi = 0;
+	int					tmpo = 0;
+	int					tmps = 1;
 	
 	// * 251
-	size_t clients_inv = ev->search_list_with_mode("", "", 'i').size();
-	size_t clients = ev->search_list_nick("*").size() - clients_inv;
+	tmpu += ev->search_list_nick("*").size();
+	tmpi += ev->search_list_with_mode("", "", 'i').size();
+	tmpo += ev->search_list_with_mode("", "", 'o').size();
+	for (OtherServ *sv : ev->otherServers) {
+		tmpu += sv->clients.size();
+		tmpi += sv->search_list_with_mode('i').size();
+		tmpo += sv->search_list_with_mode('o').size();
+		tmps += sv->connected;
+	}
+	std::string clients_inv = std::to_string(tmpi);
+	std::string clients = std::to_string(tmpu - tmpi);
+	std::string snum = std::to_string(tmps);
 	ms = reply_formating(servername.c_str(), RPL_LUSERCLIENT,
-	std::vector<std::string>({std::to_string(clients), std::to_string(clients_inv), "1"}), nick.c_str());
+	std::vector<std::string>({clients, clients_inv, snum}), nick.c_str());
 	custom_send(ms, this);
 
     // * 252
-	std::string clients_op = std::to_string(ev->search_list_with_mode("", "", 'o').size());
+	std::string clients_op = std::to_string(tmpo);
 	ms = reply_formating(servername.c_str(), RPL_LUSEROP, std::vector<std::string>({clients_op}), nick.c_str());
 	custom_send(ms, this);
 	
@@ -568,10 +659,11 @@ void	Client::LUSERS(Command *cmd) {
 	size_t	channelNumber = ev->channels->size();
 	ms = reply_formating(servername.c_str(), RPL_LUSERCHANNELS,
 	std::vector<std::string>({std::to_string(channelNumber)}), nick.c_str());
+	// ! this shows only the local chans
 	custom_send(ms, this);
 	
 	// * 255
-	ms = reply_formating(servername.c_str(), RPL_LUSERME, std::vector<std::string>({std::to_string(clients), "1"}), nick.c_str());
+	ms = reply_formating(servername.c_str(), RPL_LUSERME, std::vector<std::string>({clients, snum}), nick.c_str());
 	custom_send(ms, this);
 }
 
@@ -581,14 +673,14 @@ void	Client::VERSION(Command *cmd) {
 
 	if (cmd->arguments.size() > 0) {
 		if (cmd->arguments[0] == servername || cmd->arguments[0] == "*") {
-			ms = reply_formating(servername.c_str(), RPL_VERSION, std::vector<std::string>({*ev->version, "1", servername, "first server-to-client iterations of irc for 42 project"}), nick.c_str());
+			ms = reply_formating(servername.c_str(), RPL_VERSION, std::vector<std::string>({*ev->version, "1", servername, "second server-to-server iterations of irc for 42 project"}), nick.c_str());
 			custom_send(ms, this);
 		} else {
 			ms = reply_formating(servername.c_str(), ERR_NOSUCHSERVER, {cmd->arguments[0]}, nick.c_str());
 			custom_send(ms, this);
 		}
 	} else {
-		ms = reply_formating(servername.c_str(), RPL_VERSION, std::vector<std::string>({*ev->version, "1", servername, "first server-to-client iterations of irc for 42 project"}), nick.c_str());
+		ms = reply_formating(servername.c_str(), RPL_VERSION, std::vector<std::string>({*ev->version, "1", servername, "second server-to-server iterations of irc for 42 project"}), nick.c_str());
 		custom_send(ms, this);
 	}
 }
@@ -597,8 +689,8 @@ void	Client::STATS(Command *cmd) {
 	std::string ms;
 	ev->cmd_count["STATS"] += 1;
 
-	if (cmd->arguments.size() >= 2) {
-		if (cmd->arguments[1] == servername || cmd->arguments[1] == "*") {
+	if (cmd->arguments.size() >= 1) {
+		if (cmd->arguments.size() == 1 || (cmd->arguments[1] == servername || cmd->arguments[1] == "*")) {
 			if (cmd->arguments[0] == "m") {
 				for (std::pair<std::string, int> cm : ev->cmd_count) {
 					ms = reply_formating(servername.c_str(), RPL_STATSCOMMANDS, std::vector<std::string>({cm.first, std::to_string(cm.second)}), nick.c_str());
@@ -607,6 +699,10 @@ void	Client::STATS(Command *cmd) {
 				ms = reply_formating(servername.c_str(), RPL_ENDOFSTATS, {"m"}, nick.c_str());
 				custom_send(ms, this);
 			} else if (cmd->arguments[0] == "c") {
+				for (OtherServ *sv : ev->otherServers) {
+					ms = reply_formating(servername.c_str(), RPL_STATSCLINE, std::vector<std::string>({sv->name, sv->port}), nick.c_str());
+					custom_send(ms, this);
+				}
 				ms = reply_formating(servername.c_str(), RPL_ENDOFSTATS, {"c"}, nick.c_str());
 				custom_send(ms, this);
 			} else if (cmd->arguments[0] == "h") {
@@ -621,30 +717,52 @@ void	Client::STATS(Command *cmd) {
 			} else if (cmd->arguments[0] == "l") {
 				for (Fd *f : ev->search_list_nick("*")) {
 					Client *c = reinterpret_cast<Client *>(f);
-					ms += c->nick;
+					ms = c->nick;
 					ms += "!";
 					ms += c->username;
 					ms += "@";
 					ms += hostname;
 					ms += " ";
-					ms += std::to_string(sendq);
+					ms += std::to_string(c->sendq);
 					ms += " ";
-					ms += std::to_string(send_ms);
+					ms += std::to_string(c->send_ms);
 					ms += " ";
-					ms += std::to_string(Kb_sent / 1000);
+					ms += std::to_string(c->Kb_sent / 1000);
 					ms += " ";
-					ms += std::to_string(recv_ms);
+					ms += std::to_string(c->recv_ms);
 					ms += " ";
-					ms += std::to_string(Kb_recv / 1000);
+					ms += std::to_string(c->Kb_recv / 1000);
 					time_t now;
 					time(&now);
-					int diff = difftime(now, creation);
+					int diff = difftime(now, c->creation);
 					ms += " :";
 					ms += std::to_string(diff);
 					ms = reply_formating(servername.c_str(), RPL_STATSLINKINFO, {ms}, nick.c_str());
 					custom_send(ms, this);
 				}
-				// TODO : adding the same as above for servers when server-to-server
+				for (OtherServ *sv : ev->otherServers) {
+					ms = sv->name;
+					ms += ":";
+					ms += sv->port;
+					ms += " ";
+					ms += std::to_string(sv->sendq);
+					ms += " ";
+					ms += std::to_string(sv->send_ms);
+					ms += " ";
+					ms += std::to_string(sv->Kb_sent / 1000);
+					ms += " ";
+					ms += std::to_string(sv->recv_ms);
+					ms += " ";
+					ms += std::to_string(sv->Kb_recv / 1000);
+					time_t now;
+					time(&now);
+					int diff = difftime(now, sv->creation); 
+					ms += " :";
+					ms += std::to_string(diff);
+					ms = reply_formating(servername.c_str(), RPL_STATSLINKINFO, {ms}, nick.c_str());
+					custom_send(ms, this);
+				}
+				
 				ms = reply_formating(servername.c_str(), RPL_ENDOFSTATS, {"l"}, nick.c_str());
 				custom_send(ms, this);
 			}  else if (cmd->arguments[0] == "o") {
@@ -670,10 +788,10 @@ void	Client::STATS(Command *cmd) {
 				// TODO : test long time after solving PING
 			} else {
 				ms = reply_formating(servername.c_str(), RPL_ENDOFSTATS, {std::string(&cmd->arguments[0][0], &cmd->arguments[0][1])}, nick.c_str());
-				custom_send(ms, this); 
+				custom_send(ms, this);
 			}
 		} else {
-			ms = reply_formating(servername.c_str(), ERR_NOSUCHSERVER, {cmd->arguments[0]}, nick.c_str());
+			ms = reply_formating(servername.c_str(), ERR_NOSUCHSERVER, {cmd->arguments[1]}, nick.c_str());
 			custom_send(ms, this);
 		}
 	} else {
@@ -687,20 +805,42 @@ void	Client::LINKS(Command *cmd) {
 	std::string ms;
 	ev->cmd_count["LINKS"] += 1;
 	
+	for (OtherServ *sv : ev->otherServers) {
+		ms = reply_formating(servername.c_str(), RPL_LINKS, std::vector<std::string>({"", sv->name, std::to_string(sv->hop_count), "No specific information"}), nick.c_str());
+		custom_send(ms, this);
+	}
 	ms = reply_formating(servername.c_str(), RPL_ENDOFLINKS, {""}, nick.c_str());
 	custom_send(ms, this);
 }
 
 void	Client::TIME(Command *cmd) {
 	(void)cmd;
+	bool good = false;
 	std::string ms;
 	ev->cmd_count["TIME"] += 1;
 	time_t		now = time(NULL);
-
-	ms = asctime(localtime(&now));
-	ms = std::string(&ms[0], &ms[ms.size() - 1]);
-	ms = reply_formating(servername.c_str(), RPL_TIME, std::vector<std::string>({servername, ms}), nick.c_str());
-	custom_send(ms, this);
+	
+	if (cmd->arguments.size() >= 1) {
+		if (servername == cmd->arguments[0])
+			good = true;
+		else {
+			for (OtherServ *sv : ev->otherServers) {
+				if (cmd->arguments[0] == sv->name) 
+					good = true;
+			}
+		}
+	} else {
+		good = true;
+	}
+	if (good) {
+		ms = asctime(localtime(&now));
+		ms = std::string(&ms[0], &ms[ms.size() - 1]);
+		ms = reply_formating(servername.c_str(), RPL_TIME, std::vector<std::string>({cmd->arguments[0], ms}), nick.c_str());
+		custom_send(ms, this);
+	} else {
+		ms = reply_formating(servername.c_str(), ERR_NOSUCHSERVER, {cmd->arguments[0]}, nick.c_str());
+		custom_send(ms, this);
+	}
 }
 
 void	Client::ADMIN(Command *cmd) {
@@ -772,25 +912,11 @@ void	Client::WHO(Command *cmd) {
 	ev->cmd_count["WHO"] += 1;
 
 	if (cmd->arguments.size() >= 1) {
-		std::map<std::string, Fd*>	matchMap;
-		std::string			mask = cmd->arguments[0];
-
-		// collect all visible clients that match the mask, using their realname and their nickname
-		// I use a map to efficiently avoid to collect the same user twice
-		for (Fd *f: ev->clients_fd) {
-			if (f->type == FD_CLIENT) {
-				Client *c = reinterpret_cast<Client *>(f);
-				if (utils::strMatchToLower(mask, c->realname) && !c->i_mode)
-					matchMap[c->nick] = c;
-				else if (utils::strMatchToLower(mask, c->nick) && !c->i_mode)
-					matchMap[c->nick] = c;
-			}
-		}
-		for (std::pair<std::string, Fd*> pair : matchMap) {
-			Client *c = reinterpret_cast<Client *>(pair.second);
-			
-			if (nick != c->nick && (c->o_mode || cmd->arguments.size() == 1
-				|| cmd->arguments[1] != "o")) {
+		for (Fd *f: ev->search_list_nick(cmd->arguments[0])) {
+			Client *c = reinterpret_cast<Client *>(f);
+			// TODO : addind same channel checking
+			if (c->o_mode || cmd->arguments.size() == 1
+				|| cmd->arguments[1] != "o") {
 				ms = c->username;
 				ms += " ";
 				ms += c->hostname;
@@ -800,26 +926,52 @@ void	Client::WHO(Command *cmd) {
 				ms += c->nick;
 				ms += " H :0 ";
 				ms += c->realname;
-				ms = reply_formating(servername.c_str(), RPL_WHOREPLY, {ms}, nick.c_str());
+				ms = reply_formating(servername.c_str(), RPL_WHOREPLY, {ms},nick.c_str());
 				custom_send(ms, this);
+			}
+		}
+		for (OtherServ *sv: ev->otherServers) {
+			for (Client *c : sv->clients) { // ! ???? search_list_nick(cmd->arguments[0])
+				if (c->o_mode || cmd->arguments.size() == 1
+					|| cmd->arguments[1] != "o") {
+					ms = c->username;
+					ms += " ";
+					ms += c->hostname;
+					ms += " ";
+					ms += c->servername;
+					ms += " ";
+					ms += c->nick;
+					ms += " H :0 ";
+					ms += c->realname;
+					ms = reply_formating(servername.c_str(), RPL_WHOREPLY, {ms},nick.c_str());
+					custom_send(ms, this);
+				}
 			}
 		}
 	} else {
 		for (Fd *f: ev->clients_fd) {
 			if (f->type == FD_CLIENT) {
 				Client *c = reinterpret_cast<Client *>(f);
-				bool	noCommonChannels = true;
-				std::list<Channel*>::iterator	current = channels.begin();
-				std::list<Channel*>::iterator	end = channels.end();
-				while (current != end) {
-					if ((*current)->isInChan(c->nick)) {
-						noCommonChannels = false;
-						break ;
-					}
-					++current;
-				}
-				if (nick != c->nick && noCommonChannels && !c->i_mode) {
+				// TODO : addind same channel checking
+				if (!c->i_mode) {
 					ms += c->username;
+					ms += " ";
+					ms += c->hostname;
+					ms += " ";
+					ms += c->servername;
+					ms += " ";
+					ms += c->nick;
+					ms += " H :0 ";
+					ms += c->realname;
+					ms = reply_formating(servername.c_str(), RPL_WHOREPLY, {ms},nick.c_str());
+					custom_send(ms, this);
+				}
+			}
+		}
+		for (OtherServ *sv: ev->otherServers) {
+			for (Client *c : sv->clients) {
+				if (!c->i_mode) {
+					ms = c->username;
 					ms += " ";
 					ms += c->hostname;
 					ms += " ";
@@ -843,11 +995,20 @@ void	Client::WHOIS(Command *cmd) {
 	std::string ms;
 	ev->cmd_count["WHOIS"] += 1;
 	std::vector<Fd *> tmp;
+	std::vector<OtherServ *> tmpo;
 
 	if (cmd->arguments.size() >= 1) {
 		for (std::string targ : parse_comma(cmd->arguments[0])) {
 			if (!(tmp = ev->search_list_nick(targ)).empty()) {
 				Client *c = reinterpret_cast<Client *>(tmp[0]);
+				ms = reply_formating(servername.c_str(), RPL_WHOISUSER, std::vector<std::string>({c->nick, c->username, c->hostname, c->realname}), nick.c_str());
+				custom_send(ms, this);
+				ms = asctime(localtime(&c->last));
+				ms = std::string(&ms[0], &ms[ms.size() - 1]);
+				ms = reply_formating(servername.c_str(), RPL_WHOISSERVER, std::vector<std::string>({c->nick, c->servername, ms}), nick.c_str());
+				custom_send(ms, this);
+			} else if (!(tmpo = ev->search_othersrv_nick(targ)).empty())  {
+				Client *c = *(tmpo[0]->search_nick(targ));
 				ms = reply_formating(servername.c_str(), RPL_WHOISUSER, std::vector<std::string>({c->nick, c->username, c->hostname, c->realname}), nick.c_str());
 				custom_send(ms, this);
 				ms = asctime(localtime(&c->last));
@@ -868,16 +1029,24 @@ void	Client::WHOIS(Command *cmd) {
 }
 
 void	Client::WHOWAS(Command *cmd) {
-	// ! ignoring server parametre because no multi server for the moment
 	std::string ms;
 	ev->cmd_count["WHOWAS"] += 1;
 	std::vector<Fd *> tmp;
+	std::vector<OtherServ *> tmpo;
 
 	if (cmd->arguments.size() >= 1) {
 		for (std::string targ : parse_comma(cmd->arguments[0])) {
 			if (!(tmp = ev->search_history_nick(targ)).empty()) {
 				Client *c = reinterpret_cast<Client *>(tmp[0]);
 				ms = reply_formating(servername.c_str(), RPL_WHOWASUSER, std::vector<std::string>({c->nick, c->username, c->hostname, c->realname}), nick.c_str());
+				custom_send(ms, this);
+				ms = asctime(localtime(&c->last));
+				ms = std::string(&ms[0], &ms[ms.size() - 1]);
+				ms = reply_formating(servername.c_str(), RPL_WHOISSERVER, std::vector<std::string>({c->nick, c->servername, ms}), nick.c_str());
+				custom_send(ms, this);
+			} else if (!(tmpo = ev->search_othersrv_history_nick(targ)).empty())  {
+				Client *c = *(tmpo[0]->search_history_nick(targ));
+				ms = reply_formating(servername.c_str(), RPL_WHOISUSER, std::vector<std::string>({c->nick, c->username, c->hostname, c->realname}), nick.c_str());
 				custom_send(ms, this);
 				ms = asctime(localtime(&c->last));
 				ms = std::string(&ms[0], &ms[ms.size() - 1]);
@@ -900,6 +1069,7 @@ void	Client::KILL(Command *cmd) {
 	std::string ms;
 	ev->cmd_count["KILL"] += 1;
 	std::vector<Fd *> tmp;
+	std::vector<OtherServ *> tmpo;
 
 	if (cmd->arguments.size() >= 2) {
 		if (o_mode) {
@@ -911,9 +1081,23 @@ void	Client::KILL(Command *cmd) {
 					ms += cmd->arguments[i];
 					ms += " ";
 				}
+				ms += CR;
 				c->execute_parsed(parse(ms));
+			} else if (!(tmpo = ev->search_othersrv_nick(cmd->arguments[0])).empty()) {
+				ms = ":";
+				ms += cmd->arguments[0];
+				ms += " KILL ";
+				for (size_t i = 1; i < cmd->arguments.size(); i++) {
+					ms += cmd->arguments[i];
+					ms += " ";
+				}
+
+				ms += CRLF;
+				for (OtherServ *sv : ev->otherServers) {
+					send(sv->sock, ms.c_str(), ms.length(), 0);
+				}
 			} else {
-				ms = reply_formating(servername.c_str(), ERR_NOSUCHNICK, {}, nick.c_str());
+				ms = reply_formating(servername.c_str(), ERR_NOSUCHNICK, {cmd->arguments[0]}, nick.c_str());
 				custom_send(ms, this);
 			}
 		} else {
@@ -961,10 +1145,25 @@ void	Client::AWAY(Command *cmd) {
 		away_ms = ms;
 		ms = reply_formating(servername.c_str(), RPL_AWAY, std::vector<std::string>({nick, ms}), nick.c_str());
 		custom_send(ms, this);
+		ms = ":";
+		ms += nick;
+		ms += " AWAY ";
+		ms += away_ms;
+		ms += CRLF;
+		for (OtherServ *sv : ev->otherServers) {
+			send(sv->sock, ms.c_str(), ms.length(), 0);
+		}
 	} else {
 		is_away = false;
 		ms = reply_formating(servername.c_str(), RPL_UNAWAY, {}, nick.c_str());
 		custom_send(ms, this);
+		ms = ":";
+		ms += nick;
+		ms += " AWAY";
+		ms += CRLF;
+		for (OtherServ *sv : ev->otherServers) {
+			send(sv->sock, ms.c_str(), ms.length(), 0);
+		}
 	}
 }
 
@@ -1135,6 +1334,148 @@ void	Client::INVITE(Command *cmd) {
 	}
 }
 
+void	Client::SERVER(Command *cmd) {
+	std::string ms;
+	ev->cmd_count["SERVER"] += 1;
+	OtherServ *other = new OtherServ(sock, true, ev);
+
+	if (!is_setup) {
+		if (cmd->arguments.size() >= 1) {
+			other->name = cmd->arguments[0];
+		} if (cmd->arguments.size() >= 2) {
+			other->hop_count = std::atoi(cmd->arguments[1].c_str());
+		} if (cmd->arguments.size() >= 3) {
+			other->token = std::atoi(cmd->arguments[2].c_str());
+		} if (cmd->arguments.size() >= 4) {
+			other->port = cmd->arguments[3];
+		} if (cmd->arguments.size() >= 5) {
+			for (size_t i = 4; i < cmd->arguments.size(); i++) {
+				ms += cmd->arguments[i];
+				ms += " ";
+			}
+			other->info = cmd->arguments[0];
+		}
+		delete ev->clients_fd[sock];
+		ev->clients_fd[sock] = other;
+
+		int tmp = 1;
+		for (OtherServ *sv : ev->otherServers) {
+			tmp += sv->connected;
+		} 
+		// Notify incoming server of number of servers
+		ms = "NSERV ";
+		ms += std::to_string(tmp);
+		ms += CRLF;
+		send(sock, ms.c_str(), ms.length(), 0);
+
+		// Notify other serv that a new server as been add
+		ms = "ADDS";
+		ms += CRLF;
+		for (OtherServ *sv : ev->otherServers) {
+			send(sv->sock, ms.c_str(), ms.length(), 0);
+		}
+
+		std::cerr << "Fd adding Ok" << std::endl;
+		ev->otherServers.push_back(other);
+		std::cerr << "OtherServ adding Ok" << std::endl;
+	} else {
+		ms = reply_formating(servername.c_str(), ERR_ALREADYREGISTRED, {}, nick.c_str());
+		custom_send(ms, this);
+	}
+}
+
+void	Client::TRACE(Command *cmd) {
+	std::string ms;
+	ev->cmd_count["TRACE"] += 1;
+	std::vector<Fd *> tmp;
+	
+	if (!(tmp = ev->search_list_nick(cmd->arguments[0])).empty() || servername == cmd->arguments[0]) {
+		if (!tmp.empty()) {
+			Client *c = reinterpret_cast<Client *>(tmp[0]);
+			std::string cl = c->o_mode ? "operator" : "user";
+			ms = c->nick;
+			ms += "[";
+			ms += c->username;
+			ms += "@";
+			ms += c->servername;
+			ms += "] (";
+			ms += c->hostname;
+			ms += ") 0";
+			time_t now;
+			time(&now);
+			int diff = difftime(now, c->creation);
+			ms += " :";
+			ms += std::to_string(diff);
+			ms = reply_formating(servername.c_str(), RPL_TRACEUSER, std::vector<std::string>({cl, ms}), nick.c_str());
+			custom_send(ms, this);
+		} else {
+			for (Fd * f : ev->search_list_with_mode("", "", 'o')) {
+				Client *c = static_cast<Client *>(f);
+				std::string cl = c->o_mode ? "operator" : "user";
+				ms = c->nick;
+				ms += "[";
+				ms += c->username;
+				ms += "@";
+				ms += c->servername;
+				ms += "] (";
+				ms += c->hostname;
+				ms += ") 0";
+				time_t now;
+				time(&now);
+				int diff = difftime(now, c->creation);
+				ms += " :";
+				ms += std::to_string(diff);
+				ms = reply_formating(servername.c_str(), RPL_TRACEUSER, std::vector<std::string>({cl, ms}), nick.c_str());
+				custom_send(ms, this);
+			}
+		}
+	} else {
+		for (OtherServ * sv : ev->otherServers) {
+			ms = ":";
+			ms += nick;
+			ms += " TRACE ";
+			ms += cmd->arguments[0];
+			ms += CRLF;
+			send(sv->sock, ms.c_str(), ms.length(), 0); 
+		}
+	}
+}
+
+void	Client::SQUIT(Command *cmd) {
+	// * SQUIT servname port comment
+	std::string ms;
+	ev->cmd_count["SQUIT"] += 1;
+
+	if (cmd->arguments.size() >= 2) {
+		if (o_mode) {
+			if (servername == cmd->arguments[0] && std::to_string(htons(ev->sin.sin_port)) == cmd->arguments[1]) {
+				ev->active = false;
+			} else {
+				for (OtherServ *sv : ev->otherServers) {
+					ms = cmd->line;
+					ms += CRLF;
+					send(sv->sock, ms.c_str(), ms.length(), 0);
+				}
+			}
+		} else {
+			ms = reply_formating(servername.c_str(), ERR_NOPRIVILEGES, {}, nick.c_str());
+			custom_send(ms, this);
+		}
+	} else {
+		ms = reply_formating(servername.c_str(), ERR_NEEDMOREPARAMS, {cmd->line}, nick.c_str());
+		custom_send(ms, this);
+	}
+}
+
+void	Client::CONNECT(Command *cmd) {
+	(void)cmd;
+	std::string ms;
+	ev->cmd_count["CONNECT"] += 1;
+
+	ms = reply_formating(servername.c_str(), ERR_CONNECTDISABLED, {}, nick.c_str());
+	custom_send(ms, this);
+}
+
 void	Client::LIST(Command *cmd) {
 	ev->channels->list(this, cmd->arguments);
 }
@@ -1260,17 +1601,29 @@ int		Client::execute_parsed(Command *parsed) {
 	case LIST_CC:
 		LIST(parsed);
 		break;
+	case SERVER_CC:
+		SERVER(parsed);
+		break;
+	case TRACE_CC:
+		TRACE(parsed);
+		break;
+	case SQUIT_CC:
+		SQUIT(parsed);
+		break;
+	case CONNECT_CC:
+		CONNECT(parsed);
+		break;
 	default:
 		break;
 	}
 	return (0);
 }
 
-bool	Client::_thereIsAFullCmd(size_t &pos, size_t& charsToJump) {
+bool	Client::thereIsAFullCmd(size_t &pos, size_t& charsToJump, const std::string &str) {
 	charsToJump = 2;
-	pos = _stream.find(CRLF);
+	pos = str.find(CRLF);
 	if (pos == std::string::npos) {
-		pos = _stream.find("\n");
+		pos = str.find("\n");
 		charsToJump = 1;
 	}
 	return (pos != std::string::npos);
@@ -1308,7 +1661,7 @@ void	Client::read_func() {
 
 	std::cout << "now _stream is: " << _stream << "\n\n";
 	
-	while (_thereIsAFullCmd(pos, charsToJump)) {
+	while (thereIsAFullCmd(pos, charsToJump, _stream)) {
 		line = _stream.substr(0, pos);
 		_stream = _stream.substr(pos + charsToJump);
 
@@ -1355,4 +1708,60 @@ void	Client::updateNickInChannels(const std::string &oldNick, const std::string 
 		(*current)->changeNick(oldNick, newNick);
 		++current;
 	}
+}
+
+void	Client::share_Client(int socket) {
+	// Send all Client Data to the socket, starting by NICK and all command prefixed by the nickname
+	std::string ms;
+	
+	ms = "";
+	ms += "NICK ";
+	ms += nick;
+	ms += CRLF;
+	send(socket, ms.c_str(), ms.length(), 0);
+
+	ms = ":";
+	ms += nick;
+	ms += " USER ";
+	ms += username;
+	ms += " ";
+	ms += hostname;
+	ms += " ";
+	ms += servername;
+	ms += " :";
+	ms += realname;
+	ms += CRLF;
+	send(socket, ms.c_str(), ms.length(), 0);
+
+	ms = ":";
+	ms += nick;
+	ms += " MODE ";
+	ms += get_userMODEs_ms(false);
+	ms += CRLF;
+	send(socket, ms.c_str(), ms.length(), 0);
+
+	if (is_away) {
+		ms = ":";
+		ms += nick;
+		ms += " AWAY ";
+		ms += away_ms;
+		ms += CRLF;
+	} else {
+		ms = ":";
+		ms += nick;
+		ms += " AWAY";
+		ms += CRLF;
+	}
+	send(socket, ms.c_str(), ms.length(), 0);
+
+	ms = ":";
+	ms += nick;
+	ms += " TIME ";
+	ms += std::to_string(creation);
+	ms += " ";
+	ms += std::to_string(last);
+	ms += CRLF;
+	send(socket, ms.c_str(), ms.length(), 0);
+
+	
 }

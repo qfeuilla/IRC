@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/20 17:01:28 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/24 15:03:03 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/02 20:10:53 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,6 +26,8 @@
 # define FD_SERVER		1
 # define FD_CLIENT		2
 # define FD_WAITC		3
+# define FD_OTHER		4
+# define FD_OCLIENT		5
 
 # define BUF_SIZE		4096
 # define CLIENTS_MAX	512
@@ -80,6 +82,10 @@
 # define ISON_CC		45 // * done
 # define SERVER_CC		46 // TODO : when server to server
 # define NJOIN_CC		47 // TODO : when server to server
+# define ADDS_CC		48 // * Command used to notify adding of a new server
+# define NSERV_CC		49 // * Command to notify entrying server of num of SERVERS
+# define DELS_CC		50 // * Command used to notify deleting of a new server
+# define TRACEUP_CC		51 // * Used for trace
 
 // * Messages necessay rights to execute
 
@@ -207,7 +213,8 @@
 # define RPL_TRACEUNKNOWN      {"203", "???? {} {}", 2}
 // "Oper <class> <nick>"
 # define RPL_TRACEOPERATOR     {"204", "Oper {} {}", 2}
-// "User <class> <nick>"
+// "User <class> <info>"
+// <info> : nick[username@servername] (hostname) hop :since_creation
 # define RPL_TRACEUSER         {"205", "User {} {}", 2}
 // "Serv <class> <int>S <int>C <server>
 // <nick!user|*!*>@<host|server> V<protocol version>" // * -> one arg
@@ -228,6 +235,8 @@
 # define RPL_STATSLINKINFO     {"211", "{}", 1}
 // "<command> <count>"
 # define RPL_STATSCOMMANDS     {"212", "{} {}", 2}
+// "C <name> <port>"
+#define RPL_STATSCLINE		   {"213", "C {}:{}", 2}
 // "<stats letter> :End of STATS report"
 # define RPL_ENDOFSTATS        {"219", "{} :End of STATS report", 1}
 // ":Server Up <days> days <hours>:<minutes>:<seconds>"
@@ -319,6 +328,8 @@
 // 
 # define ERR_USERSDISABLED     {"446", ":USERS has been disabled please use WHOIS to querry user informations", 0}
 // 
+# define ERR_CONNECTDISABLED   {"447", ":CONNECT has been disabled for security reasons", 0}
+//
 # define ERR_NOTREGISTERED     {"451", ":You have not registered", 0}
 // "<command> :Not enough parameters"
 # define ERR_NEEDMOREPARAMS    {"461", "{} :Not enough parameters", 1}

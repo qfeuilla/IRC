@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:50:59 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/24 14:55:43 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/02 20:09:33 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,6 +25,8 @@ class Channel;
 class Client : public Fd {
 public:
 	Client(Environment *, int, struct sockaddr_in);
+	// Constructor for multi serv
+	Client(std::string);
 	~Client();
 
 	Client(const Client &);
@@ -61,18 +63,24 @@ public:
 	void				WALLOPS(Command *);
 	void				USERHOST(Command *);
 	void				ISON(Command *);
-	void				JOIN(Command *cmd);
-	void				PART(Command *cmd);
-	void				KICK(Command *cmd);
-	void				TOPIC(Command *cmd);
-	void				INVITE(Command *cmd);
-	void				LIST(Command *cmd);
+	void				JOIN(Command *);
+	void				PART(Command *);
+	void				KICK(Command *);
+	void				TOPIC(Command *);
+	void				INVITE(Command *);
+	void				LIST(Command *);
+	void				SERVER(Command *);
+	void				TRACE(Command *);
+	void				SQUIT(Command *);
+	void				CONNECT(Command *);
 
 	int					execute_parsed(Command *);
 
 	void				exec_registerMS();
-	std::string			get_userMODEs_ms();
+	std::string			get_userMODEs_ms(bool);
 	bool				set_uMODE(char c, bool add);
+
+	void				share_Client(int socket);
 
 	Client				*getOtherClient(const std::string &name);
 	void				updateNickInChannels(const std::string &oldNick, const std::string &newNick);
@@ -105,15 +113,17 @@ public:
 	
 	std::list<Channel*>	channels;
 
+	bool				nick_set;
+
+	static bool	thereIsAFullCmd(size_t &pos, size_t& charsToJump, const std::string &str);
+
 private:
 	Environment			*ev;
 	bool				pass_set;
-	bool				nick_set;
 	bool				is_setup;
 
 	std::string			_stream;
 
-	bool	_thereIsAFullCmd(size_t &pos, size_t& charsToJump);
 	bool	_cmdNeedAuth(int cmdCode) const;
 };
 

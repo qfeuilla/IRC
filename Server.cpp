@@ -22,40 +22,118 @@ Server::~Server() {
 	std::cout << "server destructed" << std::endl;
 }
 
-std::string		Server::generate_servname(std::string ex) {
-	std::string		gen;
-	std::vector<std::string> names = {"ampere", "archimedes", "aristote", "becquerel", "bohr", "bose", "boyle", "carson", "copernicus", "watson", "curie", "cuvier", "dalton", "darwin", "einstein", "faraday", "fermi", "feynman", "fleming", "franklin", "feuillade", "galilei", "hawking", "hershel", "hertz", "hippocrates", "hubble", "joule", "kepler", "lavoisier", "lovelace", "maxwell", "mendeleev", "newton", "nobel", "pasteur", "planck", "rutherford", "thomson", "kelvin", "volta", "wegener"};
-
-	srand(time(0));
-	gen = names[rand() % names.size()];
-	gen += ex;
-	return (gen);
-}
-
 Server::Server() {
 	type = FD_SERVER;
 	ev = new Environment();
 	ev->password = new std::string("");
 	time(&ev->start);
 	ev->accept_operators = true;
-	ev->serv = new std::string(generate_servname(EX_NAME));
 	ev->version = new std::string("ft_irc_0.4.2b");
 	ev->loc1 = std::string("Paris, France");
 	ev->loc2 = std::string("42born2code");
 	ev->emails.push_back("quentin.feuillade33@gmail.com");
 	ev->emails.push_back("m.lemoniesdesagazan@gmail.com");
+}
 
-	ev->channels->setSrvName(*(ev->serv));
+bool			Server::load_other_servs(std::string servinfo) {
+	(void)servinfo;
+	// 1 : connect
+	// 2 : send SERVER message
+	// 3 : stock the socket as a OtherServ
+	unsigned int		porti;
+	std::string			addr;
+	std::string			pass;
+	unsigned int		last = 0;
+	int					tp = 0;
+	std::string			ms;
+	int					_sock = 0;
+	struct sockaddr_in	serv_addr;
+	
+	for (size_t i = 0; i < servinfo.length(); i++) {
+		if (servinfo[i] == ':') {
+			switch (tp)
+			{
+			case 0:
+				addr = std::string(&servinfo[0], &servinfo[i]);
+				break;
+			case 1:
+				porti = std::atoi(std::string(&servinfo[last], &servinfo[i]).c_str());
+				break;
+			default:
+				break;
+			}
+			last = i + 1;
+			tp += 1;
+		}
+	}
+	pass = std::string(&servinfo[last], &servinfo[servinfo.length()]);
+	if (tp != 2) {
+		return (false);
+	}
+
+	if ((_sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+		return (false);
+	}
+
+	serv_addr.sin_family = AF_INET;
+	serv_addr.sin_port = htons(porti);
+
+	if (inet_pton(serv_addr.sin_family, addr.c_str(), &serv_addr.sin_addr) <= 0) {
+		return (false);
+	}
+
+	if (connect(_sock, reinterpret_cast<struct sockaddr *>(&serv_addr), sizeof(serv_addr)) < 0) {
+		return (false);
+	}
+
+	ms += "SERVER ";
+	ms += inet_ntoa(ev->sin.sin_addr);
+	ms += " ";
+	ms += "1";
+	ms += " ";
+	ms += "42";
+	ms += " ";
+	ms += std::to_string(port);
+	ms += " ";
+	ms += pass;
+	ms += CRLF;
+	send(_sock, ms.c_str(), ms.length(), 0);
+
+	OtherServ *other = new OtherServ(_sock, false, ev);
+	other->name = addr;
+	other->hop_count = 1;
+	other->token = 42;
+	other->info = "";
+	other->port = std::to_string(porti);
+	delete ev->clients_fd[_sock];
+	ev->clients_fd[_sock] = other;
+	std::cerr << "Fd adding Ok" << std::endl;
+	ev->otherServers.push_back(other);
+	std::cerr << "OtherServ adding Ok" << std::endl;
+	return (true);
 }
 
 void		Server::load_options(int ac, char **av) {
-	if (ac != 3) {
-		std::cerr << "Usage: " << av[0] <<" <port> <password>" << std::endl;
+	if (ac == 3) {
+		port = std::atoi(av[1]);
+		delete ev->password;
+		ev->password = new std::string(av[2]);
+		create();
+	} else if (ac == 4) {
+		port = std::atoi(av[2]);
+		delete ev->password;
+		ev->password = new std::string(av[3]);
+		create();
+		if (!load_other_servs(av[1])) {
+			std::cerr << "Error on link server info" << std::endl;
+			std::cerr << "Usage: " << av[0] <<"[host:port:password] <port> <password>" << std::endl;
+			exit(EXIT_FAILURE);
+		}
+	}
+	else {
+		std::cerr << "Usage: " << av[0] <<"[host:port:password] <port> <password>" << std::endl;
 		exit(EXIT_FAILURE);
 	}
-	port = std::atoi(av[1]);
-	delete ev->password;
-	ev->password = new std::string(av[2]);
 }
 
 void		Server::create() {
@@ -76,6 +154,8 @@ void		Server::create() {
 	X(-1, listen(sock, 42), "listen");
 	ev->clients_fd[sock] = this;
 	ev->sin = sin;
+	ev->serv = new std::string(inet_ntoa(sin.sin_addr));
+	ev->channels->setSrvName(*(ev->serv));
 }
 
 void		Server::accept_srv() {
@@ -88,7 +168,6 @@ void		Server::accept_srv() {
 	std::cout << "New client fd:" << cs << " from " 
 		<< inet_ntoa(csin.sin_addr) << ":"
 		<< ntohs(csin.sin_port) << std::endl;
-
 	delete ev->clients_fd[cs];
 	ev->clients_fd[cs] = new Client(ev, cs, csin);
 }

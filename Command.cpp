@@ -131,6 +131,14 @@ int		Command::cmd_code() const {
 		return (SERVER_CC);
 	else if (upperCaseCommand == "NJOIN" || upperCaseCommand == ":NJOIN")	
 		return (NJOIN_CC);
+	else if (upperCaseCommand == "ADDS" || upperCaseCommand == ":ADDS")
+		return (ADDS_CC);
+	else if (upperCaseCommand == "NSERV" || upperCaseCommand == ":NSERV")
+		return (NSERV_CC);
+	else if (upperCaseCommand == "DELS" || upperCaseCommand == ":DELS")
+		return (DELS_CC);
+	else if (upperCaseCommand == "TRACEUP" || upperCaseCommand == ":TRACEUP")
+		return (TRACEUP_CC);
 	else
 		return (WRONG_CMD);
 }
