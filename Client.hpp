@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:50:59 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/02 13:20:50 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/02 16:39:40 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -69,6 +69,9 @@ public:
 	void			INVITE(Command *);
 	void			SERVER(Command *);
 	void			TRACE(Command *);
+	void			SQUIT(Command *);
+	void			CONNECT(Command *);
+
 
 	int				execute_parsed(Command *);
 
