@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/20 17:01:28 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/01 17:46:14 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/02 13:59:34 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -84,6 +84,7 @@
 # define ADDS_CC		48 // * Command used to notify adding of a new server
 # define NSERV_CC		49 // * Command to notify entrying server of num of SERVERS
 # define DELS_CC		50 // * Command used to notify deleting of a new server
+# define TRACEUP_CC		51 // * Used for trace
 
 // * Messages necessay rights to execute
 
@@ -211,7 +212,8 @@
 # define RPL_TRACEUNKNOWN      {"203", "???? {} {}", 2}
 // "Oper <class> <nick>"
 # define RPL_TRACEOPERATOR     {"204", "Oper {} {}", 2}
-// "User <class> <nick>"
+// "User <class> <info>"
+// <info> : nick[username@servername] (hostname) hop :since_creation
 # define RPL_TRACEUSER         {"205", "User {} {}", 2}
 // "Serv <class> <int>S <int>C <server>
 // <nick!user|*!*>@<host|server> V<protocol version>" // * -> one arg

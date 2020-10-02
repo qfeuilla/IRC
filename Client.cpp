@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:51:25 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/02 01:30:06 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/02 15:16:03 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -1039,6 +1039,7 @@ void	Client::KILL(Command *cmd) {
 					ms += cmd->arguments[i];
 					ms += " ";
 				}
+
 				ms += CRLF;
 				for (OtherServ *sv : ev->otherServers) {
 					send(sv->sock, ms.c_str(), ms.length(), 0);
@@ -1331,6 +1332,63 @@ void	Client::SERVER(Command *cmd) {
 	}
 }
 
+void	Client::TRACE(Command *cmd) {
+	std::string ms;
+	ev->cmd_count["TRACE"] += 1;
+	std::vector<Fd *> tmp;
+	
+	if (!(tmp = ev->search_list_nick(cmd->arguments[0])).empty() || servername == cmd->arguments[0]) {
+		if (!tmp.empty()) {
+			Client *c = reinterpret_cast<Client *>(tmp[0]);
+			std::string cl = c->o_mode ? "operator" : "user";
+			ms = c->nick;
+			ms += "[";
+			ms += c->username;
+			ms += "@";
+			ms += c->servername;
+			ms += "] (";
+			ms += c->hostname;
+			ms += ") 0";
+			time_t now;
+			time(&now);
+			int diff = difftime(now, c->creation);
+			ms += " :";
+			ms += std::to_string(diff);
+			ms = reply_formating(servername.c_str(), RPL_TRACEUSER, std::vector<std::string>({cl, ms}), nick.c_str());
+			custom_send(ms, this);
+		} else {
+			for (Fd * f : ev->search_list_with_mode("", "", 'o')) {
+				Client *c = static_cast<Client *>(f);
+				std::string cl = c->o_mode ? "operator" : "user";
+				ms = c->nick;
+				ms += "[";
+				ms += c->username;
+				ms += "@";
+				ms += c->servername;
+				ms += "] (";
+				ms += c->hostname;
+				ms += ") 0";
+				time_t now;
+				time(&now);
+				int diff = difftime(now, c->creation);
+				ms += " :";
+				ms += std::to_string(diff);
+				ms = reply_formating(servername.c_str(), RPL_TRACEUSER, std::vector<std::string>({cl, ms}), nick.c_str());
+				custom_send(ms, this);
+			}
+		}
+	} else {
+		for (OtherServ * sv : ev->otherServers) {
+			ms = ":";
+			ms += nick;
+			ms += " TRACE ";
+			ms += cmd->arguments[0];
+			ms += CRLF;
+			send(sv->sock, ms.c_str(), ms.length(), 0); 
+		}
+	}
+}
+
 int		Client::execute_parsed(Command *parsed) {
 	switch (parsed->cmd_code())
 	{
@@ -1438,6 +1496,9 @@ int		Client::execute_parsed(Command *parsed) {
 		break;
 	case SERVER_CC:
 		SERVER(parsed);
+		break;
+	case TRACE_CC:
+		TRACE(parsed);
 		break;
 	default:
 		break;

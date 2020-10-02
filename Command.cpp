@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/20 16:41:00 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/01 14:44:01 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/02 14:09:18 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -134,6 +134,8 @@ int		Command::cmd_code() const {
 		return (NSERV_CC);
 	else if (command == "DELS" || command == ":DELS")
 		return (DELS_CC);
+	else if (command == "TRACEUP" || command == ":TRACEUP")
+		return (TRACEUP_CC);
 	else
 		return (WRONG_CMD);
 }
