@@ -39,6 +39,8 @@ public:
 
 	bool			active();
 
+	std::string		getIP() const;
+
 private:
 	int					port;
 	int					action;

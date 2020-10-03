@@ -154,7 +154,8 @@ void		Server::create() {
 	X(-1, listen(sock, 42), "listen");
 	ev->clients_fd[sock] = this;
 	ev->sin = sin;
-	ev->serv = new std::string(inet_ntoa(sin.sin_addr));
+	ev->serv = new std::string(getIP());
+	std::cout << "IP = " << *ev->serv << "\n";
 	ev->channels->setSrvName(*(ev->serv));
 }
 
@@ -206,4 +207,31 @@ void		Server::do_actions() {
 
 bool		Server::active() {
 	return (ev->active);
+}
+
+std::string	Server::getIP() const {
+	char hostname[1024];
+	std::string	ip;
+
+	hostname[1023] = '\0';
+	gethostname(hostname, 1023);
+	// std::cout << "Hostname: " << hostname << "\n";
+	struct hostent* h;
+	h = gethostbyname(hostname);
+	if (!h)
+		return ("");
+	if (h->h_addrtype == AF_INET)
+	{
+		struct in_addr **address_list = (struct in_addr **)h->h_addr_list;
+		if (!address_list[0])
+			return ("");
+		unsigned int numAddress = htonl((*(address_list[0])).s_addr);
+
+		ip = std::to_string(((numAddress >> 24) & 0xFF));
+		ip += "." + std::to_string((numAddress >> 16) & 0xFF);
+		ip += "." + std::to_string((numAddress >> 8) & 0xFF);
+		ip += "." + std::to_string((numAddress) & 0xFF);
+		return (ip);
+	}
+	return ("");
 }
