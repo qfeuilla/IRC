@@ -38,11 +38,11 @@ public:
 	void			do_actions();
 
 	bool			active();
-
+	
+	Environment			*ev;
 private:
 	int					port;
 	int					action;
-	Environment			*ev;
 };
 
 #endif

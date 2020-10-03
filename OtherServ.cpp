@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/24 21:36:03 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/02 20:16:16 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/03 17:36:19 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -78,7 +78,13 @@ OtherServ::OtherServ(const OtherServ &cpy) {
 	info = cpy.info;
 }
 
-OtherServ::~OtherServ() { }
+OtherServ::~OtherServ() { 
+	for (Client *c : clients) {
+		delete c;
+	} for (Client *c : clients_history) {
+		delete c;
+	}
+}
 
 void	OtherServ::NICK(Command *cmd) {
 	std::string ms = cmd->line;
@@ -553,10 +559,10 @@ void	OtherServ::read_func() {
 	_stream += std::string(buf_read);
 
 	if (rd.empty()) {
-		ev->clients_fd[sock] = new Fd();
 		std::vector<OtherServ *>::iterator tmp;
 		tmp = std::find(ev->otherServers.begin(), ev->otherServers.end(), this);
 		ev->otherServers.erase(tmp);
+		ev->lostServers.push_back(this);
 		close(sock);
 		// * loop through all clients and call QUIT on the others servers
 		for (Client * c: clients) {
@@ -580,6 +586,7 @@ void	OtherServ::read_func() {
 				custom_send(ms, sv);
 			}
 		}
+		ev->clients_fd[sock] = new Fd();
 		std::cerr << "Other serv quit" << std::endl;
 	} else {
 
@@ -612,6 +619,8 @@ void	OtherServ::write_func() { }
 bool	OtherServ::change_nick(std::string old, std::string nw) {
 	for (Client *c : clients) {
 		if (c->nick == old) {
+			c->last = time(NULL);
+			clients_history.push_back(new Client(*c));
 			c->nick = nw;
 			return (true);
 		}
