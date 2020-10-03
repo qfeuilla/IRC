@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:51:25 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/02 21:52:43 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/03 17:39:11 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -63,6 +63,7 @@ Client::Client(std::string nc, OtherServ *srv) {
 }
 
 Client::~Client() {
+	
 	std::cout << "client destructed" << std::endl;
 }
 
@@ -162,6 +163,7 @@ void	Client::NICK(Command *cmd) {
 void	Client::exec_registerMS() {
 	std::string tmp;
 	std::string ms;
+	Command		*tm;
 
 	time(&creation);
 	ms = ":";
@@ -191,7 +193,7 @@ void	Client::exec_registerMS() {
 	custom_send(ms, this);
 	
 	// * 003
-	struct tm * timeinfo;
+	struct tm *timeinfo;
 	timeinfo = localtime(&ev->start);
 	std::vector<std::string> month = {"January", "February", "March", "April", "May", "June", "July", "August","September", "October", "November", "December"};
 	std::string date;
@@ -215,16 +217,19 @@ void	Client::exec_registerMS() {
 	
 	type = FD_CLIENT; // * register for other user
 	tmp = "LUSERS";
-	execute_parsed(parse(tmp));
+	execute_parsed((tm = parse(tmp)));
+	delete tm;
 	tmp = "MOTD";
-	execute_parsed(parse(tmp));
+	execute_parsed((tm = parse(tmp)));
+	delete tm;
 	tmp = "";
 	tmp += ":";
 	tmp += nick;
 	tmp += " MODE ";
 	tmp += nick;
 	tmp += " +i";
-	execute_parsed(parse(tmp));
+	execute_parsed((tm = parse(tmp)));
+	delete tm;
 	tmp = "";
 	tmp += ":";
 	tmp += servername;
@@ -232,7 +237,8 @@ void	Client::exec_registerMS() {
 	tmp += ": new User with nick : ";
 	tmp += nick;
 	tmp += " Join the server";
-	execute_parsed(parse(tmp));
+	execute_parsed((tm = parse(tmp)));
+	delete tm;
 	// TODO : need more functions (i will do)
 }
 
@@ -1077,8 +1083,9 @@ void	Client::WHOWAS(Command *cmd) {
 void	Client::KILL(Command *cmd) {
 	std::string ms;
 	ev->cmd_count["KILL"] += 1;
-	std::vector<Fd *> tmp;
-	std::vector<OtherServ *> tmpo;
+	std::vector<Fd *>			tmp;
+	std::vector<OtherServ *>	tmpo;
+	Command						*tm;
 
 	if (cmd->arguments.size() >= 2) {
 		if (o_mode) {
@@ -1091,7 +1098,8 @@ void	Client::KILL(Command *cmd) {
 					ms += " ";
 				}
 				ms += CR;
-				c->execute_parsed(parse(ms));
+				c->execute_parsed((tm = parse(ms)));
+				delete tm;
 			} else if (!(tmpo = ev->search_othersrv_nick(cmd->arguments[0])).empty()) {
 				ms = ":";
 				ms += cmd->arguments[0];

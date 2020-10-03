@@ -19,6 +19,7 @@
 #include <string.h>
 
 Server::~Server() {
+	delete ev;
 	std::cout << "server destructed" << std::endl;
 }
 
