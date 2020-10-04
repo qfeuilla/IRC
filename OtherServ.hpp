@@ -46,9 +46,10 @@ public:
 	void			SQUIT(Command *);
 
 	void			CHAN_CHG(Command *);
-	void			CHAN_DEL(Command *);
 	void			CHAN_RPL(Command *);
 	void			JOIN(Command *);
+	void			PART(Command *);
+	void			KICK(Command *);
 
 	void			chanModes(Command *);
 

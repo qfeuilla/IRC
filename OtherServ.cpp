@@ -535,6 +535,9 @@ void	OtherServ::CHAN_CHG(Command *cmd)
 			(*ite).usersNum = std::string(split[1]);
 			(*ite).modes = std::string(split[2]);
 			(*ite).topic = std::string(split[3]);
+			if ((*ite).usersNum == "0") {
+				chans.erase(ite);
+			}
 		}
 		for (OtherServ *sv : ev->otherServers) {
 			if (sv != this) {
@@ -564,11 +567,6 @@ void	OtherServ::CHAN_RPL(Command *cmd) {
 		ms = cmd->line + CRLF;
 		custom_send(ms, tmpo[0]);
 	}
-}
-
-void	OtherServ::CHAN_DEL(Command *cmd) {
-	// TODO
-	(void)cmd;
 }
 
 void	OtherServ::JOIN(Command *cmd) {
@@ -608,6 +606,89 @@ void	OtherServ::JOIN(Command *cmd) {
 		}
 	}
 }
+
+void	OtherServ::PART(Command *cmd)
+{
+	std::string	ms;
+	std::string	chanName;
+	std::string	reason = "";
+	std::vector<Client *>::iterator	client;
+
+	if (cmd->prefix.empty())
+		return ;
+	if (cmd->arguments.size() >= 1) {
+		chanName = cmd->arguments[0];
+		if (cmd->arguments.size() >= 2)
+			reason = cmd->arguments[1];
+		// check if we have the channel
+		if (ev->channels->getChannel(chanName)) {
+			// if we have channel, we use ChannelMaster.leave() method
+			client = search_nick(cmd->prefix);
+			if (client == clients.end())
+				return ; // message forgery won't error the server
+			ev->channels->leaveChannel(*client, chanName, reason);
+			return ;
+		}
+		// if we do not have the channel, we forward the msg to the right serv
+		for (OtherServ *sv : ev->otherServers) {
+			if (sv != this) {
+				for (Chan &chan : sv->chans) {
+					if (utils::strCmp(chan.name, chanName)) {
+						// forward the request to this serv
+						ms = ":";
+						ms += cmd->prefix; // the user who wants to join the channel
+						ms += " PART " + chanName + " " + reason;
+						ms += CRLF;
+						return ;
+					}
+				}
+			}
+		}
+	}
+}
+
+void	OtherServ::KICK(Command *cmd)
+{
+	std::string	ms;
+	std::string	chanName;
+	std::string	guyToKick;
+	std::string	reason = "";
+	std::vector<Client *>::iterator	client;
+
+	if (cmd->prefix.empty())
+		return ;
+	if (cmd->arguments.size() >= 2) {
+		chanName = cmd->arguments[0];
+		guyToKick = cmd->arguments[1];
+		if (cmd->arguments.size() >= 3)
+			reason = Channel::parseArg(2, cmd->arguments);
+		// check if we have the channel
+		if (ev->channels->getChannel(chanName)) {
+			// if we have channel, we use ChannelMaster.kick() method
+			client = search_nick(cmd->prefix);
+			if (client == clients.end())
+				return ; // message forgery won't error the server
+			ev->channels->kickFromChan(*client, chanName, guyToKick, reason);
+			return ;
+		}
+		// if we do not have the channel, we forward the msg to the right serv
+		for (OtherServ *sv : ev->otherServers) {
+			if (sv != this) {
+				for (Chan &chan : sv->chans) {
+					if (utils::strCmp(chan.name, chanName)) {
+						// forward the request to this serv
+						ms = ":";
+						ms += cmd->prefix; // the user who wants to kick someone
+						ms += " KICK " + chanName + " " + guyToKick + " :" + reason;
+						ms += CRLF;
+						return ;
+					}
+				}
+			}
+		}
+	}
+}
+
 
 void	OtherServ::chanModes(Command *cmd) {
 	std::vector<Client *>::iterator	client;
@@ -668,14 +749,17 @@ int		OtherServ::execute_parsed(Command *parsed) {
 	case CHAN_CHG_CC:
 		CHAN_CHG(parsed);
 		break;
-	case CHAN_DEL_CC:
-		CHAN_DEL(parsed);
-		break;
 	case CHAN_RPL_CC:
 		CHAN_RPL(parsed);
 		break;
 	case JOIN_CC:
 		JOIN(parsed);
+		break;
+	case PART_CC:
+		PART(parsed);
+		break;
+	case KICK_CC:
+		KICK(parsed);
 		break;
 	default:
 		break;

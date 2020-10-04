@@ -27,7 +27,6 @@ private:
 	_user_chan_map	*_user_channels;
 	// * _testChannelName returns true if the channelName is not correctly formatted
 	static bool	_testChannelName(Client *client, const std::string &channelName);
-	bool		_leave_channel(Client *client, const std::string &channelName, const std::string &reason);
 
 	std::string		_srv_name;
 public:
@@ -62,6 +61,9 @@ public:
 	std::vector<Chan>	getChans() const;
 	Channel				*getChannel(const std::string &channelName);
 	bool		joinChannel(Client *client, const std::string &channelName, const std::string &passwd);
+	bool		leaveChannel(Client *client, const std::string &channelName, const std::string &reason);
+	bool	kickFromChan(Client *client, const std::string &chanName,
+	const std::string &guyToKick, const std::string &reason);
 };
 
 #endif

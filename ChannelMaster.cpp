@@ -117,17 +117,28 @@ bool	ChannelMaster::joinChannel(Client *client, const std::string &channelName, 
 	return (false);
 }
 
-bool	ChannelMaster::_leave_channel(Client *client, const std::string &channelName, const std::string &reason)
+bool	ChannelMaster::leaveChannel(Client *client, const std::string &channelName, const std::string &reason)
 {
 	Channel	*chan = getChannel(channelName);
 	std::string		ms;
+	OtherServ		*serv;
 
+	if (!chan) {
+		// if there is chan with this name in another serv, we forward the part message to this serv
+		serv = client->getServByChannelName(channelName);
+		if (serv) {
+			ms = ":" + client->nick + " PART " + channelName  + " " + reason + CRLF;
+			custom_send(ms, serv);
+			return (true);
+		}
+	}
 	if (!chan) {
 		ms = reply_formating(client->servername.c_str(), ERR_NOSUCHCHANNEL, std::vector<std::string>({channelName}), client->nick.c_str());
 		return (!Channel::rplMsg(ms, client));
 	}
 	if (chan->leave(client, reason)) {
-		(*_user_channels)[client->nick]->remove(chan); // remove this chan from this user channels list 
+		if (client->sock != -1)
+			(*_user_channels)[client->nick]->remove(chan); // remove this chan from this user channels list 
 		if (!chan->isEmpty())
 			return (true);
 		_channels->remove(chan); // channel is empty -> we delete it
@@ -143,7 +154,7 @@ bool	ChannelMaster::leave(Client *client, const std::vector<std::string> &args)
 	std::vector<std::string>	names = splitComma(args[0]);
 	std::string		reason = args.size() > 1 ? Channel::parseArg(1, args) : std::string();
 	for (size_t i = 0; i < names.size(); ++i) {
-		ret &= _leave_channel(client, names[i], reason);
+		ret &= leaveChannel(client, names[i], reason);
 	}
 	return (ret);
 }
@@ -258,16 +269,66 @@ Channel		*ChannelMaster::getChannel(const std::string &channelName)
 
 bool	ChannelMaster::kick(Client *client, const std::vector<std::string> &args)
 {
+	std::map<std::string, std::string>	name_pass_map;
+	std::map<std::string, std::string>::iterator	current;
+	std::map<std::string, std::string>::iterator	end;
+	std::vector<std::string>	chanNames;
+	std::vector<std::string>	guysToKick;
+	std::string	reason = "";
+	bool	ret = true;
+
+	chanNames = splitComma(args[0]);
+	guysToKick = splitComma(args[1]);
+	if (args.size() > 2)
+		reason = Channel::parseArg(2, args);
+
+	if (chanNames.size() == 1) {
+		for (std::string nickname : guysToKick) {
+			ret &= kickFromChan(client, chanNames[0], nickname, reason);
+		}
+		return (ret);
+	}
+	if (chanNames.size() != guysToKick.size())
+		return (false);
+
+	for (size_t i = 0; i < chanNames.size(); ++i) {
+		name_pass_map[chanNames[i]] = guysToKick[i];
+	}
+	current = name_pass_map.begin();
+	end = name_pass_map.end();
+	while (current != end) {
+		ret &= kickFromChan(client, (*current).first, (*current).second, reason);
+		++current;
+	}
+	return (ret);
+}
+
+bool	ChannelMaster::kickFromChan(Client *client, const std::string &chanName,
+const std::string &guyToKick, const std::string &reason)
+{
 	std::string	ms;
-	Channel		*channel = getChannel(args[0]);
-	std::string	guyToKick = args[1];
-	std::string	reason = args.size() > 2 ? Channel::parseArg(2, args) : std::string();
+	Channel		*channel = getChannel(chanName);
+	
+	OtherServ			*serv;
+
 	if (!channel) {
-		ms = reply_formating(client->servername.c_str(), ERR_NOSUCHCHANNEL, std::vector<std::string>({args[0]}), client->nick.c_str());
+		// if there is chan with this name in another serv, we forward the kick message to this serv
+		serv = client->getServByChannelName(chanName);
+		if (serv) {
+			ms = ":" + client->nick + " KICK " + chanName + " " + guyToKick + " :" + reason + CRLF;
+			custom_send(ms, serv);
+			return (true);
+		}
+	}
+
+	if (!channel) {
+		ms = reply_formating(client->servername.c_str(), ERR_NOSUCHCHANNEL,
+		std::vector<std::string>({chanName}), client->nick.c_str());
 		return (!Channel::rplMsg(ms, client));
 	}
 	if (channel->kick(client, guyToKick, reason)) {
-		(*_user_channels)[client->nick]->remove(channel);
+		if (client->sock != -1)
+			(*_user_channels)[client->nick]->remove(channel);
 		return (true);
 	}
 	return (false);

@@ -128,7 +128,7 @@ bool				Channel::leave(Client *client, const std::string &reason, bool muted)
 	ms += (reason != "") ? " :" + reason : "";
 	ms += CRLF;
 	if (!muted) {
-		succesMsg(ms, client);
+		rplMsg(ms, client);
 		if (!_modes.q)
 			broadcastMsg(client, ms);
 	}
@@ -138,6 +138,7 @@ bool				Channel::leave(Client *client, const std::string &reason, bool muted)
 		_modes.v.remove(utils::ircLowerCase(user->first));
 	_users.erase(user);
 	_modes.users--;
+	updateServsChan(client); // update servers chan
 	return (true);
 }
 
@@ -449,9 +450,17 @@ bool	Channel::kick(Client *client, const std::string &guyToKick, const std::stri
 		ms += client->servername + " KICK " + getName() + " " + guyToKick;
 		ms += (reason != "") ? " :" + reason : " :" + client->nick;
 		ms += CRLF;
-		succesMsg(ms, client);
+		rplMsg(ms, client);
 		broadcastMsg(client, ms);
+
+		if (_is_in_list(userToKick->first, _modes.o))
+			_modes.o.remove(utils::ircLowerCase(userToKick->first));
+		if (_is_in_list(userToKick->first, _modes.v))
+			_modes.v.remove(utils::ircLowerCase(userToKick->first));
 		_users.erase(userToKick);
+		_modes.users--;
+		updateServsChan(client); // update servers chan
+
 		return (true);
 	}
 	ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
