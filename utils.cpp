@@ -148,3 +148,14 @@ bool	utils::strMatchToLower(const std::string &filter, const std::string &str)
 
 	return (utils::strMatch(str1, str2));
 }
+
+std::string	utils::delFirstWord(const std::string &str)
+{
+	std::string	newStr;
+	size_t		pos = str.find(" ");
+	if (pos == std::string::npos)
+		return ("");
+	++pos;
+	newStr = str.substr(pos);
+	return (newStr);
+}

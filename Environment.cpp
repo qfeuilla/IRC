@@ -18,7 +18,7 @@
 #include "Client.hpp"
 #include "utils.hpp"
 
-Environment::Environment() {
+Environment::Environment(): otherServers() {
 	clients_num = CLIENTS_MAX;
 	clients_fd = std::vector<Fd *>(clients_num);
 	for (int i = 0; i < clients_num ; i++) {
@@ -126,7 +126,7 @@ std::vector<OtherServ *>	Environment::search_othersrv_nick(std::string nk) {
 
 	for (OtherServ *srv : otherServers) {
 		for (Client *c : srv->clients) {
-			if (c->nick == nk) {
+			if (utils::strCmp(c->nick, nk)) {
 				buff.push_back(srv);
 				return (buff);
 			}

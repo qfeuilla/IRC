@@ -13,9 +13,12 @@
 #ifndef OTHERSERV_HPP
 # define OTHERSERV_HPP
 
-#include "Client.hpp"
 #include "ft_irc.hpp"
+#include "Client.hpp"
+#include "ChannelMaster.hpp"
+#include "utils.hpp"
 
+class Channel;
 class Environment;
 class Client;
 
@@ -41,6 +44,13 @@ public:
 	void			TRACE(Command *);
 	void			TRACEUP(Command *);
 	void			SQUIT(Command *);
+
+	void			CHAN_CHG(Command *);
+	void			CHAN_DEL(Command *);
+	void			CHAN_RPL(Command *);
+	void			JOIN(Command *);
+
+	void			chanModes(Command *);
 
 	virtual void	read_func();
 	virtual void	write_func();
@@ -69,7 +79,9 @@ public:
 	size_t					Kb_recv = 0;
 
 	time_t					creation;
-
+	
+	std::vector<Chan>		chans;
+	std::vector<Chan>::iterator	getChan(const std::string &name);
 private :
 	Environment		*ev;
 

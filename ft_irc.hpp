@@ -49,4 +49,14 @@ std::string					_reply_formating(const char *, Error,
 bool						is_special(char c);
 std::vector<std::string>	parse_comma(std::string cmd);
 
+struct Chan
+{
+	std::string	name;
+	std::string	usersNum;
+	std::string	modes;
+	std::string	topic;
+	Chan(const std::string &nm, const std::string &usrNm,
+	const std::string &md, const std::string &tpc): name(nm), usersNum(usrNm), modes(md), topic(tpc) {}
+};
+
 #endif

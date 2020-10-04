@@ -43,17 +43,17 @@ bool				Channel::setTopic(Client *client, const std::string &newTopic)
 	std::string	ms;
 	if (!isInChan(client->nick)) {
 		ms = reply_formating(client->servername.c_str(), ERR_NOTONCHANNEL, std::vector<std::string>({getName()}), client->nick.c_str());
-		return (!custom_send(ms, client));
+		return (!rplMsg(ms, client));
 	}
 	if (_modes.t && !_hasRights(client->nick)) {
 		ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
-		return (!custom_send(ms, client));
+		return (!rplMsg(ms, client));
 	}
 	_topic = std::string(newTopic);
 	ms = ":" + client->nick + "!" + client->username + "@" + client->servername;
 	ms += " TOPIC " + getName() + " :" +_topic;
 	ms += CRLF;
-	custom_send(ms, client);
+	succesMsg(ms, client);
 	broadcastMsg(client, ms);
 	return (true);
 }
@@ -66,7 +66,7 @@ bool				Channel::broadcastMsg(Client *sender, const std::string &msg) const
 	_users_map::const_iterator	end = _users.end();
 	while (current != end) {
 		if (!utils::strCmp((*current).first, sender->nick)) { // * send msg to everyone but the sender
-			custom_send(msg, (*current).second);
+			rplMsg(msg, (*current).second);
 		}
 		++current;
 	}
@@ -79,19 +79,19 @@ bool				Channel::join(Client *client, const std::string &passwd)
 	if (!isInChan(client->nick)) {
 		if (_modes.k != passwd) {
 			ms = reply_formating(client->servername.c_str(), ERR_BADCHANNELKEY, std::vector<std::string>({getName()}), client->nick.c_str());
-			return (!custom_send(ms, client));
+			return (!rplMsg(ms, client));
 		}
 		if (_modes.l != -1 && _modes.users >= _modes.l) {
 			ms = reply_formating(client->servername.c_str(), ERR_CHANNELISFULL, std::vector<std::string>({getName()}), client->nick.c_str());
-			return (!custom_send(ms, client));
+			return (!rplMsg(ms, client));
 		}
 		if (_modes.i && !_is_in_list(client->nick, _modes.invitation_list)) {
 			ms = reply_formating(client->servername.c_str(), ERR_INVITEONLYCHAN, std::vector<std::string>({getName()}), client->nick.c_str());
-			return (!custom_send(ms, client));
+			return (!rplMsg(ms, client));
 		}
 		if (_modes.p) {
 			ms = reply_formating(client->servername.c_str(), ERR_NOSUCHCHANNEL, std::vector<std::string>({getName()}), client->nick.c_str());
-			return (!custom_send(ms, client));
+			return (!rplMsg(ms, client));
 		}
 		// on ajoute le client dans le channel, et on le retire de la liste d'invitations
 		_users.insert(std::pair<std::string, Client*>(utils::ircLowerCase(client->nick), client));
@@ -103,9 +103,10 @@ bool				Channel::join(Client *client, const std::string &passwd)
 		join_msg += " JOIN :" + getName();
 		join_msg += CRLF;
 
-		custom_send(join_msg, client);
+		rplMsg(join_msg, client);
 		if (!_modes.q)
 			broadcastMsg(client, join_msg);
+		updateServsChan(client); // update servers chan
 		return (true);
 	}
 	return (false);
@@ -119,7 +120,7 @@ bool				Channel::leave(Client *client, const std::string &reason, bool muted)
 	if (user == _users.end()) {
 		ms = reply_formating(client->servername.c_str(), ERR_NOTONCHANNEL, std::vector<std::string>({getName()}), client->nick.c_str());
 		if (!muted)
-			custom_send(ms, client);
+			rplMsg(ms, client);
 		return (false);
 	}
 	ms = ":" + client->nick + "!a" + client->username + "@";
@@ -127,7 +128,7 @@ bool				Channel::leave(Client *client, const std::string &reason, bool muted)
 	ms += (reason != "") ? " :" + reason : "";
 	ms += CRLF;
 	if (!muted) {
-		custom_send(ms, client);
+		succesMsg(ms, client);
 		if (!_modes.q)
 			broadcastMsg(client, ms);
 	}
@@ -154,7 +155,7 @@ bool	Channel::mode_o(bool append, Client *client, const std::string &target)
 		ms += client->servername + " MODE " + getName() + " +o " + utils::ircLowerCase(target);
 		ms += CRLF;
 		broadcastMsg(client, ms);
-		return (custom_send(ms, client));
+		return (rplMsg(ms, client));
 	}
 
 	if (!append && _hasRights(client->nick)) {
@@ -165,10 +166,10 @@ bool	Channel::mode_o(bool append, Client *client, const std::string &target)
 		ms += client->servername + " MODE " + getName() + " -o " + utils::ircLowerCase(target);
 		ms += CRLF;
 		broadcastMsg(client, ms);
-		return (custom_send(ms, client));
+		return (rplMsg(ms, client));
 	}
 	ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
-	return (!custom_send(ms, client));
+	return (!rplMsg(ms, client));
 }
 
 bool	Channel::mode_v(bool append, Client *client, const std::string &target)
@@ -184,7 +185,7 @@ bool	Channel::mode_v(bool append, Client *client, const std::string &target)
 		ms += client->servername + " MODE " + getName() + " +v " + utils::ircLowerCase(target);
 		ms += CRLF;
 		broadcastMsg(client, ms);
-		return (custom_send(ms, client));
+		return (rplMsg(ms, client));
 	}
 
 	if (!append && _hasRights(client->nick)) {
@@ -195,10 +196,10 @@ bool	Channel::mode_v(bool append, Client *client, const std::string &target)
 		ms += client->servername + " MODE " + getName() + " -v " + utils::ircLowerCase(target);
 		ms += CRLF;
 		broadcastMsg(client, ms);
-		return (custom_send(ms, client));
+		return (rplMsg(ms, client));
 	}
 	ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
-	return (!custom_send(ms, client));
+	return (!rplMsg(ms, client));
 }
 
 bool	Channel::mode_p(bool append, Client *client)
@@ -210,7 +211,7 @@ bool	Channel::mode_p(bool append, Client *client)
 		ms += client->servername + " MODE " + getName() + " +p";
 		ms += CRLF;
 		broadcastMsg(client, ms);
-		return (custom_send(ms, client));
+		return (rplMsg(ms, client));
 	}
 	if (!append && _hasRights(client->nick)) {
 		_modes.p = false;
@@ -218,10 +219,10 @@ bool	Channel::mode_p(bool append, Client *client)
 		ms += client->servername + " MODE " + getName() + " -p";
 		ms += CRLF;
 		broadcastMsg(client, ms);
-		return (custom_send(ms, client));
+		return (rplMsg(ms, client));
 	}
 	ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
-	return (!custom_send(ms, client));
+	return (!rplMsg(ms, client));
 }
 
 bool	Channel::mode_s(bool append, Client *client)
@@ -233,7 +234,7 @@ bool	Channel::mode_s(bool append, Client *client)
 		ms += client->servername + " MODE " + getName() + " +s";
 		ms += CRLF;
 		broadcastMsg(client, ms);
-		return (custom_send(ms, client));
+		return (rplMsg(ms, client));
 	}
 	if (!append && _hasRights(client->nick)) {
 		_modes.s = false;
@@ -241,10 +242,10 @@ bool	Channel::mode_s(bool append, Client *client)
 		ms += client->servername + " MODE " + getName() + " -s";
 		ms += CRLF;
 		broadcastMsg(client, ms);
-		return (custom_send(ms, client));
+		return (rplMsg(ms, client));
 	}
 	ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
-	return (!custom_send(ms, client));
+	return (!rplMsg(ms, client));
 }
 
 bool	Channel::mode_i(bool append, Client *client)
@@ -256,7 +257,7 @@ bool	Channel::mode_i(bool append, Client *client)
 		ms += client->servername + " MODE " + getName() + " +i";
 		ms += CRLF;
 		broadcastMsg(client, ms);
-		return (custom_send(ms, client));
+		return (rplMsg(ms, client));
 	}
 	if (!append && _hasRights(client->nick)) {
 		_modes.i = false;
@@ -264,10 +265,10 @@ bool	Channel::mode_i(bool append, Client *client)
 		ms += client->servername + " MODE " + getName() + " -i";
 		ms += CRLF;
 		broadcastMsg(client, ms);
-		return (custom_send(ms, client));
+		return (rplMsg(ms, client));
 	}
 	ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
-	return (!custom_send(ms, client));
+	return (!rplMsg(ms, client));
 }
 
 bool	Channel::mode_t(bool append, Client *client)
@@ -279,7 +280,7 @@ bool	Channel::mode_t(bool append, Client *client)
 		ms += client->servername + " MODE " + getName() + " +t";
 		ms += CRLF;
 		broadcastMsg(client, ms);
-		return (custom_send(ms, client));
+		return (rplMsg(ms, client));
 	}
 	if (!append && _hasRights(client->nick)) {
 		_modes.t = false;
@@ -287,10 +288,10 @@ bool	Channel::mode_t(bool append, Client *client)
 		ms += client->servername + " MODE " + getName() + " -t";
 		ms += CRLF;
 		broadcastMsg(client, ms);
-		return (custom_send(ms, client));
+		return (rplMsg(ms, client));
 	}
 	ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
-	return (!custom_send(ms, client));
+	return (!rplMsg(ms, client));
 }
 
 bool	Channel::mode_m(bool append, Client *client)
@@ -302,7 +303,7 @@ bool	Channel::mode_m(bool append, Client *client)
 		ms += client->servername + " MODE " + getName() + " +m";
 		ms += CRLF;
 		broadcastMsg(client, ms);
-		return (custom_send(ms, client));
+		return (rplMsg(ms, client));
 	}
 	if (!append && _hasRights(client->nick)) {
 		_modes.m = false;
@@ -310,10 +311,10 @@ bool	Channel::mode_m(bool append, Client *client)
 		ms += client->servername + " MODE " + getName() + " -m";
 		ms += CRLF;
 		broadcastMsg(client, ms);
-		return (custom_send(ms, client));
+		return (rplMsg(ms, client));
 	}
 	ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
-	return (!custom_send(ms, client));
+	return (!rplMsg(ms, client));
 }
 
 bool	Channel::mode_n(bool append, Client *client)
@@ -325,7 +326,7 @@ bool	Channel::mode_n(bool append, Client *client)
 		ms += client->servername + " MODE " + getName() + " +n";
 		ms += CRLF;
 		broadcastMsg(client, ms);
-		return (custom_send(ms, client));
+		return (rplMsg(ms, client));
 	}
 	if (!append && _hasRights(client->nick)) {
 		_modes.n = false;
@@ -333,10 +334,10 @@ bool	Channel::mode_n(bool append, Client *client)
 		ms += client->servername + " MODE " + getName() + " -n";
 		ms += CRLF;
 		broadcastMsg(client, ms);
-		return (custom_send(ms, client));
+		return (rplMsg(ms, client));
 	}
 	ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
-	return (!custom_send(ms, client));
+	return (!rplMsg(ms, client));
 }
 
 bool	Channel::mode_q(bool append, Client *client)
@@ -348,7 +349,7 @@ bool	Channel::mode_q(bool append, Client *client)
 		ms += client->servername + " MODE " + getName() + " +q";
 		ms += CRLF;
 		broadcastMsg(client, ms);
-		return (custom_send(ms, client));
+		return (rplMsg(ms, client));
 	}
 	if (!append && _hasRights(client->nick)) {
 		_modes.q = false;
@@ -356,10 +357,10 @@ bool	Channel::mode_q(bool append, Client *client)
 		ms += client->servername + " MODE " + getName() + " -q";
 		ms += CRLF;
 		broadcastMsg(client, ms);
-		return (custom_send(ms, client));
+		return (rplMsg(ms, client));
 	}
 	ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
-	return (!custom_send(ms, client));
+	return (!rplMsg(ms, client));
 }
 
 bool	Channel::mode_l(bool append, Client *client, int limit)
@@ -371,7 +372,7 @@ bool	Channel::mode_l(bool append, Client *client, int limit)
 		ms += client->servername + " MODE " + getName() + " +l " + std::to_string(limit);
 		ms += CRLF;
 		broadcastMsg(client, ms);
-		return (custom_send(ms, client));
+		return (rplMsg(ms, client));
 	}
 	if (!append && _hasRights(client->nick)) {
 		_modes.l = -1;
@@ -379,10 +380,10 @@ bool	Channel::mode_l(bool append, Client *client, int limit)
 		ms += client->servername + " MODE " + getName() + " -l";
 		ms += CRLF;
 		broadcastMsg(client, ms);
-		return (custom_send(ms, client));
+		return (rplMsg(ms, client));
 	}
 	ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
-	return (!custom_send(ms, client));
+	return (!rplMsg(ms, client));
 }
 
 bool	Channel::mode_k(bool append, Client *client, const std::string &passwd)
@@ -390,31 +391,28 @@ bool	Channel::mode_k(bool append, Client *client, const std::string &passwd)
 	std::string ms;
 	if (!_hasRights(client->nick)) {
 		ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
-		return (!custom_send(ms, client));
+		return (!rplMsg(ms, client));
 	}
-	std::cout << append << " = append\n\n";
 
 	if (append) {
 		if (_modes.k != "") {
 			ms = reply_formating(client->servername.c_str(), ERR_KEYSET, {getName()}, client->nick.c_str());
-			return (!custom_send(ms, client));
+			return (!rplMsg(ms, client));
 		}
 		_modes.k = passwd;
 		ms = ":" + client->nick + "!" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " +k " + passwd;
 		ms += CRLF;
 		broadcastMsg(client, ms);
-		return (custom_send(ms, client));
+		return (rplMsg(ms, client));
 	} else {
-		std::cout << "WE ENTER HERE\n\n";
 		_modes.k = "";
 		ms = ":" + client->nick + "!" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " -k";
 		ms += CRLF;
 		broadcastMsg(client, ms);
-		return (custom_send(ms, client));
+		return (rplMsg(ms, client));
 	}
-	std::cout << "WE RETURN HERE (NEVER)\n\n";
 }
 
 std::string	Channel::getModes() const
@@ -445,19 +443,19 @@ bool	Channel::kick(Client *client, const std::string &guyToKick, const std::stri
 	if (_hasRights(client->nick)) {
 		if (userToKick == _users.end()) {
 			ms = reply_formating(client->servername.c_str(), ERR_USERNOTINCHANNEL, std::vector<std::string>({guyToKick, getName()}), client->nick.c_str());
-			return (!custom_send(ms, client));
+			return (!rplMsg(ms, client));
 		}
 		ms = ":" + client->nick + "!a" + client->username + "@";
 		ms += client->servername + " KICK " + getName() + " " + guyToKick;
 		ms += (reason != "") ? " :" + reason : " :" + client->nick;
 		ms += CRLF;
-		custom_send(ms, client);
+		succesMsg(ms, client);
 		broadcastMsg(client, ms);
 		_users.erase(userToKick);
 		return (true);
 	}
 	ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
-	return (!custom_send(ms, client));
+	return (!rplMsg(ms, client));
 }
 
 bool	Channel::invite(Client *client, const std::string &guyToInvite)
@@ -468,29 +466,29 @@ bool	Channel::invite(Client *client, const std::string &guyToInvite)
 
 	if (!clientToInvite) {
 		ms = reply_formating(client->servername.c_str(), ERR_NOSUCHNICK, {guyToInvite}, client->nick.c_str());
-		return (!custom_send(ms, client));
+		return (!rplMsg(ms, client));
 	}
 	if (!isInChan(client->nick)) {
 		ms = reply_formating(client->servername.c_str(), ERR_NOTONCHANNEL, {getName()}, client->nick.c_str());
-		return (!custom_send(ms, client));
+		return (!rplMsg(ms, client));
 	}
 	if (!_hasRights(client->nick)) {
 		ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
-		return (!custom_send(ms, client));
+		return (!rplMsg(ms, client));
 	}
 	if (userToInvite != _users.end()) { // user is already in channel (no need to invite)
 		ms = reply_formating(client->servername.c_str(), ERR_USERONCHANNEL, std::vector<std::string>({guyToInvite, getName()}), client->nick.c_str());
-		return (!custom_send(ms, client));
+		return (!rplMsg(ms, client));
 	}
 	if (!_is_in_list(guyToInvite, _modes.invitation_list))
 		_modes.invitation_list.push_back(utils::ircLowerCase(guyToInvite));
 	ms = ":" + client->nick + "!" + client->username + "@" + client->servername;
 	ms += " INVITE " + utils::ircLowerCase(guyToInvite) + " :" + getName();
 	ms += CRLF;
-	custom_send(ms, clientToInvite);
+	succesMsg(ms, clientToInvite);
 	ms = reply_formating(client->servername.c_str(), RPL_INVITING,
 	std::vector<std::string>({utils::ircLowerCase(guyToInvite), getName()}), client->nick.c_str());
-	return (custom_send(ms, client));
+	return (rplMsg(ms, client));
 }
 
 bool				Channel::isEmpty() const
@@ -531,7 +529,7 @@ bool		Channel::msgErrors(Client *client, bool sendErrors) const
 			return (false); // he can send the message (he is in voice list)
 		ms = reply_formating(client->servername.c_str(), ERR_CANNOTSENDTOCHAN, {getName()}, client->nick.c_str());
 		if (sendErrors)
-			custom_send(ms, client);
+			rplMsg(ms, client);
 		return (true);
 	}
 	return (false); // user can send the message as the chan is not restricted
@@ -578,4 +576,47 @@ bool		Channel::quit(Client *client, const std::vector<std::string> &args)
 	broadcastMsg(client, ms);
 	leave(client, "", true);
 	return (true);
+}
+
+// * this function always returns true
+bool		Channel::rplMsg(std::string ms, Client *c)
+{
+	std::string	msg = ":" + c->nick + " CHAN_RPL ";
+	if (c->sock == -1) { // we need to send msg to the server on which the client is connected
+		msg += ms;
+		OtherServ *srv = c->serv;
+		if (!srv)
+			return (true);
+		custom_send(msg, srv);
+		return (true);
+	}
+	custom_send(ms, c);
+	return (true);
+}
+
+// this function always returns true
+bool		Channel::succesMsg(std::string ms, Client *c)
+{
+	if (c->sock == -1) { // we need to send msg to the server on which the client is connected
+		OtherServ *srv = c->serv;
+		if (!srv)
+			return (true);
+		custom_send(ms, srv);
+		return (true);
+	}
+	custom_send(ms, c);
+	return (true);
+}
+
+void			Channel::updateServsChan(Client *c) const
+{
+	std::string	ms;
+
+	if (getName().at(0) == '&')
+		return ; // channel is local to this serv
+	ms = "CHAN_CHG ";
+	ms += getName() + "," + getUsersNum() + "," + getModes() + ",";
+	ms += (getTopic() != "") ? getTopic() : "!";
+	ms += CRLF;
+	c->sendToAllServs(ms);
 }

@@ -30,6 +30,27 @@ OtherServ::OtherServ(int socket, bool share_data, Environment *e): _stream() {
 	if (share_data) {
 		// TODO : share all the Server data to the new server
 		
+		// * **CHANNELS
+		std::vector<Chan>	thisServChans = ev->channels->getChans();
+		for (Chan &chan : thisServChans) {
+			ms = "CHAN_CHG ";
+			ms += chan.name + "," + chan.usersNum + "," + chan.modes + ",";
+			ms += (chan.topic != "") ? chan.topic : "!";
+			ms += CRLF;
+			send(socket, ms.c_str(), ms.length(), 0);
+		}
+		for (OtherServ *sv : ev->otherServers) {
+			if (sv != this) {
+				for (Chan &chan : sv->chans) {
+					ms = "CHAN_CHG ";
+					ms += chan.name + "," + chan.usersNum + "," + chan.modes + ",";
+					ms += (chan.topic != "") ? chan.topic : "!";
+					ms += CRLF;
+					send(socket, ms.c_str(), ms.length(), 0);
+				}
+			}
+		}
+
 		// * **NICKS
 		for (Fd *f: ev->clients_fd) {
 			if (f->type == FD_CLIENT) {
@@ -85,11 +106,11 @@ void	OtherServ::NICK(Command *cmd) {
 
 	ms += CRLF;
 	if (cmd->prefix.empty()) {
-		clients.push_back(new Client(cmd->arguments[0]));
+		clients.push_back(new Client(cmd->arguments[0], this));
 	} else {
 		if (change_nick(cmd->prefix, cmd->arguments[0])) {
 		} else {
-			clients.push_back(new Client(cmd->arguments[0]));
+			clients.push_back(new Client(cmd->arguments[0], this));
 		}
 	}
 	for (OtherServ *sv : ev->otherServers) {
@@ -191,6 +212,7 @@ void	OtherServ::USER(Command *cmd) {
 	}
 	c->realname += cmd->arguments[cmd->arguments.size() - 1];
 	c->realname = std::string(&c->realname[1], &c->realname[c->realname.length()]);
+	c->setEnv(ev);
 	ms = cmd->line;
 	ms += CRLF;
 	for (OtherServ *sv : ev->otherServers) {
@@ -204,6 +226,12 @@ void	OtherServ::MODE(Command *cmd) {
 	std::string ms;
 	Client		*c;
 	
+	char		ch = cmd->prefix.at(0);
+
+	if (ch == '#' || ch == '!' || ch == '+') {
+		chanModes(cmd);
+		return ;
+	}
 	c = *search_nick(cmd->prefix);
 	c->i_mode = false;
 	c->o_mode = false;
@@ -264,7 +292,9 @@ void	OtherServ::TIME(Command *cmd) {
 	Client		*c;
 	
 	c = *search_nick(cmd->prefix);
+	std::cout << "before crash\n";
 	c->creation = std::strtoll(cmd->arguments[0].c_str(), NULL, 10);
+	std::cout << "after crash\n";
 	c->last = std::strtoll(cmd->arguments[1].c_str(), NULL, 10);
 
 	ms = cmd->line;
@@ -485,6 +515,109 @@ void	OtherServ::SQUIT(Command *cmd) {
 	}
 } 
 
+void	OtherServ::CHAN_CHG(Command *cmd)
+{
+	std::string	ms;
+	if (cmd->arguments.size() >= 1) {
+		std::vector<std::string>	split = parse_comma(cmd->arguments[0]);
+		if (split.size() != 4)
+			return ;
+		std::vector<Chan>::iterator	ite = getChan(split[0]);
+		if (ite == chans.end()) { // this chan does not exist yet: insert new channel data
+			chans.push_back(Chan(
+				std::string(split[0]),
+				std::string(split[1]),
+				std::string(split[2]),
+				std::string(split[3])
+			));
+		} else { // channel exists, just update it
+			(*ite).name = std::string(split[0]);
+			(*ite).usersNum = std::string(split[1]);
+			(*ite).modes = std::string(split[2]);
+			(*ite).topic = std::string(split[3]);
+		}
+		for (OtherServ *sv : ev->otherServers) {
+			if (sv != this) {
+				ms = cmd->line;
+				ms += CRLF;
+				send(sv->sock, ms.c_str(), ms.length(), 0);
+			}
+		}
+	}
+}
+
+void	OtherServ::CHAN_RPL(Command *cmd) {
+	std::vector<OtherServ *>	tmpo;
+	std::vector<Fd *>	tmpc;
+	Client				*c = nullptr;
+	std::string			ms;
+	std::string			nickName = cmd->prefix;
+
+	if (nickName.empty())
+		return ;
+	if (!(tmpc = ev->search_list_nick(nickName)).empty()) {
+		c = reinterpret_cast<Client *>(tmpc[0]);
+		// delete the part ":prefix CHAN_RPL " of the message
+		ms = utils::delFirstWord(utils::delFirstWord(cmd->line)) + CRLF;
+		custom_send(ms, c);
+	} else if (!(tmpo = ev->search_othersrv_nick(nickName)).empty()) {
+		ms = cmd->line + CRLF;
+		custom_send(ms, tmpo[0]);
+	}
+}
+
+void	OtherServ::CHAN_DEL(Command *cmd) {
+	// TODO
+	(void)cmd;
+}
+
+void	OtherServ::JOIN(Command *cmd) {
+	std::string	ms;
+	std::string	chanName;
+	std::string	passwd = "";
+	std::vector<Client *>::iterator	client;
+
+	if (cmd->prefix.empty())
+		return ;
+	if (cmd->arguments.size() >= 1) {
+		chanName = cmd->arguments[0];
+		if (cmd->arguments.size() >= 2)
+			passwd = cmd->arguments[1];
+		// check if we have the channel
+		if (ev->channels->getChannel(chanName)) {
+			// if we have channel, we use ChannelMaster.join() method
+			client = search_nick(cmd->prefix);
+			if (client == clients.end())
+				return ; // message forgery won't error the server
+			ev->channels->joinChannel(*client, chanName, passwd);
+			return ;
+		}
+		for (OtherServ *sv : ev->otherServers) {
+			if (sv != this) {
+				for (Chan &chan : sv->chans) {
+					if (utils::strCmp(chan.name, chanName)) {
+						// forward the request to this serv
+						ms = ":";
+						ms += cmd->prefix; // the user who wants to join the channel
+						ms += " JOIN " + chanName + " " + passwd;
+						ms += CRLF;
+						return ;
+					}
+				}
+			}
+		}
+	}
+}
+
+void	OtherServ::chanModes(Command *cmd) {
+	std::vector<Client *>::iterator	client;
+
+	client = search_nick(cmd->prefix);
+	if (client == clients.end())
+		return ; // message forgery won't error the server
+	ev->channels->mode(*client, cmd->arguments);
+}
+
 int		OtherServ::execute_parsed(Command *parsed) {
 	switch (parsed->cmd_code()) {
 	case NICK_CC:
@@ -531,6 +664,18 @@ int		OtherServ::execute_parsed(Command *parsed) {
 		break;
 	case SQUIT_CC:
 		SQUIT(parsed);
+		break;
+	case CHAN_CHG_CC:
+		CHAN_CHG(parsed);
+		break;
+	case CHAN_DEL_CC:
+		CHAN_DEL(parsed);
+		break;
+	case CHAN_RPL_CC:
+		CHAN_RPL(parsed);
+		break;
+	case JOIN_CC:
+		JOIN(parsed);
 		break;
 	default:
 		break;
@@ -624,7 +769,7 @@ std::vector<Client *>::iterator	OtherServ::search_nick(std::string nk) {
 	
 	while (buff != clients.end()) {
 		Client *c = *buff;
-		if (c->nick == nk || nk == "*") 
+		if (utils::strMatchToLower(c->nick, nk)) 
 			return buff;
 		buff++;
 	}
@@ -636,7 +781,7 @@ std::vector<Client *>::iterator	OtherServ::search_history_nick(std::string nk) {
 	
 	while (buff != clients_history.end()) {
 		Client *c = *buff;
-		if (c->nick == nk || nk == "*") 
+		if (utils::strMatchToLower(c->nick, nk)) 
 			return buff;
 		buff++;
 	}
@@ -657,4 +802,17 @@ std::vector<Client *>	OtherServ::search_list_with_mode(char c) {
 			buff.push_back(cl);
 	}
 	return buff;
+}
+
+std::vector<Chan>::iterator	OtherServ::getChan(const std::string &name)
+{
+	std::vector<Chan>::iterator	current = chans.begin();
+	std::vector<Chan>::iterator	end = chans.end();
+
+	while (current != end) {
+		if (utils::strCmp((*current).name, name))
+			return (current);
+		++current;
+	}
+	return (chans.end());
 }

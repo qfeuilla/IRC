@@ -1,6 +1,7 @@
 #ifndef CHANNELMASTER_H
 #define CHANNELMASTER_H
 
+#include "ft_irc.hpp"
 #include "Channel.hpp"
 #include "Command.hpp"
 #include <vector>
@@ -9,6 +10,8 @@
 #include <list>
 #include "Client.hpp"
 #include "utils.hpp"
+
+#include "OtherServ.hpp"
 
 class Channel;
 class Client;
@@ -24,9 +27,7 @@ private:
 	_user_chan_map	*_user_channels;
 	// * _testChannelName returns true if the channelName is not correctly formatted
 	static bool	_testChannelName(Client *client, const std::string &channelName);
-	bool		_join_channel(Client *client, const std::string &channelName, const std::string &passwd);
 	bool		_leave_channel(Client *client, const std::string &channelName, const std::string &reason);
-	Channel		*_chan_exists(const std::string &channelName);
 
 	std::string		_srv_name;
 public:
@@ -57,6 +58,10 @@ public:
 
 	// * send msg to everyone in the channel but the sender 
 	bool	broadcastMsg(Client *client, const std::string &chanName, const std::vector<std::string> &args, bool sendErrors = true);
+
+	std::vector<Chan>	getChans() const;
+	Channel				*getChannel(const std::string &channelName);
+	bool		joinChannel(Client *client, const std::string &channelName, const std::string &passwd);
 };
 
 #endif
