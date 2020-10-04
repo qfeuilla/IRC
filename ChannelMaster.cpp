@@ -80,15 +80,27 @@ bool	ChannelMaster::join(Client *client, const std::vector<std::string> &args, s
 	current = name_pass_map.begin();
 	end = name_pass_map.end();
 	while (current != end) {
-		ret &= _join_channel(client, (*current).first, (*current).second);
+		ret &= joinChannel(client, (*current).first, (*current).second);
 		++current;
 	}
 	return (ret);
 }
 
-bool	ChannelMaster::_join_channel(Client *client, const std::string &channelName, const std::string &passwd)
+bool	ChannelMaster::joinChannel(Client *client, const std::string &channelName, const std::string &passwd)
 {
-	Channel	*chan = _chan_exists(channelName);
+	Channel	*chan = getChannel(channelName);
+	OtherServ			*serv;
+	std::string			ms;
+
+	if (!chan) {
+		// if there is chan with this name in another serv, we forward the join message to this serv
+		serv = client->getServByChannelName(channelName);
+		if (serv) {
+			ms = ":" + client->nick + " JOIN " + channelName + " " + passwd + CRLF;
+			custom_send(ms, serv);
+			return (true); // stop the function here to prevent creating a local channel
+		}
+	}
 	if (!chan) {
 		if (_testChannelName(client, channelName))
 			return (false);
@@ -98,23 +110,35 @@ bool	ChannelMaster::_join_channel(Client *client, const std::string &channelName
 		return (true);
 	}
 	if (chan->join(client, passwd)) {
-		(*_user_channels)[client->nick]->push_back(chan);
+		if (client->sock != -1)
+			(*_user_channels)[client->nick]->push_back(chan);
 		return (true);
 	}
 	return (false);
 }
 
-bool	ChannelMaster::_leave_channel(Client *client, const std::string &channelName, const std::string &reason)
+bool	ChannelMaster::leaveChannel(Client *client, const std::string &channelName, const std::string &reason)
 {
-	Channel	*chan = _chan_exists(channelName);
+	Channel	*chan = getChannel(channelName);
 	std::string		ms;
+	OtherServ		*serv;
 
 	if (!chan) {
+		// if there is chan with this name in another serv, we forward the part message to this serv
+		serv = client->getServByChannelName(channelName);
+		if (serv) {
+			ms = ":" + client->nick + " PART " + channelName  + " " + reason + CRLF;
+			custom_send(ms, serv);
+			return (true);
+		}
+	}
+	if (!chan) {
 		ms = reply_formating(client->servername.c_str(), ERR_NOSUCHCHANNEL, std::vector<std::string>({channelName}), client->nick.c_str());
-		return (!custom_send(ms, client));
+		return (!Channel::rplMsg(ms, client));
 	}
 	if (chan->leave(client, reason)) {
-		(*_user_channels)[client->nick]->remove(chan); // remove this chan from this user channels list 
+		if (client->sock != -1)
+			(*_user_channels)[client->nick]->remove(chan); // remove this chan from this user channels list 
 		if (!chan->isEmpty())
 			return (true);
 		_channels->remove(chan); // channel is empty -> we delete it
@@ -130,7 +154,7 @@ bool	ChannelMaster::leave(Client *client, const std::vector<std::string> &args)
 	std::vector<std::string>	names = splitComma(args[0]);
 	std::string		reason = args.size() > 1 ? Channel::parseArg(1, args) : std::string();
 	for (size_t i = 0; i < names.size(); ++i) {
-		ret &= _leave_channel(client, names[i], reason);
+		ret &= leaveChannel(client, names[i], reason);
 	}
 	return (ret);
 }
@@ -140,14 +164,24 @@ bool	ChannelMaster::getChanModes(Client *client, const std::vector<std::string> 
 	Channel		*chan;
 	std::string	ms;
 	std::string	modes;
+	OtherServ	*serv;
 
-	chan = _chan_exists(args[0]);
+	chan = getChannel(args[0]);
+	if (!chan) {
+		// if there is chan with this name in another serv, we forward the join message to this serv
+		serv = client->getServByChannelName(args[0]);
+		if (serv) {
+			ms = ":" + client->nick + " MODE " + args[0] + CRLF;
+			custom_send(ms, serv);
+			return (true); // stop the function here to prevent creating a local channel
+		}
+	}
 	if (!chan)
 		return (false);
 	modes = chan->getModes();
 	std::vector<std::string>	params({chan->getName(), modes, ""});
 	ms = reply_formating(client->servername.c_str(), RPL_CHANNELMODEIS, params, client->nick.c_str());
-	return (custom_send(ms, client));
+	return (Channel::rplMsg(ms, client));
 }
 
 bool	ChannelMaster::mode(Client *client, const std::vector<std::string> &args)
@@ -155,14 +189,26 @@ bool	ChannelMaster::mode(Client *client, const std::vector<std::string> &args)
 	Channel					*chan;
 	std::string				operations = args[1]; // looks like "+o" 
 	bool					append;
+	OtherServ				*serv;
+	std::string				ms;
 
-	chan = _chan_exists(args[0]);
+	chan = getChannel(args[0]);
 	
 	if (!(operations[0] == '+' || operations[0] == '-'))
 		return (false);
 	append = operations[0] == '+';
-	if (!chan)
-		return (false);
+	if (!chan) {
+		serv = client->getServByChannelName(args[0]);
+		if (!serv)
+			return (false);
+		ms = ":" + client->nick + " MODE ";
+		for (std::string str: args) {
+			ms += str + " ";
+		}
+		ms += CRLF;
+		custom_send(ms, serv);
+		return (true);
+	}
 	for (size_t i = 1; i < operations.size(); ++i) {
 		switch (operations[i])
 		{
@@ -214,10 +260,11 @@ bool	ChannelMaster::mode(Client *client, const std::vector<std::string> &args)
 			break;
 		}
 	}
+	chan->updateServsChan(client);
 	return (true);
 }
 
-Channel		*ChannelMaster::_chan_exists(const std::string &channelName)
+Channel		*ChannelMaster::getChannel(const std::string &channelName)
 {
 	_channel_list::iterator	current = _channels->begin();
 	_channel_list::iterator	end = _channels->end();
@@ -232,16 +279,66 @@ Channel		*ChannelMaster::_chan_exists(const std::string &channelName)
 
 bool	ChannelMaster::kick(Client *client, const std::vector<std::string> &args)
 {
+	std::map<std::string, std::string>	name_pass_map;
+	std::map<std::string, std::string>::iterator	current;
+	std::map<std::string, std::string>::iterator	end;
+	std::vector<std::string>	chanNames;
+	std::vector<std::string>	guysToKick;
+	std::string	reason = "";
+	bool	ret = true;
+
+	chanNames = splitComma(args[0]);
+	guysToKick = splitComma(args[1]);
+	if (args.size() > 2)
+		reason = Channel::parseArg(2, args);
+
+	if (chanNames.size() == 1) {
+		for (std::string nickname : guysToKick) {
+			ret &= kickFromChan(client, chanNames[0], nickname, reason);
+		}
+		return (ret);
+	}
+	if (chanNames.size() != guysToKick.size())
+		return (false);
+
+	for (size_t i = 0; i < chanNames.size(); ++i) {
+		name_pass_map[chanNames[i]] = guysToKick[i];
+	}
+	current = name_pass_map.begin();
+	end = name_pass_map.end();
+	while (current != end) {
+		ret &= kickFromChan(client, (*current).first, (*current).second, reason);
+		++current;
+	}
+	return (ret);
+}
+
+bool	ChannelMaster::kickFromChan(Client *client, const std::string &chanName,
+const std::string &guyToKick, const std::string &reason)
+{
 	std::string	ms;
-	Channel		*channel = _chan_exists(args[0]);
-	std::string	guyToKick = args[1];
-	std::string	reason = args.size() > 2 ? Channel::parseArg(2, args) : std::string();
+	Channel		*channel = getChannel(chanName);
+	
+	OtherServ			*serv;
+
 	if (!channel) {
-		ms = reply_formating(client->servername.c_str(), ERR_NOSUCHCHANNEL, std::vector<std::string>({args[0]}), client->nick.c_str());
-		return (!custom_send(ms, client));
+		// if there is chan with this name in another serv, we forward the kick message to this serv
+		serv = client->getServByChannelName(chanName);
+		if (serv) {
+			ms = ":" + client->nick + " KICK " + chanName + " " + guyToKick + " :" + reason + CRLF;
+			custom_send(ms, serv);
+			return (true);
+		}
+	}
+
+	if (!channel) {
+		ms = reply_formating(client->servername.c_str(), ERR_NOSUCHCHANNEL,
+		std::vector<std::string>({chanName}), client->nick.c_str());
+		return (!Channel::rplMsg(ms, client));
 	}
 	if (channel->kick(client, guyToKick, reason)) {
-		(*_user_channels)[client->nick]->remove(channel);
+		if (client->sock != -1)
+			(*_user_channels)[client->nick]->remove(channel);
 		return (true);
 	}
 	return (false);
@@ -251,19 +348,31 @@ bool	ChannelMaster::kick(Client *client, const std::vector<std::string> &args)
 bool	ChannelMaster::broadcastMsg(Client *client, const std::string &chanName, const std::vector<std::string> &args, bool sendErrors)
 {
 	std::string	ms;
-	Channel		*channel = _chan_exists(chanName);
+	Channel		*channel = getChannel(chanName);
 	std::string	msgToSend = Channel::parseArg(1, args);
+	OtherServ	*serv;
+
+	if (!channel) {
+		// if there is chan with this name in another serv, we forward the topic message to this serv
+		serv = client->getServByChannelName(chanName);
+		if (serv) {
+			ms = ":" + client->nick + (sendErrors ? " PRIVMSG " : " NOTICE ") + chanName + " :" + msgToSend;
+			ms += CRLF;
+			custom_send(ms, serv);
+			return (true);
+		}
+	}
 
 	if (!channel) {
 		ms = reply_formating(client->servername.c_str(), ERR_NOSUCHCHANNEL, {chanName}, client->nick.c_str());
 		if (sendErrors)
-			custom_send(ms, client);
+			Channel::rplMsg(ms, client);
 		return (false);
 	}
 	if (channel->getModeN() && !channel->isInChan(client->nick)) {
 		ms = reply_formating(client->servername.c_str(), ERR_CANNOTSENDTOCHAN, {chanName}, client->nick.c_str());
 		if (sendErrors)
-			custom_send(ms, client);
+			Channel::rplMsg(ms, client);
 		return (false);
 	}
 	if (channel->msgErrors(client, sendErrors))
@@ -278,25 +387,41 @@ bool	ChannelMaster::broadcastMsg(Client *client, const std::string &chanName, co
 bool	ChannelMaster::topic(Client *client, const std::vector<std::string> &args)
 {
 	std::string	ms;
-	std::string	newTopic;
+	std::string	newTopic = "";
 	std::string	topicIs;
+	OtherServ	*serv;
 
-	Channel		*channel = _chan_exists(args[0]);
+	Channel		*channel = getChannel(args[0]);
+
+	if (args.size() > 1)
+		newTopic = Channel::parseArg(1, args);
+
+	if (!channel) {
+		// if there is chan with this name in another serv, we forward the topic message to this serv
+		serv = client->getServByChannelName(args[0]);
+		if (serv) {
+			ms = ":" + client->nick + " TOPIC " + args[0];
+			if (newTopic != "")
+				ms += " :" + newTopic;
+			ms += CRLF;
+			custom_send(ms, serv);
+			return (true);
+		}
+	}
 
 	if (!channel) {
 		ms = reply_formating(client->servername.c_str(), ERR_NOSUCHCHANNEL, std::vector<std::string>({args[0]}), client->nick.c_str());
-		return (!custom_send(ms, client));
+		return (!Channel::rplMsg(ms, client));
 	}
 	if (args.size() == 1) {
 		topicIs = channel->getTopic();
 		if (topicIs == "") {
 			ms = reply_formating(client->servername.c_str(), RPL_NOTOPIC, std::vector<std::string>({channel->getName()}), client->nick.c_str());
-			return (custom_send(ms, client));
+			return (Channel::rplMsg(ms, client));
 		}
 		ms = reply_formating(client->servername.c_str(), RPL_TOPIC, std::vector<std::string>({channel->getName(), topicIs}), client->nick.c_str());
-		return (custom_send(ms, client));
+		return (Channel::rplMsg(ms, client));
 	}
-	newTopic = Channel::parseArg(1, args);
 	return (channel->setTopic(client, newTopic));
 }
 
@@ -304,11 +429,22 @@ bool	ChannelMaster::invite(Client *client, const std::vector<std::string> &args)
 {
 	std::string	ms;
 	std::string	userName = args[0];
-	Channel		*channel = _chan_exists(args[1]);
+	Channel		*channel = getChannel(args[1]);
+	OtherServ	*serv;
+
+	if (!channel) {
+		// if there is chan with this name in another serv, we forward the invite message to this serv
+		serv = client->getServByChannelName(args[1]);
+		if (serv) {
+			ms = ":" + client->nick + " INVITE " + args[0] + " " + args[1] + CRLF;
+			custom_send(ms, serv);
+			return (true);
+		}
+	}
 
 	if (!channel) {
 		ms = reply_formating(client->servername.c_str(), ERR_NOSUCHCHANNEL, std::vector<std::string>({args[1]}), client->nick.c_str());
-		return (!custom_send(ms, client));
+		return (!Channel::rplMsg(ms, client));
 	}
 	return (channel->invite(client, userName));
 }
@@ -326,6 +462,7 @@ bool	ChannelMaster::list(Client *client, const std::vector<std::string> &args)
 	std::string	topic;
 	std::string	chanModes;
 	std::vector<std::string>	names;
+	std::vector<Chan>	serverChans = client->getServsChans();
 	
 	if (args.size() >= 1)
 		names = splitComma(args[0], true);
@@ -335,6 +472,7 @@ bool	ChannelMaster::list(Client *client, const std::vector<std::string> &args)
 	ms = ":" + client->servername + " 321 " + client->nick + " Channel :Users Name" + CRLF;
 	custom_send(ms, client);
 
+	// * local chans
 	// :chatjunkies.org 322 adwonno #linuxdojo 10 :[+nt]
 	// :chatjunkies.org 322 adwonno #trax 7 :[+nt] #trax museum : bring back the only demo art
 	for (Channel *chan : *_channels) {
@@ -348,6 +486,29 @@ bool	ChannelMaster::list(Client *client, const std::vector<std::string> &args)
 		topic = "[" + chanModes + "]";
 		if (chan->getTopic() != "") {
 			topic += " " + chan->getTopic();
+		}
+		std::vector<std::string> params({chanName, numUsersVisible, topic});
+		ms = reply_formating(client->servername.c_str(), RPL_LIST, params, client->nick.c_str());
+		if (args.size() < 1)
+			custom_send(ms, client);
+		else {
+			if (std::find(names.begin(), names.end(), utils::ircLowerCase(chanName)) != names.end())
+				custom_send(ms, client);
+		}
+	}
+
+	// * others servers chans
+	for (Chan &chan : serverChans) {
+		chanModes = chan.modes;
+		if (chanModes.find("s") != std::string::npos)
+			continue ; // this chan is secret: skip it
+		if (chanModes.find("p") != std::string::npos)
+			continue ; // this chan is private: skip it
+		chanName = chan.name;
+		numUsersVisible = chan.usersNum;
+		topic = "[" + chanModes + "]";
+		if (chan.topic != "" && chan.topic != "!") {
+			topic += " " + chan.topic;
 		}
 		std::vector<std::string> params({chanName, numUsersVisible, topic});
 		ms = reply_formating(client->servername.c_str(), RPL_LIST, params, client->nick.c_str());
@@ -376,4 +537,30 @@ size_t	ChannelMaster::size() const
 		++size;
 	}
 	return (size);
+}
+
+std::vector<Chan>	ChannelMaster::getChans() const
+{
+	std::vector<Chan>	vec;
+
+	for (Channel *nextChannel : *_channels) {
+		if (nextChannel->getName()[0] == '&')
+			continue ;	
+		vec.push_back(Chan(
+			std::string(nextChannel->getName()),
+			std::string(nextChannel->getUsersNum()),
+			std::string(nextChannel->getModes()),
+			std::string(nextChannel->getTopic())
+		));
+	}
+	return (vec);
+}
+
+void		ChannelMaster::doQuit(Client *client, const std::vector<std::string> &args)
+{
+	for (Channel *nextChannel : *_channels) {
+		if (nextChannel->isInChan(client->nick)) {
+			nextChannel->quit(client, args);
+		}
+	}
 }

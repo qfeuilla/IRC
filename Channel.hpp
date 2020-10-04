@@ -11,10 +11,13 @@
 #include "Client.hpp"
 #include "ft_irc.hpp"
 #include "utils.hpp"
+#include "OtherServ.hpp"
 
+class OtherServ;
 class Client;
 
 bool		custom_send(std::string ms, Client *c);
+bool		custom_send(std::string ms, OtherServ *s);
 
 class Channel
 {
@@ -115,6 +118,11 @@ public:
 	bool	msgErrors(Client *client, bool sendErrors = true) const;
 
 	void	changeNick(const std::string &oldNick, const std::string &newNick);
+
+	static bool		rplMsg(std::string ms, Client *c);
+	static bool		succesMsg(std::string ms, Client *c);
+
+	void			updateServsChan(Client *c) const;
 
 };
 

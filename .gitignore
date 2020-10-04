@@ -3,3 +3,4 @@ a.out
 bircd
 *.o
 *.d
+vgcore.*

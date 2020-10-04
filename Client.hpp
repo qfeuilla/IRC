@@ -18,6 +18,7 @@
 # include "Channel.hpp"
 # include <list>
 # include <map>
+# include "OtherServ.hpp"
 
 class Environment;
 class Channel;
@@ -26,7 +27,7 @@ class Client : public Fd {
 public:
 	Client(Environment *, int, struct sockaddr_in);
 	// Constructor for multi serv
-	Client(std::string);
+	Client(std::string, OtherServ *);
 	~Client();
 
 	Client(const Client &);
@@ -115,7 +116,16 @@ public:
 
 	bool				nick_set;
 
+	OtherServ			*serv;
+
 	static bool	thereIsAFullCmd(size_t &pos, size_t& charsToJump, const std::string &str);
+
+	OtherServ	*getServByChannelName(const std::string &nickname);
+
+	std::vector<Chan>	getServsChans();
+
+	void		sendToAllServs(const std::string &ms);
+	void		setEnv(Environment *env);
 
 private:
 	Environment			*ev;

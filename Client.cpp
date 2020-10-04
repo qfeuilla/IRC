@@ -51,13 +51,15 @@ Client::Client(Environment *e, int s, struct sockaddr_in addr) : channels(), ev(
 	time(&creation);
 	csin = addr;
 	hostname = std::string(inet_ntoa(csin.sin_addr)); // * ip of the user if not specified
+	serv = nullptr;
 }
 
-Client::Client(std::string nc) {
+Client::Client(std::string nc, OtherServ *srv) {
 	type = FD_OCLIENT;
 	is_setup = false;
 	sock = -1;
 	nick = nc;
+	serv = srv;
 }
 
 Client::~Client() {
@@ -357,14 +359,15 @@ void	Client::MODE(Command *cmd) {
 	ev->cmd_count["MODE"] += 1;
 
 	if (cmd->arguments.size() >= 2) {
-		if (cmd->arguments[0][0] != '#') {
-			if (utils::strMatchToLower(cmd->arguments[0], nick)) {
+		char det = cmd->arguments[0][0];
+		if (det != '#' && det != '&' && det != '+' && det != '!') {
+			if (utils::strCmp(cmd->arguments[0], nick)) {
 				size_t	i;
 				bool	add = false;
 				char	c;
 				bool	goodFormat = true;
 
-				// check format before setting flags to follow advice of RFC 1459: 4.2.3.1 Channel modes
+				// check format before setting flags to follow advice of RFC 1459: 4.2.3.1
 				for (i = 0; i < cmd->arguments[1].length() && i < 4; i++) {
 					c = cmd->arguments[1][i];
 					if (i == 0) {
@@ -458,7 +461,12 @@ void	Client::QUIT(Command *cmd) {
 	for (OtherServ *serv : ev->otherServers) {
 		ms = ":";
 		ms += nick;
-		ms += " QUIT 1";
+		// ms += " QUIT 1";
+		ms += " QUIT ";
+		for (std::string str : cmd->arguments) {
+			ms += str;
+			ms += " ";
+		}
 		ms += CRLF;
 		send(serv->sock, ms.c_str(), ms.length(), 0);
 	}
@@ -1692,11 +1700,22 @@ std::ostream &			operator<<( std::ostream & o, Client const & cl ) {
 Client	*Client::getOtherClient(const std::string &name)
 {
 	std::vector<Fd *> 	tmp;
+	std::vector<OtherServ *> 	tmp2;
+	OtherServ			*srv;
+	std::vector<Client *>::iterator client;
 	
 	tmp = ev->search_list_nick(name);
 	if (!tmp.empty()) {
 		Client *c = reinterpret_cast<Client *>(tmp[0]);
 		return (c);
+	}
+	tmp2 = ev->search_othersrv_nick(name);
+	if (!tmp2.empty()) {
+		srv = tmp2[0];
+		client = srv->search_nick(name);
+		if (client == srv->clients.end())
+			return (nullptr);
+		return (*client);
 	}
 	return (nullptr);
 }
@@ -1765,4 +1784,36 @@ void	Client::share_Client(int socket) {
 	send(socket, ms.c_str(), ms.length(), 0);
 
 	
+}
+
+OtherServ	*Client::getServByChannelName(const std::string &chanName) {
+	for (OtherServ *serv : ev->otherServers) {
+		if (serv->getChan(chanName) != serv->chans.end())
+			return (serv);
+	}
+	return (nullptr);
+}
+
+std::vector<Chan>	Client::getServsChans()
+{
+	std::vector<Chan>	ret;
+
+	for (OtherServ *serv : ev->otherServers) {
+		for (Chan &chan : serv->chans) {
+			ret.push_back(chan);
+		}
+	}
+	return (ret);
+}
+
+void	Client::sendToAllServs(const std::string &ms)
+{
+	for (OtherServ *serv : ev->otherServers) {
+		custom_send(ms, serv);
+	}
+}
+
+void	Client::setEnv(Environment *env)
+{
+	ev = env;
 }

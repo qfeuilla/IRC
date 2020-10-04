@@ -16,6 +16,8 @@ namespace utils
 	int isalnum( int ch );
 
 	void* memset( void* dest, int ch, std::size_t count );
+
+	std::string	delFirstWord(const std::string &str);
 }
 
 #endif

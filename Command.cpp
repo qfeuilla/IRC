@@ -139,6 +139,10 @@ int		Command::cmd_code() const {
 		return (DELS_CC);
 	else if (upperCaseCommand == "TRACEUP" || upperCaseCommand == ":TRACEUP")
 		return (TRACEUP_CC);
+	else if (upperCaseCommand == "CHAN_CHG" || upperCaseCommand == ":CHAN_CHG")
+		return (CHAN_CHG_CC);
+	else if (upperCaseCommand == "CHAN_RPL" || upperCaseCommand == ":CHAN_RPL")
+		return (CHAN_RPL_CC);
 	else
 		return (WRONG_CMD);
 }
