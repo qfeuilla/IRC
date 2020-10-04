@@ -626,8 +626,8 @@ void			Channel::updateServsChan(Client *c) const
 	if (getName().at(0) == '&')
 		return ; // channel is local to this serv
 	ms = "CHAN_CHG ";
-	ms += getName() + "," + getUsersNum() + "," + getModes() + ",";
-	ms += (getTopic() != "") ? getTopic() : "!";
+	ms += getName() + "," + getUsersNum() + "," + getModes() + " ";
+	ms += (getTopic() != "") ? ":" + getTopic() : ":!";
 	ms += CRLF;
 	c->sendToAllServs(ms);
 }

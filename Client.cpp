@@ -461,7 +461,12 @@ void	Client::QUIT(Command *cmd) {
 	for (OtherServ *serv : ev->otherServers) {
 		ms = ":";
 		ms += nick;
-		ms += " QUIT 1";
+		// ms += " QUIT 1";
+		ms += " QUIT ";
+		for (std::string str : cmd->arguments) {
+			ms += str;
+			ms += " ";
+		}
 		ms += CRLF;
 		send(serv->sock, ms.c_str(), ms.length(), 0);
 	}

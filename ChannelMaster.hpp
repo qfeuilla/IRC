@@ -64,6 +64,8 @@ public:
 	bool		leaveChannel(Client *client, const std::string &channelName, const std::string &reason);
 	bool	kickFromChan(Client *client, const std::string &chanName,
 	const std::string &guyToKick, const std::string &reason);
+
+	void		doQuit(Client *client, const std::vector<std::string> &args);
 };
 
 #endif

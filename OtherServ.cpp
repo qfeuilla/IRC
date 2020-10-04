@@ -34,8 +34,8 @@ OtherServ::OtherServ(int socket, bool share_data, Environment *e): _stream() {
 		std::vector<Chan>	thisServChans = ev->channels->getChans();
 		for (Chan &chan : thisServChans) {
 			ms = "CHAN_CHG ";
-			ms += chan.name + "," + chan.usersNum + "," + chan.modes + ",";
-			ms += (chan.topic != "") ? chan.topic : "!";
+			ms += chan.name + "," + chan.usersNum + "," + chan.modes + " ";
+			ms += (chan.topic != "") ? ":" + chan.topic : ":!";
 			ms += CRLF;
 			send(socket, ms.c_str(), ms.length(), 0);
 		}
@@ -43,8 +43,8 @@ OtherServ::OtherServ(int socket, bool share_data, Environment *e): _stream() {
 			if (sv != this) {
 				for (Chan &chan : sv->chans) {
 					ms = "CHAN_CHG ";
-					ms += chan.name + "," + chan.usersNum + "," + chan.modes + ",";
-					ms += (chan.topic != "") ? chan.topic : "!";
+					ms += chan.name + "," + chan.usersNum + "," + chan.modes + " ";
+					ms += (chan.topic != "") ? ":" + chan.topic : ":!";
 					ms += CRLF;
 					send(socket, ms.c_str(), ms.length(), 0);
 				}
@@ -127,6 +127,9 @@ void	OtherServ::QUIT(Command *cmd) {
 
 	c = search_nick(cmd->prefix);
 	if (c != clients.end()) {
+		// quit all of the channels the user were on that are on this serv
+		ev->channels->doQuit(*c, cmd->arguments);
+
 		if (cmd->arguments.size() >= 1) {
 			(*c)->last = time(NULL);
 		}
@@ -147,9 +150,13 @@ void	OtherServ::PRIVMSG(Command *cmd) {
 	std::vector<OtherServ *>	tmpo;
 	std::string					targ;
 
+	std::vector<Client *>::iterator cit = search_nick(cmd->prefix);
+
 	targ = cmd->arguments[0];
-	if (targ[0] == '#') {
-		// TODO : channel
+	if (targ[0] == '#' || targ[0] == '+' || targ[0] == '!') {
+		if (cit == clients.end())
+			return ;
+		ev->channels->broadcastMsg(*cit, targ, cmd->arguments);
 	} else {
 		ms = ":";
 		ms += cmd->prefix;
@@ -176,9 +183,13 @@ void	OtherServ::NOTICE(Command *cmd) {
 	std::vector<OtherServ *>	tmpo;
 	std::string					targ;
 
+	std::vector<Client *>::iterator cit = search_nick(cmd->prefix);
+
 	targ = cmd->arguments[0];
-	if (targ[0] == '#') {
-		// TODO : channel
+	if (targ[0] == '#' || targ[0] == '+' || targ[0] == '!') {
+		if (cit == clients.end())
+			return ;
+		ev->channels->broadcastMsg(*cit, targ, cmd->arguments, false);
 	} else {
 		ms = ":";
 		ms += cmd->prefix;
@@ -520,23 +531,26 @@ void	OtherServ::SQUIT(Command *cmd) {
 void	OtherServ::CHAN_CHG(Command *cmd)
 {
 	std::string	ms;
-	if (cmd->arguments.size() >= 1) {
+	std::string	topic;
+	if (cmd->arguments.size() >= 2) {
 		std::vector<std::string>	split = parse_comma(cmd->arguments[0]);
-		if (split.size() != 4)
+		if (split.size() != 3)
 			return ;
+		topic = Channel::parseArg(1, cmd->arguments);
+		std::cout << "TOPIC here IS " << split[3] << "\n\n";
 		std::vector<Chan>::iterator	ite = getChan(split[0]);
 		if (ite == chans.end()) { // this chan does not exist yet: insert new channel data
 			chans.push_back(Chan(
 				std::string(split[0]),
 				std::string(split[1]),
 				std::string(split[2]),
-				std::string(split[3])
+				std::string(topic)
 			));
 		} else { // channel exists, just update it
 			(*ite).name = std::string(split[0]);
 			(*ite).usersNum = std::string(split[1]);
 			(*ite).modes = std::string(split[2]);
-			(*ite).topic = std::string(split[3]);
+			(*ite).topic = std::string(topic);
 			if ((*ite).usersNum == "0") {
 				chans.erase(ite);
 			}

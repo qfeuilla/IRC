@@ -350,6 +350,18 @@ bool	ChannelMaster::broadcastMsg(Client *client, const std::string &chanName, co
 	std::string	ms;
 	Channel		*channel = getChannel(chanName);
 	std::string	msgToSend = Channel::parseArg(1, args);
+	OtherServ	*serv;
+
+	if (!channel) {
+		// if there is chan with this name in another serv, we forward the topic message to this serv
+		serv = client->getServByChannelName(chanName);
+		if (serv) {
+			ms = ":" + client->nick + (sendErrors ? " PRIVMSG " : " NOTICE ") + chanName + " :" + msgToSend;
+			ms += CRLF;
+			custom_send(ms, serv);
+			return (true);
+		}
+	}
 
 	if (!channel) {
 		ms = reply_formating(client->servername.c_str(), ERR_NOSUCHCHANNEL, {chanName}, client->nick.c_str());
@@ -542,4 +554,13 @@ std::vector<Chan>	ChannelMaster::getChans() const
 		));
 	}
 	return (vec);
+}
+
+void		ChannelMaster::doQuit(Client *client, const std::vector<std::string> &args)
+{
+	for (Channel *nextChannel : *_channels) {
+		if (nextChannel->isInChan(client->nick)) {
+			nextChannel->quit(client, args);
+		}
+	}
 }
