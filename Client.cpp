@@ -1695,11 +1695,22 @@ std::ostream &			operator<<( std::ostream & o, Client const & cl ) {
 Client	*Client::getOtherClient(const std::string &name)
 {
 	std::vector<Fd *> 	tmp;
+	std::vector<OtherServ *> 	tmp2;
+	OtherServ			*srv;
+	std::vector<Client *>::iterator client;
 	
 	tmp = ev->search_list_nick(name);
 	if (!tmp.empty()) {
 		Client *c = reinterpret_cast<Client *>(tmp[0]);
 		return (c);
+	}
+	tmp2 = ev->search_othersrv_nick(name);
+	if (!tmp2.empty()) {
+		srv = tmp2[0];
+		client = srv->search_nick(name);
+		if (client == srv->clients.end())
+			return (nullptr);
+		return (*client);
 	}
 	return (nullptr);
 }

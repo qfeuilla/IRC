@@ -375,10 +375,27 @@ bool	ChannelMaster::broadcastMsg(Client *client, const std::string &chanName, co
 bool	ChannelMaster::topic(Client *client, const std::vector<std::string> &args)
 {
 	std::string	ms;
-	std::string	newTopic;
+	std::string	newTopic = "";
 	std::string	topicIs;
+	OtherServ	*serv;
 
 	Channel		*channel = getChannel(args[0]);
+
+	if (args.size() > 1)
+		newTopic = Channel::parseArg(1, args);
+
+	if (!channel) {
+		// if there is chan with this name in another serv, we forward the topic message to this serv
+		serv = client->getServByChannelName(args[0]);
+		if (serv) {
+			ms = ":" + client->nick + " TOPIC " + args[0];
+			if (newTopic != "")
+				ms += " :" + newTopic;
+			ms += CRLF;
+			custom_send(ms, serv);
+			return (true);
+		}
+	}
 
 	if (!channel) {
 		ms = reply_formating(client->servername.c_str(), ERR_NOSUCHCHANNEL, std::vector<std::string>({args[0]}), client->nick.c_str());
@@ -393,7 +410,6 @@ bool	ChannelMaster::topic(Client *client, const std::vector<std::string> &args)
 		ms = reply_formating(client->servername.c_str(), RPL_TOPIC, std::vector<std::string>({channel->getName(), topicIs}), client->nick.c_str());
 		return (Channel::rplMsg(ms, client));
 	}
-	newTopic = Channel::parseArg(1, args);
 	return (channel->setTopic(client, newTopic));
 }
 
@@ -402,6 +418,17 @@ bool	ChannelMaster::invite(Client *client, const std::vector<std::string> &args)
 	std::string	ms;
 	std::string	userName = args[0];
 	Channel		*channel = getChannel(args[1]);
+	OtherServ	*serv;
+
+	if (!channel) {
+		// if there is chan with this name in another serv, we forward the invite message to this serv
+		serv = client->getServByChannelName(args[1]);
+		if (serv) {
+			ms = ":" + client->nick + " INVITE " + args[0] + " " + args[1] + CRLF;
+			custom_send(ms, serv);
+			return (true);
+		}
+	}
 
 	if (!channel) {
 		ms = reply_formating(client->servername.c_str(), ERR_NOSUCHCHANNEL, std::vector<std::string>({args[1]}), client->nick.c_str());

@@ -50,6 +50,8 @@ public:
 	void			JOIN(Command *);
 	void			PART(Command *);
 	void			KICK(Command *);
+	void			TOPIC(Command *);
+	void			INVITE(Command *);
 
 	void			chanModes(Command *);
 

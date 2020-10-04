@@ -601,6 +601,7 @@ void	OtherServ::JOIN(Command *cmd) {
 						ms += cmd->prefix; // the user who wants to join the channel
 						ms += " JOIN " + chanName + " " + passwd;
 						ms += CRLF;
+						custom_send(ms, sv);
 						return ;
 					}
 				}
@@ -641,6 +642,7 @@ void	OtherServ::PART(Command *cmd)
 						ms += cmd->prefix; // the user who wants to join the channel
 						ms += " PART " + chanName + " " + reason;
 						ms += CRLF;
+						custom_send(ms, sv);
 						return ;
 					}
 				}
@@ -683,6 +685,7 @@ void	OtherServ::KICK(Command *cmd)
 						ms += cmd->prefix; // the user who wants to kick someone
 						ms += " KICK " + chanName + " " + guyToKick + " :" + reason;
 						ms += CRLF;
+						custom_send(ms, sv);
 						return ;
 					}
 				}
@@ -703,6 +706,85 @@ void	OtherServ::chanModes(Command *cmd) {
 		return ;
 	}
 	ev->channels->mode(*client, cmd->arguments);
+}
+
+void	OtherServ::TOPIC(Command *cmd)
+{
+	std::string	ms;
+	std::string	chanName;
+	std::string	newTopic = "";
+	std::vector<Client *>::iterator	client;
+
+	if (cmd->prefix.empty())
+		return ;
+	if (cmd->arguments.size() >= 1) {
+		chanName = cmd->arguments[0];
+		if (cmd->arguments.size() >= 2)
+			newTopic = Channel::parseArg(1, cmd->arguments);
+		// check if we have the channel
+		if (ev->channels->getChannel(chanName)) {
+			// if we have channel, we use ChannelMaster.topic() method
+			client = search_nick(cmd->prefix);
+			if (client == clients.end())
+				return ; // message forgery won't error the server
+			ev->channels->topic(*client, cmd->arguments);
+			return ;
+		}
+		// if we do not have the channel, we forward the msg to the right serv
+		for (OtherServ *sv : ev->otherServers) {
+			if (sv != this) {
+				for (Chan &chan : sv->chans) {
+					if (utils::strCmp(chan.name, chanName)) {
+						// forward the request to this serv
+						ms = ":" + cmd->prefix + " TOPIC " + chanName;
+						if (newTopic != "")
+							ms += " :" + newTopic;
+						ms += CRLF;
+						custom_send(ms, sv);
+						return ;
+					}
+				}
+			}
+		}
+	}
+}
+
+void	OtherServ::INVITE(Command *cmd)
+{
+	std::string	ms;
+	std::string	chanName;
+	std::string	guyToInvite;
+	std::vector<Client *>::iterator	client;
+
+	if (cmd->prefix.empty())
+		return ;
+	if (cmd->arguments.size() >= 2) {
+		guyToInvite = cmd->arguments[0];
+		chanName = cmd->arguments[1];
+		// check if we have the channel
+		if (ev->channels->getChannel(chanName)) {
+			// if we have channel, we use ChannelMaster.invite() method
+			client = search_nick(cmd->prefix);
+			if (client == clients.end())
+				return ; // message forgery won't error the server
+			ev->channels->invite(*client, cmd->arguments);
+			return ;
+		}
+		// if we do not have the channel, we forward the msg to the right serv
+		for (OtherServ *sv : ev->otherServers) {
+			if (sv != this) {
+				for (Chan &chan : sv->chans) {
+					if (utils::strCmp(chan.name, chanName)) {
+						// forward the request to this serv
+						ms = ":" + cmd->prefix + " INVITE " + guyToInvite + " " + chanName;
+						ms += CRLF;
+						custom_send(ms, sv);
+						return ;
+					}
+				}
+			}
+		}
+	}
 }
 
 int		OtherServ::execute_parsed(Command *parsed) {
@@ -766,6 +848,12 @@ int		OtherServ::execute_parsed(Command *parsed) {
 		break;
 	case KICK_CC:
 		KICK(parsed);
+		break;
+	case TOPIC_CC:
+		TOPIC(parsed);
+		break;
+	case INVITE_CC:
+		INVITE(parsed);
 		break;
 	default:
 		break;

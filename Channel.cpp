@@ -53,8 +53,9 @@ bool				Channel::setTopic(Client *client, const std::string &newTopic)
 	ms = ":" + client->nick + "!" + client->username + "@" + client->servername;
 	ms += " TOPIC " + getName() + " :" +_topic;
 	ms += CRLF;
-	succesMsg(ms, client);
+	rplMsg(ms, client);
 	broadcastMsg(client, ms);
+	updateServsChan(client); // update servers chan
 	return (true);
 }
 
@@ -123,7 +124,7 @@ bool				Channel::leave(Client *client, const std::string &reason, bool muted)
 			rplMsg(ms, client);
 		return (false);
 	}
-	ms = ":" + client->nick + "!a" + client->username + "@";
+	ms = ":" + client->nick + "!" + client->username + "@";
 	ms += client->servername + " PART " + getName();
 	ms += (reason != "") ? " :" + reason : "";
 	ms += CRLF;
@@ -425,6 +426,7 @@ std::string	Channel::getModes() const
 	modes += _modes.t ? "t" : "";
 	modes += _modes.m ? "m" : "";
 	modes += _modes.n ? "n" : "";
+	modes += _modes.q ? "q" : "";
 	modes += _modes.l != -1 ? "l" : "";
 	modes += _modes.k != "" ? "k" : "";
 	return (modes);
@@ -494,7 +496,7 @@ bool	Channel::invite(Client *client, const std::string &guyToInvite)
 	ms = ":" + client->nick + "!" + client->username + "@" + client->servername;
 	ms += " INVITE " + utils::ircLowerCase(guyToInvite) + " :" + getName();
 	ms += CRLF;
-	succesMsg(ms, clientToInvite);
+	rplMsg(ms, clientToInvite);
 	ms = reply_formating(client->servername.c_str(), RPL_INVITING,
 	std::vector<std::string>({utils::ircLowerCase(guyToInvite), getName()}), client->nick.c_str());
 	return (rplMsg(ms, client));
