@@ -77,7 +77,7 @@ bool				Channel::join(Client *client, const std::string &passwd)
 {
 	std::string	ms;
 	if (!isInChan(client->nick)) {
-		if (_modes.k != passwd) {
+		if (_modes.k != "" && _modes.k != passwd) {
 			ms = reply_formating(client->servername.c_str(), ERR_BADCHANNELKEY, std::vector<std::string>({getName()}), client->nick.c_str());
 			return (!rplMsg(ms, client));
 		}

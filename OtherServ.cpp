@@ -225,8 +225,10 @@ void	OtherServ::USER(Command *cmd) {
 void	OtherServ::MODE(Command *cmd) {
 	std::string ms;
 	Client		*c;
-	
-	char		ch = cmd->prefix.at(0);
+	char		ch = ' ';
+
+	if (cmd->arguments.size() >= 1)
+		ch = cmd->arguments[0].at(0);
 
 	if (ch == '#' || ch == '!' || ch == '+') {
 		chanModes(cmd);
@@ -696,6 +698,10 @@ void	OtherServ::chanModes(Command *cmd) {
 	client = search_nick(cmd->prefix);
 	if (client == clients.end())
 		return ; // message forgery won't error the server
+	if (cmd->arguments.size() == 1) {
+		ev->channels->getChanModes(*client, cmd->arguments);
+		return ;
+	}
 	ev->channels->mode(*client, cmd->arguments);
 }
 

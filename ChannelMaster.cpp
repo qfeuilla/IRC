@@ -164,8 +164,18 @@ bool	ChannelMaster::getChanModes(Client *client, const std::vector<std::string> 
 	Channel		*chan;
 	std::string	ms;
 	std::string	modes;
+	OtherServ	*serv;
 
 	chan = getChannel(args[0]);
+	if (!chan) {
+		// if there is chan with this name in another serv, we forward the join message to this serv
+		serv = client->getServByChannelName(args[0]);
+		if (serv) {
+			ms = ":" + client->nick + " MODE " + args[0] + CRLF;
+			custom_send(ms, serv);
+			return (true); // stop the function here to prevent creating a local channel
+		}
+	}
 	if (!chan)
 		return (false);
 	modes = chan->getModes();
@@ -191,7 +201,7 @@ bool	ChannelMaster::mode(Client *client, const std::vector<std::string> &args)
 		serv = client->getServByChannelName(args[0]);
 		if (!serv)
 			return (false);
-		ms = ":" + args[0] + " MODE ";
+		ms = ":" + client->nick + " MODE ";
 		for (std::string str: args) {
 			ms += str + " ";
 		}
