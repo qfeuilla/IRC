@@ -25,14 +25,19 @@ public:
 	typedef	int			socket_t;
 private:
 	typedef	std::map<std::string, Client*>	_users_map;
+	typedef	std::map<std::string, std::pair<std::string, time_t> >	_ban_map;
 	class _Chan_modes
 	{
 	public:
 		typedef	std::list<std::string>	usr_list;
+
 		usr_list	invitation_list; // if i is set to true
 
 		usr_list	o; // Operator privileges
 		usr_list	v; // Ability to speak on a moderated channel
+		_ban_map	b; // ban map (map [mask] = pair<operatorName, date>)
+		_ban_map	e; // exception map (map [mask] = pair<operatorName, date>)
+		_ban_map	I; // invite map (map [mask] = pair<operatorName, date>)
 		bool		p; // Private channel
 		bool		s; // Secret channel
 		bool		i; // Users can't join without invite
@@ -43,7 +48,7 @@ private:
 		int			l; // User limit
 		std::string	k; // Channel password
 		int			users;
-		_Chan_modes(): invitation_list(), o(), v(), p(false), s(false), i(false), t(true), m(false), n(false), q(false), l(-1), k(), users(0) {}
+		_Chan_modes(): invitation_list(), o(), v(), b(), e(), I(), p(false), s(false), i(false), t(true), m(false), n(false), q(false), l(-1), k(), users(0) {}
 	};
 	
 	
@@ -61,11 +66,14 @@ private:
 		return (user != _modes.o.end());
 	}
 
-	bool		_is_in_list(const std::string &userName, const _Chan_modes::usr_list &listToCheck) const
+	bool		_isInList(const std::string &userName, const _Chan_modes::usr_list &listToCheck) const
 	{
 		_Chan_modes::usr_list::const_iterator	user = std::find(listToCheck.begin(), listToCheck.end(), utils::ircLowerCase(userName));
 		return (user != listToCheck.end());
 	}
+	bool		_isBanned(Client *client) const;
+	bool		_isInvited(Client *client) const;
+	bool		_isInExceptionList(Client *client) const;
 public:
 	Channel();
 	Channel(const std::string &name, Client *client, const std::string &srvName);
@@ -74,6 +82,8 @@ public:
 
 	const std::string	&getName() const;
 	std::string			getUsersNum() const;
+	std::string			getUsersStr() const;
+	std::vector<std::string>	getUsersVec() const;
 	const std::string	&getCreator() const;
 	const std::string	&getTopic() const;
 	bool				setTopic(Client *client, const std::string &newTopic);
@@ -96,8 +106,13 @@ public:
 	bool				quit(Client *client, const std::vector<std::string> &args);
 
 	// MODES METHODS
+	bool	mode_O(bool append, Client *client, const std::string &target);
+
 	bool	mode_o(bool append, Client *client, const std::string &target);
 	bool	mode_v(bool append, Client *client, const std::string &target);
+	bool	mode_b(bool append, Client *client, const std::string &mask);
+	bool	mode_e(bool append, Client *client, const std::string &mask);
+	bool	mode_I(bool append, Client *client, const std::string &mask);
 
 	bool	mode_p(bool append, Client *client);
 	bool	mode_s(bool append, Client *client);
@@ -120,9 +135,13 @@ public:
 	void	changeNick(const std::string &oldNick, const std::string &newNick);
 
 	static bool		rplMsg(std::string ms, Client *c);
-	static bool		succesMsg(std::string ms, Client *c);
 
 	void			updateServsChan(Client *c) const;
+
+	void			showBanlist(Client *client) const;
+	void			showInvitelist(Client *client) const;
+	void			showExceptionlist(Client *client) const;
+	void			showChanCreator(Client *client) const;
 
 };
 

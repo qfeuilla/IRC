@@ -55,8 +55,9 @@ struct Chan
 	std::string	usersNum;
 	std::string	modes;
 	std::string	topic;
-	Chan(const std::string &nm, const std::string &usrNm,
-	const std::string &md, const std::string &tpc): name(nm), usersNum(usrNm), modes(md), topic(tpc) {}
+	std::vector<std::string>	nicknames;
+	Chan(const std::string &nm, const std::string &usrNm, const std::string &md, const std::string &tpc,
+	std::vector<std::string> nicks): name(nm), usersNum(usrNm), modes(md), topic(tpc), nicknames(nicks) {}
 };
 
 #endif

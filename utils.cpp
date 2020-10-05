@@ -175,3 +175,16 @@ std::string	utils::decrypt(const std::string &str) {
 	std::string ms = std::string(_str.begin(), _str.end());
 	return ms;
 }
+
+std::string	utils::strJoin(const std::vector<std::string> &vec, char sep)
+{
+	std::string	users;
+
+	for (std::string str : vec) {
+		users += str;
+		users += sep;
+	}
+	if (users.size() == 0)
+		return ("");
+	return (users.substr(0, users.size() - 1));
+}
