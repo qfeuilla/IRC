@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/24 21:36:03 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/03 17:36:19 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/05 18:19:15 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -256,8 +256,8 @@ void	OtherServ::MODE(Command *cmd) {
 	c->o_mode = false;
 	c->w_mode = false;
 	c->s_mode = false;
-	if (cmd->arguments.size() >= 1) {
-		for (char m : cmd->arguments[0]) {
+	if (cmd->arguments.size() >= 2) {
+		for (char m : cmd->arguments[1]) {
 			if (m == 'o')
 				c->o_mode = true;
 			else if (m == 'i')

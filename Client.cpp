@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:51:25 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/03 17:39:11 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/05 18:16:11 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -112,23 +112,48 @@ void	Client::NICK(Command *cmd) {
 				if (is_setup) {
 					ms += ":";
 					ms += nick;
-					ms += " NICK :";
+					ms += " NICK ";
 					ms += cmd->arguments[0];
 					ms += CRLF;
-					
-					for (OtherServ *serv : ev->otherServers) {
-						serv->change_nick(nick, cmd->arguments[0]);
-						send(serv->sock, ms.c_str(), ms.length(), 0);
-					}
 
 					// * save old client for history purpose
-					if (type == FD_CLIENT)
+					if (type == FD_CLIENT) {
 						ev->client_history.push_back(new Client(*this));
-					
+
+						for (OtherServ *serv : ev->otherServers) {
+							serv->change_nick(nick, cmd->arguments[0]);
+							send(serv->sock, ms.c_str(), ms.length(), 0);
+						}
+					} else {
+						std::string ms2;
+						ms2 = "NICK ";
+						ms2 += cmd->arguments[0];
+						ms2 += CRLF;
+						for (OtherServ *serv : ev->otherServers) {
+							send(serv->sock, ms2.c_str(), ms2.length(), 0);
+						}
+						ms2 = ":";
+						ms2 += cmd->arguments[0];
+						ms2 += " USER ";
+						ms2 += username;
+						ms2 += " ";
+						ms2 += hostname;
+						ms2 += " ";
+						ms2 += servername;
+						ms2 += " :";
+						ms2 += realname;
+						ms2 += CRLF;
+						for (OtherServ *serv : ev->otherServers) {
+							send(serv->sock, ms2.c_str(), ms2.length(), 0);
+						}
+					}
+
 					std::string	oldNick = nick;
 					nick = cmd->arguments[0];
-					// we need to update the nick in all of client's channels
-					updateNickInChannels(oldNick, nick);
+					if (type == FD_CLIENT) {
+						// we need to update the nick in all of client's channels
+						updateNickInChannels(oldNick, nick);
+					}
 
 					custom_send(ms, this);
 					if (!nick_set) {
@@ -309,6 +334,8 @@ void	Client::OPER(Command *cmd) {
 						ms = ":";
 						ms += nick;
 						ms += " MODE ";
+						ms += nick;
+						ms += " ";
 						ms += get_userMODEs_ms(false);
 						ms += CRLF;
 						send(sv->sock, ms.c_str(), ms.length(), 0);
@@ -415,6 +442,8 @@ void	Client::MODE(Command *cmd) {
 						ms = ":";
 						ms += nick;
 						ms += " MODE ";
+						ms += nick;
+						ms += " ";
 						ms += get_userMODEs_ms(false);
 						ms += CRLF;
 						send(sv->sock, ms.c_str(), ms.length(), 0);
@@ -1499,7 +1528,8 @@ void	Client::LIST(Command *cmd) {
 bool	Client::_cmdNeedAuth(int cmdCode) const
 {
 	if (cmdCode == PASS_CC || cmdCode == NICK_CC
-	|| cmdCode == USER_CC || cmdCode == SERVER_CC) {
+	|| cmdCode == USER_CC || cmdCode == SERVER_CC
+	|| cmdCode == PING_CC || cmdCode == PONG_CC) {
 		return (false);
 	}
 	return (true);
@@ -1763,6 +1793,8 @@ void	Client::share_Client(int socket) {
 	ms = ":";
 	ms += nick;
 	ms += " MODE ";
+	ms += nick;
+	ms += " ";
 	ms += get_userMODEs_ms(false);
 	ms += CRLF;
 	send(socket, ms.c_str(), ms.length(), 0);
