@@ -99,12 +99,11 @@ bool			Server::load_other_servs(std::string servinfo) {
 	ms += CRLF;
 	send(_sock, ms.c_str(), ms.length(), 0);
 
-	OtherServ *other = new OtherServ(_sock, false, ev);
+	OtherServ *other = new OtherServ(_sock, false, ev, std::to_string(porti));
 	other->name = addr;
 	other->hop_count = 1;
 	other->token = 42;
 	other->info = "";
-	other->port = std::to_string(porti);
 	delete ev->clients_fd[_sock];
 	ev->clients_fd[_sock] = other;
 	std::cerr << "Fd adding Ok" << std::endl;

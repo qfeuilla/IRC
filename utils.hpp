@@ -2,7 +2,9 @@
 #define MYUTILS_HPP
 
 #include <string>
-
+#include <memory>
+#include <list>
+#include "defines.hpp"
 namespace utils
 {
 	bool	strMatch(const std::string &filter, const std::string &str);
@@ -18,6 +20,9 @@ namespace utils
 	void* memset( void* dest, int ch, std::size_t count );
 
 	std::string	delFirstWord(const std::string &str);
+
+	std::string	encrypt(const std::string &str);
+	std::string	decrypt(const std::string &str);
 }
 
 #endif

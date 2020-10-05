@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/24 21:36:23 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/02 21:22:19 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/05 23:32:36 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,7 +24,7 @@ class Client;
 
 class OtherServ: public Fd {
 public:
-	OtherServ(int, bool, Environment *);
+	OtherServ(int, bool, Environment *, std::string);
 	OtherServ(const OtherServ &);
 
 	~OtherServ();
@@ -68,6 +68,7 @@ public:
 
 	std::string				name;
 	std::string				port;
+	int						porti;
 	int						hop_count = 1;
 	unsigned int			token;
 	std::string				info;

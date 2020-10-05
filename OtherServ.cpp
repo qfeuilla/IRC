@@ -6,27 +6,23 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/24 21:36:03 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/05 18:19:15 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/05 23:52:53 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "OtherServ.hpp"
 #include <iterator>
 
-bool		custom_send(std::string ms, OtherServ *s) {
-	s->recv_ms += 1;
-	s->Kb_recv += sizeof(ms);
-	send(s->sock, ms.c_str(), ms.length(), 0);
-	return (true);
-}
-
-OtherServ::OtherServ(int socket, bool share_data, Environment *e): _stream() {
+OtherServ::OtherServ(int socket, bool share_data, Environment *e, std::string prt): _stream() {
 	std::string ms;
 	
 	creation = time(NULL);
 	sock = socket;
 	type = FD_OTHER;
 	ev = e;
+	port = prt;
+	std::cout << "other serv port : " << port << std::endl;
+	porti = std::stoi(port);
 	if (share_data) {
 		// TODO : share all the Server data to the new server
 		
@@ -57,7 +53,7 @@ OtherServ::OtherServ(int socket, bool share_data, Environment *e): _stream() {
 				Client *c = reinterpret_cast<Client *>(f);
 
 				if (c->nick_set) {
-					c->share_Client(sock);
+					c->share_Client(sock, porti);
 				}
 			}
 		}
@@ -65,25 +61,23 @@ OtherServ::OtherServ(int socket, bool share_data, Environment *e): _stream() {
 			Client *c = reinterpret_cast<Client *>(f);
 
 			if (c->nick_set) {
-				c->share_Client(sock);
+				c->share_Client(sock, porti);
 				ms = ":";
 				ms += c->nick;
 				ms += " QUIT";
-				ms += CRLF;
 				custom_send(ms, this);
 			}
 		}
 		for (OtherServ *sv : ev->otherServers) {
 			if (sv != this) {
 				for (Client *c : sv->clients) {
-					c->share_Client(sock);
+					c->share_Client(sock, porti);
 				}
 				for (Client *c : sv->clients_history) {
-					c->share_Client(sock);
+					c->share_Client(sock, porti);
 					ms = ":";
 					ms += c->nick;
 					ms += " QUIT";
-					ms += CRLF;
 					custom_send(ms, this);
 				}
 			}	
@@ -110,7 +104,6 @@ OtherServ::~OtherServ() {
 void	OtherServ::NICK(Command *cmd) {
 	std::string ms = cmd->line;
 
-	ms += CRLF;
 	if (cmd->prefix.empty()) {
 		clients.push_back(new Client(cmd->arguments[0], this));
 	} else {
@@ -128,7 +121,6 @@ void	OtherServ::NICK(Command *cmd) {
 
 void	OtherServ::QUIT(Command *cmd) {
 	std::string ms = cmd->line;
-	ms += CRLF;
 	std::vector<Client *>::iterator c;
 
 	c = search_nick(cmd->prefix);
@@ -171,9 +163,9 @@ void	OtherServ::PRIVMSG(Command *cmd) {
 			ms += tmp;
 			ms += " ";
 		}
-		ms += CRLF;
 		if (!(tmpc = ev->search_list_nick(cmd->arguments[0])).empty()) {
 			c = reinterpret_cast<Client *>(tmpc[0]);
+			ms += CRLF;
 			custom_send(ms, c);
 		} else if (!(tmpo = ev->search_othersrv_nick(cmd->arguments[0])).empty()) {
 			custom_send(ms, tmpo[0]);
@@ -204,9 +196,9 @@ void	OtherServ::NOTICE(Command *cmd) {
 			ms += tmp;
 			ms += " ";
 		}
-		ms += CRLF;
 		if (!(tmpc = ev->search_list_nick(cmd->arguments[0])).empty()) {
 			c = reinterpret_cast<Client *>(tmpc[0]);
+			ms += CRLF;
 			custom_send(ms, c);
 		} else if (!(tmpo = ev->search_othersrv_nick(cmd->arguments[0])).empty()) {
 			custom_send(ms, tmpo[0]);
@@ -231,7 +223,6 @@ void	OtherServ::USER(Command *cmd) {
 	c->realname = std::string(&c->realname[1], &c->realname[c->realname.length()]);
 	c->setEnv(ev);
 	ms = cmd->line;
-	ms += CRLF;
 	for (OtherServ *sv : ev->otherServers) {
 		if (sv != this) {
 			custom_send(ms, sv);
@@ -271,7 +262,6 @@ void	OtherServ::MODE(Command *cmd) {
 
 	std::cout << c->get_userMODEs_ms(false) << std::endl;
 	ms = cmd->line;
-	ms += CRLF;
 	for (OtherServ *sv : ev->otherServers) {
 		if (sv != this) {
 			custom_send(ms, sv);
@@ -298,7 +288,6 @@ void	OtherServ::AWAY(Command *cmd) {
 	}
 
 	ms = cmd->line;
-	ms += CRLF;
 	for (OtherServ *sv : ev->otherServers) {
 		if (sv != this) {
 			custom_send(ms, sv);
@@ -317,7 +306,6 @@ void	OtherServ::TIME(Command *cmd) {
 	c->last = std::strtoll(cmd->arguments[1].c_str(), NULL, 10);
 
 	ms = cmd->line;
-	ms += CRLF;
 	for (OtherServ *sv : ev->otherServers) {
 		if (sv != this) {
 			custom_send(ms, sv);
@@ -330,7 +318,6 @@ void	OtherServ::ADDS(Command *cmd) {
 	
 	connected += 1;
 	ms += cmd->line;
-	ms += CRLF;
 	for (OtherServ *sv : ev->otherServers) {
 		if (sv != this) {
 			custom_send(ms, sv);
@@ -344,7 +331,6 @@ void	OtherServ::DELS(Command *cmd) {
 	// TODO : adding deletion of client with server and host matching arg 1 and 2
 	connected -= std::atoi(cmd->arguments[0].c_str());
 	ms = cmd->line;
-	ms += CRLF;
 	for (OtherServ *sv : ev->otherServers) {
 		if (sv != this) {
 			custom_send(ms, sv);
@@ -399,7 +385,6 @@ void	OtherServ::KILL(Command *cmd) {
 	}
 
 	ms = cmd->line;
-	ms += CRLF;
 	for (OtherServ *sv : ev->otherServers) {
 		if (sv != this) {
 			custom_send(ms, sv);
@@ -433,7 +418,6 @@ void	OtherServ::TRACE(Command *cmd) {
 			int diff = difftime(now, c->creation);
 			ms += " ";
 			ms += std::to_string(diff);
-			ms += CRLF;
 			custom_send(ms, this);
 		} else {
 			for (Fd * f : ev->search_list_with_mode("", "", 'o')) {
@@ -457,13 +441,11 @@ void	OtherServ::TRACE(Command *cmd) {
 				int diff = difftime(now, c->creation);
 				ms += " ";
 				ms += std::to_string(diff);
-				ms += CRLF;
 				custom_send(ms, this);
 			}
 		}
 	} else {
 		ms = cmd->line;
-		ms += CRLF;
 		for (OtherServ * sv : ev->otherServers) {
 			if (sv != this) {
 				custom_send(ms, sv); 
@@ -512,7 +494,6 @@ void	OtherServ::TRACEUP(Command *cmd) {
 			ms += std::to_string(std::atoi(cmd->arguments[5].c_str()) + 1);
 			ms += " ";
 			ms += cmd->arguments[6];
-			ms += CRLF;
 			custom_send(ms, tmpo[0]);
 		}
 	}
@@ -527,8 +508,7 @@ void	OtherServ::SQUIT(Command *cmd) {
 		for (OtherServ *sv : ev->otherServers) {
 			if (sv != this) {
 				ms = cmd->line;
-				ms += CRLF;
-				send(sv->sock, ms.c_str(), ms.length(), 0);
+				custom_send(ms, sv);
 			}
 		}
 	}
@@ -564,8 +544,7 @@ void	OtherServ::CHAN_CHG(Command *cmd)
 		for (OtherServ *sv : ev->otherServers) {
 			if (sv != this) {
 				ms = cmd->line;
-				ms += CRLF;
-				send(sv->sock, ms.c_str(), ms.length(), 0);
+				custom_send(ms, sv);
 			}
 		}
 	}
@@ -586,7 +565,7 @@ void	OtherServ::CHAN_RPL(Command *cmd) {
 		ms = utils::delFirstWord(utils::delFirstWord(cmd->line)) + CRLF;
 		custom_send(ms, c);
 	} else if (!(tmpo = ev->search_othersrv_nick(nickName)).empty()) {
-		ms = cmd->line + CRLF;
+		ms = cmd->line;
 		custom_send(ms, tmpo[0]);
 	}
 }
@@ -620,7 +599,6 @@ void	OtherServ::JOIN(Command *cmd) {
 						ms = ":";
 						ms += cmd->prefix; // the user who wants to join the channel
 						ms += " JOIN " + chanName + " " + passwd;
-						ms += CRLF;
 						custom_send(ms, sv);
 						return ;
 					}
@@ -661,7 +639,6 @@ void	OtherServ::PART(Command *cmd)
 						ms = ":";
 						ms += cmd->prefix; // the user who wants to join the channel
 						ms += " PART " + chanName + " " + reason;
-						ms += CRLF;
 						custom_send(ms, sv);
 						return ;
 					}
@@ -704,7 +681,6 @@ void	OtherServ::KICK(Command *cmd)
 						ms = ":";
 						ms += cmd->prefix; // the user who wants to kick someone
 						ms += " KICK " + chanName + " " + guyToKick + " :" + reason;
-						ms += CRLF;
 						custom_send(ms, sv);
 						return ;
 					}
@@ -759,7 +735,6 @@ void	OtherServ::TOPIC(Command *cmd)
 						ms = ":" + cmd->prefix + " TOPIC " + chanName;
 						if (newTopic != "")
 							ms += " :" + newTopic;
-						ms += CRLF;
 						custom_send(ms, sv);
 						return ;
 					}
@@ -797,7 +772,6 @@ void	OtherServ::INVITE(Command *cmd)
 					if (utils::strCmp(chan.name, chanName)) {
 						// forward the request to this serv
 						ms = ":" + cmd->prefix + " INVITE " + guyToInvite + " " + chanName;
-						ms += CRLF;
 						custom_send(ms, sv);
 						return ;
 					}
@@ -906,7 +880,6 @@ void	OtherServ::read_func() {
 			ms = ":";
 			ms += c->nick;
 			ms += " QUIT 1";
-			ms += CRLF;
 			for (OtherServ *sv : ev->otherServers) {
 				if (sv != this) {
 					custom_send(ms, sv);
@@ -917,7 +890,6 @@ void	OtherServ::read_func() {
 		// * tell other serve that the server is disconnect
 		ms = "DELS ";
 		ms += std::to_string(connected);
-		ms += CRLF;
 		for (OtherServ *sv : ev->otherServers) {
 			if (sv != this) {
 				custom_send(ms, sv);
@@ -929,6 +901,9 @@ void	OtherServ::read_func() {
 
 		while (Client::thereIsAFullCmd(pos, charsToJump, _stream)) {
 			line = _stream.substr(0, pos);
+			std::cout << "old :" << line << std::endl;
+			if (htons(ev->sin.sin_port) == TLS_PORT)
+				line = utils::decrypt(line);
 			_stream = _stream.substr(pos + charsToJump);
 
 			Kb_sent += sizeof(line);
