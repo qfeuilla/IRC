@@ -42,8 +42,12 @@ OtherServ::OtherServ(int socket, bool share_data, Environment *e, std::string pr
 		for (OtherServ *sv : ev->otherServers) {
 			if (sv != this) {
 				for (Chan &chan : sv->chans) {
+					std::string	usersStr = utils::strJoin(chan.nicknames, ',');
+					if (usersStr.size() == 0)
+						usersStr = "nobody";
 					ms = "CHAN_CHG ";
 					ms += chan.name + "," + chan.usersNum + "," + chan.modes + " ";
+					ms += usersStr + " ";
 					ms += (chan.topic != "") ? ":" + chan.topic : ":!";
 					ms += CRLF;
 					send(socket, ms.c_str(), ms.length(), 0);

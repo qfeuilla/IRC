@@ -698,7 +698,7 @@ std::string		Channel::getUsersStr() const
 	std::string	users;
 
 	for (std::pair<std::string, Client *> pair: _users) {
-		users += pair.first;
+		users += utils::ircLowerCase(pair.first);
 		users += ",";
 	}
 	if (users.size() == 0)
