@@ -19,6 +19,7 @@
 #include <string.h>
 
 Server::~Server() {
+	delete ev;
 	std::cout << "server destructed" << std::endl;
 }
 
@@ -85,7 +86,6 @@ bool			Server::load_other_servs(std::string servinfo) {
 	if (connect(_sock, reinterpret_cast<struct sockaddr *>(&serv_addr), sizeof(serv_addr)) < 0) {
 		return (false);
 	}
-
 	ms += "SERVER ";
 	ms += inet_ntoa(ev->sin.sin_addr);
 	ms += " ";
@@ -99,12 +99,11 @@ bool			Server::load_other_servs(std::string servinfo) {
 	ms += CRLF;
 	send(_sock, ms.c_str(), ms.length(), 0);
 
-	OtherServ *other = new OtherServ(_sock, false, ev);
+	OtherServ *other = new OtherServ(_sock, false, ev, std::to_string(porti));
 	other->name = addr;
 	other->hop_count = 1;
 	other->token = 42;
 	other->info = "";
-	other->port = std::to_string(porti);
 	delete ev->clients_fd[_sock];
 	ev->clients_fd[_sock] = other;
 	std::cerr << "Fd adding Ok" << std::endl;
@@ -152,8 +151,8 @@ void		Server::create() {
 	sin.sin_port = htons(port);
 	X(-1, bind(sock, (struct sockaddr*)&sin, sizeof(sin)), "bind");
 	X(-1, listen(sock, 42), "listen");
-	ev->clients_fd[sock] = this;
 	ev->sin = sin;
+	ev->clients_fd[sock] = this;
 	ev->serv = new std::string(getIP());
 	std::cout << "IP = " << *ev->serv << "\n";
 	ev->channels->setSrvName(*(ev->serv));

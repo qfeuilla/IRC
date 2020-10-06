@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:51:25 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/02 20:11:04 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/05 23:36:41 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,6 +22,17 @@ bool		custom_send(std::string ms, Client *c) {
 	c->recv_ms += 1;
 	c->Kb_recv += sizeof(ms);
 	send(c->sock, ms.c_str(), ms.length(), 0);
+	return (true);
+}
+
+bool		custom_send(std::string ms, OtherServ *s) {
+	s->recv_ms += 1;
+	s->Kb_recv += sizeof(ms);
+	if (s->porti == TLS_PORT)
+		ms = utils::encrypt(ms);
+	else
+		ms += CRLF;
+	send(s->sock, ms.c_str(), ms.length(), 0);
 	return (true);
 }
 
@@ -63,6 +74,7 @@ Client::Client(std::string nc, OtherServ *srv) {
 }
 
 Client::~Client() {
+	
 	std::cout << "client destructed" << std::endl;
 }
 
@@ -102,6 +114,7 @@ void	Client::PASS(Command *cmd) {
 
 void	Client::NICK(Command *cmd) {
 	std::string	ms;
+	std::string ms2;
 	ev->cmd_count["NICK"] += 1;
 
 	if (cmd->arguments.size() >= 1) {
@@ -109,26 +122,48 @@ void	Client::NICK(Command *cmd) {
 			if (ev->search_list_nick(cmd->arguments[0]).empty() && ev->search_othersrv_nick(cmd->arguments[0]).empty()) {
 				// * if client is setup so it is a nick change
 				if (is_setup) {
-					ms += ":";
+					ms = ":";
 					ms += nick;
-					ms += " NICK :";
+					ms += " NICK ";
 					ms += cmd->arguments[0];
-					ms += CRLF;
-					
-					for (OtherServ *serv : ev->otherServers) {
-						serv->change_nick(nick, cmd->arguments[0]);
-						send(serv->sock, ms.c_str(), ms.length(), 0);
-					}
 
 					// * save old client for history purpose
-					if (type == FD_CLIENT)
+					if (type == FD_CLIENT) {
 						ev->client_history.push_back(new Client(*this));
-					
+
+						for (OtherServ *serv : ev->otherServers) {
+							serv->change_nick(nick, cmd->arguments[0]);
+							custom_send(ms, serv);
+						}
+					} else {
+						std::string ms2;
+						ms2 = "NICK ";
+						ms2 += cmd->arguments[0];
+						for (OtherServ *serv : ev->otherServers) {
+							custom_send(ms2, serv);
+						}
+						ms2 = ":";
+						ms2 += cmd->arguments[0];
+						ms2 += " USER ";
+						ms2 += username;
+						ms2 += " ";
+						ms2 += hostname;
+						ms2 += " ";
+						ms2 += servername;
+						ms2 += " :";
+						ms2 += realname;
+						for (OtherServ *serv : ev->otherServers) {
+							custom_send(ms2, serv);
+						}
+					}
+
 					std::string	oldNick = nick;
 					nick = cmd->arguments[0];
-					// we need to update the nick in all of client's channels
-					updateNickInChannels(oldNick, nick);
-
+					if (type == FD_CLIENT) {
+						// we need to update the nick in all of client's channels
+						updateNickInChannels(oldNick, nick);
+					}
+					ms += CRLF;
 					custom_send(ms, this);
 					if (!nick_set) {
 						nick_set = true;
@@ -138,8 +173,7 @@ void	Client::NICK(Command *cmd) {
 					for (OtherServ *serv : ev->otherServers) {
 						ms = "NICK ";
 						ms += cmd->arguments[0];
-						ms += CRLF;
-						send(serv->sock, ms.c_str(), ms.length(), 0);
+						custom_send(ms, serv);
 					}
 					nick = cmd->arguments[0];
 					nick_set = true;
@@ -162,6 +196,7 @@ void	Client::NICK(Command *cmd) {
 void	Client::exec_registerMS() {
 	std::string tmp;
 	std::string ms;
+	Command		*tm;
 
 	time(&creation);
 	ms = ":";
@@ -170,9 +205,8 @@ void	Client::exec_registerMS() {
 	ms += std::to_string(creation);
 	ms += " ";
 	ms += std::to_string(last);
-	ms += CRLF;
 	for (OtherServ *sv: ev->otherServers) {
-		send(sv->sock, ms.c_str(), ms.length(), 0);
+		custom_send(ms, sv);
 	}
 
 	// * 001
@@ -191,7 +225,7 @@ void	Client::exec_registerMS() {
 	custom_send(ms, this);
 	
 	// * 003
-	struct tm * timeinfo;
+	struct tm *timeinfo;
 	timeinfo = localtime(&ev->start);
 	std::vector<std::string> month = {"January", "February", "March", "April", "May", "June", "July", "August","September", "October", "November", "December"};
 	std::string date;
@@ -215,16 +249,19 @@ void	Client::exec_registerMS() {
 	
 	type = FD_CLIENT; // * register for other user
 	tmp = "LUSERS";
-	execute_parsed(parse(tmp));
+	execute_parsed((tm = parse(tmp)));
+	delete tm;
 	tmp = "MOTD";
-	execute_parsed(parse(tmp));
+	execute_parsed((tm = parse(tmp)));
+	delete tm;
 	tmp = "";
 	tmp += ":";
 	tmp += nick;
 	tmp += " MODE ";
 	tmp += nick;
 	tmp += " +i";
-	execute_parsed(parse(tmp));
+	execute_parsed((tm = parse(tmp)));
+	delete tm;
 	tmp = "";
 	tmp += ":";
 	tmp += servername;
@@ -232,8 +269,8 @@ void	Client::exec_registerMS() {
 	tmp += ": new User with nick : ";
 	tmp += nick;
 	tmp += " Join the server";
-	execute_parsed(parse(tmp));
-	// TODO : need more functions (i will do)
+	execute_parsed((tm = parse(tmp)));
+	delete tm;
 }
 
 void	Client::USER(Command *cmd) {
@@ -272,8 +309,7 @@ void	Client::USER(Command *cmd) {
 					ms += servername;
 					ms += " :";
 					ms += realname;
-					ms += CRLF;
-					send(serv->sock, ms.c_str(), ms.length(), 0);
+					custom_send(ms, serv);
 				}
 				exec_registerMS();
 			}
@@ -303,9 +339,10 @@ void	Client::OPER(Command *cmd) {
 						ms = ":";
 						ms += nick;
 						ms += " MODE ";
+						ms += nick;
+						ms += " ";
 						ms += get_userMODEs_ms(false);
-						ms += CRLF;
-						send(sv->sock, ms.c_str(), ms.length(), 0);
+						custom_send(ms, sv);
 					}
 			} else {
 				ms = reply_formating(servername.c_str(), ERR_PASSWDMISMATCH, {}, nick.c_str());
@@ -409,9 +446,10 @@ void	Client::MODE(Command *cmd) {
 						ms = ":";
 						ms += nick;
 						ms += " MODE ";
+						ms += nick;
+						ms += " ";
 						ms += get_userMODEs_ms(false);
-						ms += CRLF;
-						send(sv->sock, ms.c_str(), ms.length(), 0);
+						custom_send(ms, sv);
 					}
 				} else {
 					ms = reply_formating(servername.c_str(), ERR_UMODEUNKNOWNFLAG, {}, nick.c_str());
@@ -467,8 +505,7 @@ void	Client::QUIT(Command *cmd) {
 			ms += str;
 			ms += " ";
 		}
-		ms += CRLF;
-		send(serv->sock, ms.c_str(), ms.length(), 0);
+		custom_send(ms, serv);
 	}
 	custom_send(ans, this);
 	std::list<Channel*>::iterator	current = channels.begin();
@@ -509,8 +546,8 @@ void	Client::PRIVMSG(Command *cmd) {
 					ms += cmd->arguments[i];
 					ms += " ";
 				}
-				ms += CRLF;
 				if (!(tmp = ev->search_list_nick(targ)).empty()) {
+					ms += CRLF;
 					Client *c = reinterpret_cast<Client *>(tmp[0]);
 					custom_send(ms, c);
 					good += 1;
@@ -519,7 +556,7 @@ void	Client::PRIVMSG(Command *cmd) {
 						custom_send(ms, this);
 					}
 				} else if (!(tmpo = ev->search_othersrv_nick(targ)).empty()) {
-					send(tmpo[0]->sock, ms.c_str(), ms.length(), 0);
+					custom_send(ms, tmpo[0]);
 					Client *c = *(tmpo[0]->search_nick(targ));
 					good += 1;
 					if (c->is_away) {
@@ -564,12 +601,12 @@ void	Client::NOTICE(Command *cmd) {
 					ms += cmd->arguments[i];
 					ms += " ";
 				}
-				ms += CRLF;
 				if (!(tmp = ev->search_list_nick(targ)).empty()) {
+					ms += CRLF;
 					Client *c = reinterpret_cast<Client *>(tmp[0]);
 					custom_send(ms, c);
 				} else if (!(tmpo = ev->search_othersrv_nick(targ)).empty()) {
-					send(tmpo[0]->sock, ms.c_str(), ms.length(), 0);
+					custom_send(ms, tmpo[0]);
 				}
 			}
 		}
@@ -1077,8 +1114,9 @@ void	Client::WHOWAS(Command *cmd) {
 void	Client::KILL(Command *cmd) {
 	std::string ms;
 	ev->cmd_count["KILL"] += 1;
-	std::vector<Fd *> tmp;
-	std::vector<OtherServ *> tmpo;
+	std::vector<Fd *>			tmp;
+	std::vector<OtherServ *>	tmpo;
+	Command						*tm;
 
 	if (cmd->arguments.size() >= 2) {
 		if (o_mode) {
@@ -1091,7 +1129,8 @@ void	Client::KILL(Command *cmd) {
 					ms += " ";
 				}
 				ms += CR;
-				c->execute_parsed(parse(ms));
+				c->execute_parsed((tm = parse(ms)));
+				delete tm;
 			} else if (!(tmpo = ev->search_othersrv_nick(cmd->arguments[0])).empty()) {
 				ms = ":";
 				ms += cmd->arguments[0];
@@ -1100,10 +1139,8 @@ void	Client::KILL(Command *cmd) {
 					ms += cmd->arguments[i];
 					ms += " ";
 				}
-
-				ms += CRLF;
 				for (OtherServ *sv : ev->otherServers) {
-					send(sv->sock, ms.c_str(), ms.length(), 0);
+					custom_send(ms, sv);
 				}
 			} else {
 				ms = reply_formating(servername.c_str(), ERR_NOSUCHNICK, {cmd->arguments[0]}, nick.c_str());
@@ -1158,9 +1195,8 @@ void	Client::AWAY(Command *cmd) {
 		ms += nick;
 		ms += " AWAY ";
 		ms += away_ms;
-		ms += CRLF;
 		for (OtherServ *sv : ev->otherServers) {
-			send(sv->sock, ms.c_str(), ms.length(), 0);
+			custom_send(ms, sv);
 		}
 	} else {
 		is_away = false;
@@ -1169,9 +1205,8 @@ void	Client::AWAY(Command *cmd) {
 		ms = ":";
 		ms += nick;
 		ms += " AWAY";
-		ms += CRLF;
 		for (OtherServ *sv : ev->otherServers) {
-			send(sv->sock, ms.c_str(), ms.length(), 0);
+			custom_send(ms, sv);
 		}
 	}
 }
@@ -1346,47 +1381,47 @@ void	Client::INVITE(Command *cmd) {
 void	Client::SERVER(Command *cmd) {
 	std::string ms;
 	ev->cmd_count["SERVER"] += 1;
-	OtherServ *other = new OtherServ(sock, true, ev);
 
 	if (!is_setup) {
-		if (cmd->arguments.size() >= 1) {
+		if (cmd->arguments.size() >= 5 && cmd->arguments[4] == *ev->password) {
+			OtherServ *other = new OtherServ(sock, true, ev, cmd->arguments[3]);
 			other->name = cmd->arguments[0];
-		} if (cmd->arguments.size() >= 2) {
 			other->hop_count = std::atoi(cmd->arguments[1].c_str());
-		} if (cmd->arguments.size() >= 3) {
 			other->token = std::atoi(cmd->arguments[2].c_str());
-		} if (cmd->arguments.size() >= 4) {
-			other->port = cmd->arguments[3];
-		} if (cmd->arguments.size() >= 5) {
-			for (size_t i = 4; i < cmd->arguments.size(); i++) {
+			for (size_t i = 5; i < cmd->arguments.size(); i++) {
 				ms += cmd->arguments[i];
 				ms += " ";
 			}
-			other->info = cmd->arguments[0];
+			other->info = ms;
+			delete ev->clients_fd[sock];
+			ev->clients_fd[sock] = other;
+
+			int tmp = 1;
+			for (OtherServ *sv : ev->otherServers) {
+				tmp += sv->connected;
+			}
+			// Notify incoming server of number of servers
+			ms = "NSERV ";
+			ms += std::to_string(tmp);
+			if (other->porti == TLS_PORT)
+				ms = utils::encrypt(ms);
+			else
+				ms += CRLF;
+			send(sock, ms.c_str(), ms.length(), 0);
+
+			// Notify other serv that a new server as been add
+			ms = "ADDS";
+			for (OtherServ *sv : ev->otherServers) {
+				custom_send(ms, sv);
+			}
+
+			std::cerr << "Fd adding Ok" << std::endl;
+			ev->otherServers.push_back(other);
+			std::cerr << "OtherServ adding Ok" << std::endl;
+		} else {
+			ev->clients_fd[sock] = new Fd();
+			close(sock);
 		}
-		delete ev->clients_fd[sock];
-		ev->clients_fd[sock] = other;
-
-		int tmp = 1;
-		for (OtherServ *sv : ev->otherServers) {
-			tmp += sv->connected;
-		} 
-		// Notify incoming server of number of servers
-		ms = "NSERV ";
-		ms += std::to_string(tmp);
-		ms += CRLF;
-		send(sock, ms.c_str(), ms.length(), 0);
-
-		// Notify other serv that a new server as been add
-		ms = "ADDS";
-		ms += CRLF;
-		for (OtherServ *sv : ev->otherServers) {
-			send(sv->sock, ms.c_str(), ms.length(), 0);
-		}
-
-		std::cerr << "Fd adding Ok" << std::endl;
-		ev->otherServers.push_back(other);
-		std::cerr << "OtherServ adding Ok" << std::endl;
 	} else {
 		ms = reply_formating(servername.c_str(), ERR_ALREADYREGISTRED, {}, nick.c_str());
 		custom_send(ms, this);
@@ -1444,8 +1479,7 @@ void	Client::TRACE(Command *cmd) {
 			ms += nick;
 			ms += " TRACE ";
 			ms += cmd->arguments[0];
-			ms += CRLF;
-			send(sv->sock, ms.c_str(), ms.length(), 0); 
+			custom_send(ms, sv);
 		}
 	}
 }
@@ -1462,8 +1496,7 @@ void	Client::SQUIT(Command *cmd) {
 			} else {
 				for (OtherServ *sv : ev->otherServers) {
 					ms = cmd->line;
-					ms += CRLF;
-					send(sv->sock, ms.c_str(), ms.length(), 0);
+					custom_send(ms, sv);
 				}
 			}
 		} else {
@@ -1492,7 +1525,8 @@ void	Client::LIST(Command *cmd) {
 bool	Client::_cmdNeedAuth(int cmdCode) const
 {
 	if (cmdCode == PASS_CC || cmdCode == NICK_CC
-	|| cmdCode == USER_CC || cmdCode == SERVER_CC) {
+	|| cmdCode == USER_CC || cmdCode == SERVER_CC
+	|| cmdCode == PING_CC || cmdCode == PONG_CC) {
 		return (false);
 	}
 	return (true);
@@ -1669,7 +1703,7 @@ void	Client::read_func() {
 	_stream += std::string(buf_read);
 
 	std::cout << "now _stream is: " << _stream << "\n\n";
-	
+
 	while (thereIsAFullCmd(pos, charsToJump, _stream)) {
 		line = _stream.substr(0, pos);
 		_stream = _stream.substr(pos + charsToJump);
@@ -1730,14 +1764,17 @@ void	Client::updateNickInChannels(const std::string &oldNick, const std::string 
 	}
 }
 
-void	Client::share_Client(int socket) {
+void	Client::share_Client(int socket, int port) {
 	// Send all Client Data to the socket, starting by NICK and all command prefixed by the nickname
 	std::string ms;
 	
 	ms = "";
 	ms += "NICK ";
 	ms += nick;
-	ms += CRLF;
+	if (port == TLS_PORT)
+		ms = utils::encrypt(ms);
+	else
+		ms += CRLF;
 	send(socket, ms.c_str(), ms.length(), 0);
 
 	ms = ":";
@@ -1750,14 +1787,22 @@ void	Client::share_Client(int socket) {
 	ms += servername;
 	ms += " :";
 	ms += realname;
-	ms += CRLF;
+	if (port == TLS_PORT)
+		ms = utils::encrypt(ms);
+	else
+		ms += CRLF;
 	send(socket, ms.c_str(), ms.length(), 0);
 
 	ms = ":";
 	ms += nick;
 	ms += " MODE ";
+	ms += nick;
+	ms += " ";
 	ms += get_userMODEs_ms(false);
-	ms += CRLF;
+	if (port == TLS_PORT)
+		ms = utils::encrypt(ms);
+	else
+		ms += CRLF;
 	send(socket, ms.c_str(), ms.length(), 0);
 
 	if (is_away) {
@@ -1765,12 +1810,18 @@ void	Client::share_Client(int socket) {
 		ms += nick;
 		ms += " AWAY ";
 		ms += away_ms;
-		ms += CRLF;
+		if (port == TLS_PORT)
+			ms = utils::encrypt(ms);
+		else
+			ms += CRLF;
 	} else {
 		ms = ":";
 		ms += nick;
 		ms += " AWAY";
-		ms += CRLF;
+		if (port == TLS_PORT)
+			ms = utils::encrypt(ms);
+		else
+			ms += CRLF;
 	}
 	send(socket, ms.c_str(), ms.length(), 0);
 
@@ -1780,7 +1831,10 @@ void	Client::share_Client(int socket) {
 	ms += std::to_string(creation);
 	ms += " ";
 	ms += std::to_string(last);
-	ms += CRLF;
+	if (port == TLS_PORT)
+		ms = utils::encrypt(ms);
+	else
+		ms += CRLF;
 	send(socket, ms.c_str(), ms.length(), 0);
 
 	

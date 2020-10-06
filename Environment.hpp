@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Environment.hpp                                    :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mayeul <mayeul@student.42.fr>              +#+  +:+       +#+        */
+/*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:54:23 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/24 13:58:01 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/03 17:34:37 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -58,6 +58,7 @@ public:
 	std::string					loc2;
 
 	std::vector<OtherServ *>	otherServers;
+	std::vector<OtherServ *>	lostServers;
 
 	bool						active = true;
 	

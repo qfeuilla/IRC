@@ -6,14 +6,14 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/20 17:01:28 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/02 20:10:53 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/05 23:20:37 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef DEFINES_HPP
-#define DEFINES_HPP
+# define DEFINES_HPP
 
-# define EX_NAME		".ft.irc"
+# define TLS_PORT		6697
 
 // * utilitie for format
 

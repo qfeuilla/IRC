@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:50:59 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/02 20:09:33 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/05 23:27:56 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -81,7 +81,7 @@ public:
 	std::string			get_userMODEs_ms(bool);
 	bool				set_uMODE(char c, bool add);
 
-	void				share_Client(int socket);
+	void				share_Client(int socket, int port);
 
 	Client				*getOtherClient(const std::string &name);
 	void				updateNickInChannels(const std::string &oldNick, const std::string &newNick);

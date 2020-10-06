@@ -11,9 +11,12 @@
 /* ************************************************************************** */
 
 #include "Fd.hpp"
+#include "utils.hpp"
 
 Fd::Fd() {
 	type = FD_FREE;
+	utils::memset(buf_read, 0, BUF_SIZE + 1);
+	utils::memset(buf_write, 0, BUF_SIZE + 1);
 }
 
 Fd::~Fd() { }

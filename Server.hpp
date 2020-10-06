@@ -41,10 +41,10 @@ public:
 
 	std::string		getIP() const;
 
+	Environment			*ev;
 private:
 	int					port;
 	int					action;
-	Environment			*ev;
 };
 
 #endif
