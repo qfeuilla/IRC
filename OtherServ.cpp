@@ -29,8 +29,12 @@ OtherServ::OtherServ(int socket, bool share_data, Environment *e, std::string pr
 		// * **CHANNELS
 		std::vector<Chan>	thisServChans = ev->channels->getChans();
 		for (Chan &chan : thisServChans) {
+			std::string	usersStr = utils::strJoin(chan.nicknames, ',');
+			if (usersStr.size() == 0)
+				usersStr = "nobody";
 			ms = "CHAN_CHG ";
 			ms += chan.name + "," + chan.usersNum + "," + chan.modes + " ";
+			ms += usersStr + " ";
 			ms += (chan.topic != "") ? ":" + chan.topic : ":!";
 			ms += CRLF;
 			send(socket, ms.c_str(), ms.length(), 0);
@@ -38,8 +42,12 @@ OtherServ::OtherServ(int socket, bool share_data, Environment *e, std::string pr
 		for (OtherServ *sv : ev->otherServers) {
 			if (sv != this) {
 				for (Chan &chan : sv->chans) {
+					std::string	usersStr = utils::strJoin(chan.nicknames, ',');
+					if (usersStr.size() == 0)
+						usersStr = "nobody";
 					ms = "CHAN_CHG ";
 					ms += chan.name + "," + chan.usersNum + "," + chan.modes + " ";
+					ms += usersStr + " ";
 					ms += (chan.topic != "") ? ":" + chan.topic : ":!";
 					ms += CRLF;
 					send(socket, ms.c_str(), ms.length(), 0);
@@ -514,25 +522,28 @@ void	OtherServ::CHAN_CHG(Command *cmd)
 {
 	std::string	ms;
 	std::string	topic;
-	if (cmd->arguments.size() >= 2) {
+	if (cmd->arguments.size() >= 3) {
 		std::vector<std::string>	split = parse_comma(cmd->arguments[0]);
+		std::vector<std::string>	users = parse_comma(cmd->arguments[1]);
 		if (split.size() != 3)
 			return ;
-		topic = Channel::parseArg(1, cmd->arguments);
-		std::cout << "TOPIC here IS " << split[3] << "\n\n";
+		topic = Channel::parseArg(2, cmd->arguments);
+
 		std::vector<Chan>::iterator	ite = getChan(split[0]);
 		if (ite == chans.end()) { // this chan does not exist yet: insert new channel data
 			chans.push_back(Chan(
 				std::string(split[0]),
 				std::string(split[1]),
 				std::string(split[2]),
-				std::string(topic)
+				std::string(topic),
+				std::vector<std::string>(users)
 			));
 		} else { // channel exists, just update it
 			(*ite).name = std::string(split[0]);
 			(*ite).usersNum = std::string(split[1]);
 			(*ite).modes = std::string(split[2]);
 			(*ite).topic = std::string(topic);
+			(*ite).nicknames = std::vector<std::string>(users);
 			if ((*ite).usersNum == "0") {
 				chans.erase(ite);
 			}
@@ -616,7 +627,7 @@ void	OtherServ::PART(Command *cmd)
 	if (cmd->arguments.size() >= 1) {
 		chanName = cmd->arguments[0];
 		if (cmd->arguments.size() >= 2)
-			reason = cmd->arguments[1];
+			reason = Channel::parseArg(1, cmd->arguments);
 		// check if we have the channel
 		if (ev->channels->getChannel(chanName)) {
 			// if we have channel, we use ChannelMaster.leave() method
@@ -634,7 +645,7 @@ void	OtherServ::PART(Command *cmd)
 						// forward the request to this serv
 						ms = ":";
 						ms += cmd->prefix; // the user who wants to join the channel
-						ms += " PART " + chanName + " " + reason;
+						ms += " PART " + chanName + " :" + reason;
 						custom_send(ms, sv);
 						return ;
 					}

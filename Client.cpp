@@ -1317,6 +1317,26 @@ void	Client::JOIN(Command *cmd) {
 	ev->cmd_count["JOIN"] += 1;
 
 	if (cmd->arguments.size() >= 1) {
+		if (cmd->arguments[0] == "0") {
+			for (OtherServ *serv : ev->otherServers) {
+				for (Chan chan : serv->chans) {
+					std::cout << "leaving " + chan.name << "\n";
+					if (std::find(chan.nicknames.begin(), chan.nicknames.end(), utils::ircLowerCase(nick)) != chan.nicknames.end()) {
+						ev->channels->leaveChannel(this, chan.name, "Leaving all channels");
+					} 
+				}
+			}
+			std::list<Channel *>::iterator	current = channels.begin();
+			while (current != channels.end()) {
+				Channel	*ch = *current;
+				std::cout << "leaving local " + ch->getName() << "\n";
+				if (ev->channels->leaveChannel(this, ch->getName(), "Leaving all channels"))
+					current = channels.begin();
+				else
+					++current;
+			}
+			return ;
+		}
 		ev->channels->join(this, cmd->arguments, &channels);
 	} else {
 		ms = reply_formating(servername.c_str(), ERR_NEEDMOREPARAMS, {cmd->line}, nick.c_str());

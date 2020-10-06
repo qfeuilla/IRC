@@ -127,7 +127,7 @@ bool	ChannelMaster::leaveChannel(Client *client, const std::string &channelName,
 		// if there is chan with this name in another serv, we forward the part message to this serv
 		serv = client->getServByChannelName(channelName);
 		if (serv) {
-			ms = ":" + client->nick + " PART " + channelName  + " " + reason;
+			ms = ":" + client->nick + " PART " + channelName  + " :" + reason;
 			custom_send(ms, serv);
 			return (true);
 		}
@@ -194,9 +194,6 @@ bool	ChannelMaster::mode(Client *client, const std::vector<std::string> &args)
 
 	chan = getChannel(args[0]);
 	
-	if (!(operations[0] == '+' || operations[0] == '-'))
-		return (false);
-	append = operations[0] == '+';
 	if (!chan) {
 		serv = client->getServByChannelName(args[0]);
 		if (!serv)
@@ -208,6 +205,19 @@ bool	ChannelMaster::mode(Client *client, const std::vector<std::string> &args)
 		custom_send(ms, serv);
 		return (true);
 	}
+	if (operations[0] == 'O') {
+		chan->showChanCreator(client);
+		return (true);
+	} else if (operations[0] == 'I') {
+		chan->showInvitelist(client);
+	} else if (operations[0] == 'e') {
+		chan->showExceptionlist(client);
+	} else if (operations[0] == 'b') {
+		chan->showBanlist(client);
+	}
+	if (!(operations[0] == '+' || operations[0] == '-'))
+		return (false);
+	append = operations[0] == '+';
 	for (size_t i = 1; i < operations.size(); ++i) {
 		switch (operations[i])
 		{
@@ -216,10 +226,34 @@ bool	ChannelMaster::mode(Client *client, const std::vector<std::string> &args)
 				return (false);
 			chan->mode_o(append, client, args[2]);
 			break;
+		case 'O':
+			if (args.size() < 3)
+				chan->showChanCreator(client);
+			else
+				chan->mode_O(append, client, args[2]);
+			break;
+		case 'e':
+			if (args.size() < 3)
+				chan->showExceptionlist(client);
+			else
+				chan->mode_e(append, client, args[2]);
+			break;
 		case 'v':
 			if (args.size() < 3)
 				return (false);
 			chan->mode_v(append, client, args[2]);
+			break;
+		case 'b':
+			if (args.size() < 3)
+				chan->showBanlist(client);
+			else
+				chan->mode_b(append, client, args[2]);
+			break;
+		case 'I':
+			if (args.size() < 3)
+				chan->showInvitelist(client);
+			else
+				chan->mode_I(append, client, args[2]);
 			break;
 		case 'p':
 			chan->mode_p(append, client);
@@ -541,12 +575,13 @@ std::vector<Chan>	ChannelMaster::getChans() const
 
 	for (Channel *nextChannel : *_channels) {
 		if (nextChannel->getName()[0] == '&')
-			continue ;	
+			continue ;
 		vec.push_back(Chan(
 			std::string(nextChannel->getName()),
 			std::string(nextChannel->getUsersNum()),
 			std::string(nextChannel->getModes()),
-			std::string(nextChannel->getTopic())
+			std::string(nextChannel->getTopic()),
+			std::vector<std::string>(nextChannel->getUsersVec())
 		));
 	}
 	return (vec);
