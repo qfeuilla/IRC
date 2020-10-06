@@ -21,6 +21,7 @@
 bool		custom_send(std::string ms, Client *c) {
 	c->recv_ms += 1;
 	c->Kb_recv += sizeof(ms);
+	ms += CRLF;
 	send(c->sock, ms.c_str(), ms.length(), 0);
 	return (true);
 }
@@ -163,7 +164,6 @@ void	Client::NICK(Command *cmd) {
 						// we need to update the nick in all of client's channels
 						updateNickInChannels(oldNick, nick);
 					}
-					ms += CRLF;
 					custom_send(ms, this);
 					if (!nick_set) {
 						nick_set = true;
@@ -440,7 +440,6 @@ void	Client::MODE(Command *cmd) {
 					ms += cmd->arguments[0];
 					ms += " ";
 					ms += cmd->arguments[1];
-					ms += CRLF;
 					custom_send(ms, this);
 					for (OtherServ *sv : ev->otherServers) {
 						ms = ":";
@@ -495,7 +494,6 @@ void	Client::QUIT(Command *cmd) {
 	ans += nick;
 	ans += " You have been kick of the server with the message : ";
 	ans += ms;
-	ans += CRLF;
 	for (OtherServ *serv : ev->otherServers) {
 		ms = ":";
 		ms += nick;
@@ -547,7 +545,6 @@ void	Client::PRIVMSG(Command *cmd) {
 					ms += " ";
 				}
 				if (!(tmp = ev->search_list_nick(targ)).empty()) {
-					ms += CRLF;
 					Client *c = reinterpret_cast<Client *>(tmp[0]);
 					custom_send(ms, c);
 					good += 1;
@@ -602,7 +599,6 @@ void	Client::NOTICE(Command *cmd) {
 					ms += " ";
 				}
 				if (!(tmp = ev->search_list_nick(targ)).empty()) {
-					ms += CRLF;
 					Client *c = reinterpret_cast<Client *>(tmp[0]);
 					custom_send(ms, c);
 				} else if (!(tmpo = ev->search_othersrv_nick(targ)).empty()) {
@@ -1170,7 +1166,6 @@ void	Client::PING(Command *cmd) {
 			ms += cmd->arguments[i];
 			ms += " ";
 		}
-		ms += CRLF;
 		custom_send(ms, this);
 	} else {
 		ms = reply_formating(servername.c_str(), ERR_NOORIGIN, {}, nick.c_str());
@@ -1260,7 +1255,6 @@ void	Client::WALLOPS(Command *cmd) {
 			}
 			for (Fd *f : ev->search_list_with_mode("", "", 'w')) {
 				Client *c = reinterpret_cast<Client *>(f);
-				ms += CRLF;
 				custom_send(ms, c);
 			}
 		}

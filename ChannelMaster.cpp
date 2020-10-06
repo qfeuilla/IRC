@@ -96,7 +96,7 @@ bool	ChannelMaster::joinChannel(Client *client, const std::string &channelName, 
 		// if there is chan with this name in another serv, we forward the join message to this serv
 		serv = client->getServByChannelName(channelName);
 		if (serv) {
-			ms = ":" + client->nick + " JOIN " + channelName + " " + passwd + CRLF;
+			ms = ":" + client->nick + " JOIN " + channelName + " " + passwd;
 			custom_send(ms, serv);
 			return (true); // stop the function here to prevent creating a local channel
 		}
@@ -127,7 +127,7 @@ bool	ChannelMaster::leaveChannel(Client *client, const std::string &channelName,
 		// if there is chan with this name in another serv, we forward the part message to this serv
 		serv = client->getServByChannelName(channelName);
 		if (serv) {
-			ms = ":" + client->nick + " PART " + channelName  + " " + reason + CRLF;
+			ms = ":" + client->nick + " PART " + channelName  + " " + reason;
 			custom_send(ms, serv);
 			return (true);
 		}
@@ -171,7 +171,7 @@ bool	ChannelMaster::getChanModes(Client *client, const std::vector<std::string> 
 		// if there is chan with this name in another serv, we forward the join message to this serv
 		serv = client->getServByChannelName(args[0]);
 		if (serv) {
-			ms = ":" + client->nick + " MODE " + args[0] + CRLF;
+			ms = ":" + client->nick + " MODE " + args[0];
 			custom_send(ms, serv);
 			return (true); // stop the function here to prevent creating a local channel
 		}
@@ -205,7 +205,6 @@ bool	ChannelMaster::mode(Client *client, const std::vector<std::string> &args)
 		for (std::string str: args) {
 			ms += str + " ";
 		}
-		ms += CRLF;
 		custom_send(ms, serv);
 		return (true);
 	}
@@ -325,7 +324,7 @@ const std::string &guyToKick, const std::string &reason)
 		// if there is chan with this name in another serv, we forward the kick message to this serv
 		serv = client->getServByChannelName(chanName);
 		if (serv) {
-			ms = ":" + client->nick + " KICK " + chanName + " " + guyToKick + " :" + reason + CRLF;
+			ms = ":" + client->nick + " KICK " + chanName + " " + guyToKick + " :" + reason;
 			custom_send(ms, serv);
 			return (true);
 		}
@@ -357,7 +356,6 @@ bool	ChannelMaster::broadcastMsg(Client *client, const std::string &chanName, co
 		serv = client->getServByChannelName(chanName);
 		if (serv) {
 			ms = ":" + client->nick + (sendErrors ? " PRIVMSG " : " NOTICE ") + chanName + " :" + msgToSend;
-			ms += CRLF;
 			custom_send(ms, serv);
 			return (true);
 		}
@@ -380,7 +378,6 @@ bool	ChannelMaster::broadcastMsg(Client *client, const std::string &chanName, co
 	ms = ":" + client->nick + "!" + client->username + "@" + client->servername;
 	ms += sendErrors ? " PRIVMSG " : " NOTICE ";
 	ms += channel->getName() + " :" + msgToSend;
-	ms += CRLF;
 	return (channel->broadcastMsg(client, ms));
 }
 
@@ -403,7 +400,6 @@ bool	ChannelMaster::topic(Client *client, const std::vector<std::string> &args)
 			ms = ":" + client->nick + " TOPIC " + args[0];
 			if (newTopic != "")
 				ms += " :" + newTopic;
-			ms += CRLF;
 			custom_send(ms, serv);
 			return (true);
 		}
@@ -436,7 +432,7 @@ bool	ChannelMaster::invite(Client *client, const std::vector<std::string> &args)
 		// if there is chan with this name in another serv, we forward the invite message to this serv
 		serv = client->getServByChannelName(args[1]);
 		if (serv) {
-			ms = ":" + client->nick + " INVITE " + args[0] + " " + args[1] + CRLF;
+			ms = ":" + client->nick + " INVITE " + args[0] + " " + args[1];
 			custom_send(ms, serv);
 			return (true);
 		}
@@ -469,7 +465,7 @@ bool	ChannelMaster::list(Client *client, const std::vector<std::string> &args)
 
 	// begin list
 	std::string	ms;
-	ms = ":" + client->servername + " 321 " + client->nick + " Channel :Users Name" + CRLF;
+	ms = ":" + client->servername + " 321 " + client->nick + " Channel :Users Name";
 	custom_send(ms, client);
 
 	// * local chans
@@ -521,7 +517,7 @@ bool	ChannelMaster::list(Client *client, const std::vector<std::string> &args)
 	}
 
 	// end list
-	ms = ":" + client->servername + " 323 " + client->nick + " :End of channel list" + CRLF;
+	ms = ":" + client->servername + " 323 " + client->nick + " :End of channel list";
 	custom_send(ms, client);
 	return (true);
 }

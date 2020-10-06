@@ -165,7 +165,6 @@ void	OtherServ::PRIVMSG(Command *cmd) {
 		}
 		if (!(tmpc = ev->search_list_nick(cmd->arguments[0])).empty()) {
 			c = reinterpret_cast<Client *>(tmpc[0]);
-			ms += CRLF;
 			custom_send(ms, c);
 		} else if (!(tmpo = ev->search_othersrv_nick(cmd->arguments[0])).empty()) {
 			custom_send(ms, tmpo[0]);
@@ -198,7 +197,6 @@ void	OtherServ::NOTICE(Command *cmd) {
 		}
 		if (!(tmpc = ev->search_list_nick(cmd->arguments[0])).empty()) {
 			c = reinterpret_cast<Client *>(tmpc[0]);
-			ms += CRLF;
 			custom_send(ms, c);
 		} else if (!(tmpo = ev->search_othersrv_nick(cmd->arguments[0])).empty()) {
 			custom_send(ms, tmpo[0]);
@@ -378,7 +376,6 @@ void	OtherServ::KILL(Command *cmd) {
 		ans += c->nick;
 		ans += " You have been kick of the server with the message : ";
 		ans += ms;
-		ans += CRLF;
 		custom_send(ans, c);
 		ev->clients_fd[c->sock] = new Fd();
 		close(c->sock);
@@ -473,7 +470,6 @@ void	OtherServ::TRACEUP(Command *cmd) {
 		ms += cmd->arguments[5];
 		ms += " :";
 		ms += cmd->arguments[6];
-		ms += CRLF;
 		ms = reply_formating(c->servername.c_str(), RPL_TRACEUSER, std::vector<std::string>({cmd->arguments[0], ms}), c->nick.c_str());
 		custom_send(ms, c);
 	} else {
@@ -904,6 +900,7 @@ void	OtherServ::read_func() {
 			std::cout << "old :" << line << std::endl;
 			if (htons(ev->sin.sin_port) == TLS_PORT)
 				line = utils::decrypt(line);
+			std::cout << "OK" << std::endl;
 			_stream = _stream.substr(pos + charsToJump);
 
 			Kb_sent += sizeof(line);

@@ -45,6 +45,5 @@ std::string		_reply_formating(const char *server, Error err, std::vector<std::st
 	reply += user;
 	reply += " ";
 	reply += fast_format(err.to_format, params);
-	reply += CRLF;
 	return (reply);
 }

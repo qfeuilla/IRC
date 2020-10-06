@@ -52,7 +52,6 @@ bool				Channel::setTopic(Client *client, const std::string &newTopic)
 	_topic = std::string(newTopic);
 	ms = ":" + client->nick + "!" + client->username + "@" + client->servername;
 	ms += " TOPIC " + getName() + " :" +_topic;
-	ms += CRLF;
 	rplMsg(ms, client);
 	broadcastMsg(client, ms);
 	updateServsChan(client); // update servers chan
@@ -102,7 +101,6 @@ bool				Channel::join(Client *client, const std::string &passwd)
 		std::string	join_msg = ":" + client->nick;
 		join_msg += "!" + client->username + "@" + _srv_name;
 		join_msg += " JOIN :" + getName();
-		join_msg += CRLF;
 
 		rplMsg(join_msg, client);
 		if (!_modes.q)
@@ -127,7 +125,6 @@ bool				Channel::leave(Client *client, const std::string &reason, bool muted)
 	ms = ":" + client->nick + "!" + client->username + "@";
 	ms += client->servername + " PART " + getName();
 	ms += (reason != "") ? " :" + reason : "";
-	ms += CRLF;
 	if (!muted) {
 		rplMsg(ms, client);
 		if (!_modes.q)
@@ -155,7 +152,6 @@ bool	Channel::mode_o(bool append, Client *client, const std::string &target)
 		_modes.o.push_back(utils::ircLowerCase(target));
 		ms = ":" + client->nick + "!" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " +o " + utils::ircLowerCase(target);
-		ms += CRLF;
 		broadcastMsg(client, ms);
 		return (rplMsg(ms, client));
 	}
@@ -166,7 +162,6 @@ bool	Channel::mode_o(bool append, Client *client, const std::string &target)
 		_modes.o.remove(utils::ircLowerCase(target));
 		ms = ":" + client->nick + "!" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " -o " + utils::ircLowerCase(target);
-		ms += CRLF;
 		broadcastMsg(client, ms);
 		return (rplMsg(ms, client));
 	}
@@ -185,7 +180,6 @@ bool	Channel::mode_v(bool append, Client *client, const std::string &target)
 		_modes.v.push_back(utils::ircLowerCase(target));
 		ms = ":" + client->nick + "!" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " +v " + utils::ircLowerCase(target);
-		ms += CRLF;
 		broadcastMsg(client, ms);
 		return (rplMsg(ms, client));
 	}
@@ -196,7 +190,6 @@ bool	Channel::mode_v(bool append, Client *client, const std::string &target)
 		_modes.v.remove(utils::ircLowerCase(target));
 		ms = ":" + client->nick + "!" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " -v " + utils::ircLowerCase(target);
-		ms += CRLF;
 		broadcastMsg(client, ms);
 		return (rplMsg(ms, client));
 	}
@@ -211,7 +204,6 @@ bool	Channel::mode_p(bool append, Client *client)
 		_modes.p = true;
 		ms = ":" + client->nick + "!" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " +p";
-		ms += CRLF;
 		broadcastMsg(client, ms);
 		return (rplMsg(ms, client));
 	}
@@ -219,7 +211,6 @@ bool	Channel::mode_p(bool append, Client *client)
 		_modes.p = false;
 		ms = ":" + client->nick + "!" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " -p";
-		ms += CRLF;
 		broadcastMsg(client, ms);
 		return (rplMsg(ms, client));
 	}
@@ -234,7 +225,6 @@ bool	Channel::mode_s(bool append, Client *client)
 		_modes.s = true;
 		ms = ":" + client->nick + "!" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " +s";
-		ms += CRLF;
 		broadcastMsg(client, ms);
 		return (rplMsg(ms, client));
 	}
@@ -242,7 +232,6 @@ bool	Channel::mode_s(bool append, Client *client)
 		_modes.s = false;
 		ms = ":" + client->nick + "!" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " -s";
-		ms += CRLF;
 		broadcastMsg(client, ms);
 		return (rplMsg(ms, client));
 	}
@@ -257,7 +246,6 @@ bool	Channel::mode_i(bool append, Client *client)
 		_modes.i = true;
 		ms = ":" + client->nick + "!" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " +i";
-		ms += CRLF;
 		broadcastMsg(client, ms);
 		return (rplMsg(ms, client));
 	}
@@ -265,7 +253,6 @@ bool	Channel::mode_i(bool append, Client *client)
 		_modes.i = false;
 		ms = ":" + client->nick + "!" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " -i";
-		ms += CRLF;
 		broadcastMsg(client, ms);
 		return (rplMsg(ms, client));
 	}
@@ -280,7 +267,6 @@ bool	Channel::mode_t(bool append, Client *client)
 		_modes.t = true;
 		ms = ":" + client->nick + "!" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " +t";
-		ms += CRLF;
 		broadcastMsg(client, ms);
 		return (rplMsg(ms, client));
 	}
@@ -288,7 +274,6 @@ bool	Channel::mode_t(bool append, Client *client)
 		_modes.t = false;
 		ms = ":" + client->nick + "!" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " -t";
-		ms += CRLF;
 		broadcastMsg(client, ms);
 		return (rplMsg(ms, client));
 	}
@@ -303,7 +288,6 @@ bool	Channel::mode_m(bool append, Client *client)
 		_modes.m = true;
 		ms = ":" + client->nick + "!" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " +m";
-		ms += CRLF;
 		broadcastMsg(client, ms);
 		return (rplMsg(ms, client));
 	}
@@ -311,7 +295,6 @@ bool	Channel::mode_m(bool append, Client *client)
 		_modes.m = false;
 		ms = ":" + client->nick + "!" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " -m";
-		ms += CRLF;
 		broadcastMsg(client, ms);
 		return (rplMsg(ms, client));
 	}
@@ -326,7 +309,6 @@ bool	Channel::mode_n(bool append, Client *client)
 		_modes.n = true;
 		ms = ":" + client->nick + "!" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " +n";
-		ms += CRLF;
 		broadcastMsg(client, ms);
 		return (rplMsg(ms, client));
 	}
@@ -334,7 +316,6 @@ bool	Channel::mode_n(bool append, Client *client)
 		_modes.n = false;
 		ms = ":" + client->nick + "!" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " -n";
-		ms += CRLF;
 		broadcastMsg(client, ms);
 		return (rplMsg(ms, client));
 	}
@@ -349,7 +330,6 @@ bool	Channel::mode_q(bool append, Client *client)
 		_modes.q = true;
 		ms = ":" + client->nick + "!" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " +q";
-		ms += CRLF;
 		broadcastMsg(client, ms);
 		return (rplMsg(ms, client));
 	}
@@ -357,7 +337,6 @@ bool	Channel::mode_q(bool append, Client *client)
 		_modes.q = false;
 		ms = ":" + client->nick + "!" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " -q";
-		ms += CRLF;
 		broadcastMsg(client, ms);
 		return (rplMsg(ms, client));
 	}
@@ -372,7 +351,6 @@ bool	Channel::mode_l(bool append, Client *client, int limit)
 		_modes.l = limit;
 		ms = ":" + client->nick + "!" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " +l " + std::to_string(limit);
-		ms += CRLF;
 		broadcastMsg(client, ms);
 		return (rplMsg(ms, client));
 	}
@@ -380,7 +358,6 @@ bool	Channel::mode_l(bool append, Client *client, int limit)
 		_modes.l = -1;
 		ms = ":" + client->nick + "!" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " -l";
-		ms += CRLF;
 		broadcastMsg(client, ms);
 		return (rplMsg(ms, client));
 	}
@@ -404,14 +381,12 @@ bool	Channel::mode_k(bool append, Client *client, const std::string &passwd)
 		_modes.k = passwd;
 		ms = ":" + client->nick + "!" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " +k " + passwd;
-		ms += CRLF;
 		broadcastMsg(client, ms);
 		return (rplMsg(ms, client));
 	} else {
 		_modes.k = "";
 		ms = ":" + client->nick + "!" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " -k";
-		ms += CRLF;
 		broadcastMsg(client, ms);
 		return (rplMsg(ms, client));
 	}
@@ -451,7 +426,6 @@ bool	Channel::kick(Client *client, const std::string &guyToKick, const std::stri
 		ms = ":" + client->nick + "!a" + client->username + "@";
 		ms += client->servername + " KICK " + getName() + " " + guyToKick;
 		ms += (reason != "") ? " :" + reason : " :" + client->nick;
-		ms += CRLF;
 		rplMsg(ms, client);
 		broadcastMsg(client, ms);
 
@@ -495,7 +469,6 @@ bool	Channel::invite(Client *client, const std::string &guyToInvite)
 		_modes.invitation_list.push_back(utils::ircLowerCase(guyToInvite));
 	ms = ":" + client->nick + "!" + client->username + "@" + client->servername;
 	ms += " INVITE " + utils::ircLowerCase(guyToInvite) + " :" + getName();
-	ms += CRLF;
 	rplMsg(ms, clientToInvite);
 	ms = reply_formating(client->servername.c_str(), RPL_INVITING,
 	std::vector<std::string>({utils::ircLowerCase(guyToInvite), getName()}), client->nick.c_str());
@@ -567,7 +540,7 @@ void		Channel::changeNick(const std::string &oldNick, const std::string &newNick
 	// * not in RFC but usefull
 	// :paprika!~pokemon@ip-46.net-80-236-89.joinville.rev.numericable.fr NICK :patrick-2
 	ms = ":" + oldNick + "!" + client->username + "@" + client->servername;
-	ms += " NICK :" + newNick + CRLF;
+	ms += " NICK :" + newNick;
 	if (!_modes.q)
 		broadcastMsg(client, ms);
 }
@@ -583,7 +556,6 @@ bool		Channel::quit(Client *client, const std::vector<std::string> &args)
 		if (i + 1 < args.size())
 			ms += " ";
 	}
-	ms += CRLF;
 	broadcastMsg(client, ms);
 	leave(client, "", true);
 	return (true);
@@ -628,6 +600,5 @@ void			Channel::updateServsChan(Client *c) const
 	ms = "CHAN_CHG ";
 	ms += getName() + "," + getUsersNum() + "," + getModes() + " ";
 	ms += (getTopic() != "") ? ":" + getTopic() : ":!";
-	ms += CRLF;
 	c->sendToAllServs(ms);
 }
