@@ -64,6 +64,7 @@ Client::Client(Environment *e, int s, struct sockaddr_in addr) : channels(), ev(
 	csin = addr;
 	hostname = std::string(inet_ntoa(csin.sin_addr)); // * ip of the user if not specified
 	serv = nullptr;
+	hop_count = 1;
 }
 
 Client::Client(std::string nc, OtherServ *srv) {
@@ -956,6 +957,12 @@ void	Client::WHO(Command *cmd) {
 		std::map<std::string, Fd *>	matchMap;
 		std::string					mask = cmd->arguments[0];
 
+		if (ev->channels->localChanWHO(this, cmd->arguments))
+			return ;
+		for (OtherServ *serv : ev->otherServers) {
+			if (serv->chanWHO(this, cmd->arguments))
+				return ;
+		}
 		for (Fd *f: ev->clients_fd) {
 			if (f->type == FD_CLIENT) {
 				Client *c = reinterpret_cast<Client *>(f);
@@ -973,6 +980,7 @@ void	Client::WHO(Command *cmd) {
 		}
 		for (OtherServ *sv: ev->otherServers) {
 			for (Client *c : sv->clients) {
+				c->hop_count = sv->hop_count;
 				if (utils::strMatchToLower(mask, c->hostname) && isVisible(c))
 					matchMap[c->nick] = c;
 				if (utils::strMatchToLower(mask, c->servername) && isVisible(c))
@@ -996,7 +1004,7 @@ void	Client::WHO(Command *cmd) {
 				ms += c->servername;
 				ms += " ";
 				ms += c->nick;
-				ms += " H :0 ";
+				ms += " H :" + std::to_string(c->hop_count) + " ";
 				ms += c->realname;
 				ms = reply_formating(servername.c_str(), RPL_WHOREPLY, {ms},nick.c_str());
 				custom_send(ms, this);
@@ -1006,7 +1014,6 @@ void	Client::WHO(Command *cmd) {
 		for (Fd *f: ev->clients_fd) {
 			if (f->type == FD_CLIENT) {
 				Client *c = reinterpret_cast<Client *>(f);
-				// TODO : addind same channel checking (WHEN MULTISERV CHANNELS WILL BE DONE)
 				if (isVisible(c)) {
 					ms += c->username;
 					ms += " ";
@@ -1024,6 +1031,7 @@ void	Client::WHO(Command *cmd) {
 		}
 		for (OtherServ *sv: ev->otherServers) {
 			for (Client *c : sv->clients) {
+				c->hop_count = sv->hop_count;
 				if (isVisible(c)) {
 					ms = c->username;
 					ms += " ";
@@ -1032,7 +1040,7 @@ void	Client::WHO(Command *cmd) {
 					ms += c->servername;
 					ms += " ";
 					ms += c->nick;
-					ms += " H :0 ";
+					ms += " H :" + std::to_string(c->hop_count) + " ";
 					ms += c->realname;
 					ms = reply_formating(servername.c_str(), RPL_WHOREPLY, {ms},nick.c_str());
 					custom_send(ms, this);

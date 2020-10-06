@@ -1000,3 +1000,40 @@ std::vector<Chan>::iterator	OtherServ::getChan(const std::string &name)
 	}
 	return (chans.end());
 }
+
+bool		OtherServ::chanWHO(Client *client, const std::vector<std::string> &args)
+{
+	std::string	ms;
+	Client		*c;
+	std::vector<Chan>::iterator	chan = getChan(args[0]);
+	std::vector<std::string>::iterator	end;
+
+	if (chan == chans.end())
+		return (false);
+	end = chan->nicknames.end();
+	if (std::find(chan->nicknames.begin(), end, utils::ircLowerCase(client->nick)) == end) {
+		ms = ":" + client->servername + " 315 " + client->nick + " " + args[0] + " :End of /WHO list";
+		custom_send(ms, client);
+		return (true);
+	}
+	for (std::string clientNick : chan->nicknames) {
+		if (utils::strCmp(clientNick, client->nick)) {
+			ms = ":" + client->servername + " 352 " + client->nick + " " + args[0] + " ";
+			ms += client->username + " " + client->hostname + " " + client->servername + " " + client->nick;
+			ms += " H :" + std::to_string(client->hop_count) + " " + client->realname;
+			custom_send(ms, client);
+		}
+		c = ev->getOtherServClientByNick(clientNick);
+		if (!c)
+			continue ;
+
+		ms = ":" + client->servername + " 352 " + client->nick + " " + args[0] + " ";
+		ms += c->username + " " + c->hostname + " " + c->servername + " " + c->nick;
+		ms += " H :" + std::to_string(c->hop_count) + " " + c->realname;
+		custom_send(ms, client);
+	}
+
+	ms = ":" + client->servername + " 315 " + client->nick + " " + args[0] + " :End of /WHO list";
+	custom_send(ms, client);
+	return (true);
+}

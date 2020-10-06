@@ -142,6 +142,7 @@ public:
 	void			showInvitelist(Client *client) const;
 	void			showExceptionlist(Client *client) const;
 	void			showChanCreator(Client *client) const;
+	bool			who(Client *client) const;
 
 };
 

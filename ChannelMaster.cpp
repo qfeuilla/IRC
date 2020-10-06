@@ -595,3 +595,12 @@ void		ChannelMaster::doQuit(Client *client, const std::vector<std::string> &args
 		}
 	}
 }
+
+bool		ChannelMaster::localChanWHO(Client *client, const std::vector<std::string> &args)
+{
+	Channel *chan = getChannel(args[0]);
+
+	if (!chan)
+		return (false);
+	return (chan->who(client));
+}

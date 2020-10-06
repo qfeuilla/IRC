@@ -808,3 +808,25 @@ void		Channel::showChanCreator(Client *client) const
 	std::vector<std::string>({getName(), getCreator()}), client->nick.c_str());
 	rplMsg(ms, client);
 }
+// :192.168.0.13 352 bob #1 ~adwonno 127.0.0.1 192.168.0.13 bob H :0 boby
+// :orwell.freenode.net 352 adwonno__ #tructruc ~pokemon ip-46.net-80-236-89.joinville.rev.numericable.fr orwell.freenode.net adwonno__ H :0 tortipouss
+// :wilhelm.freenode.net 315 ratata #superxd :End of /WHO list.
+bool		Channel::who(Client *client) const
+{
+	std::string	ms;
+	if (!isInChan(client->nick)) {
+		ms = ":" + client->servername + " 315 " + client->nick + " " + getName() + " :End of /WHO list";
+		custom_send(ms, client);
+		return (true);
+	}
+	for (std::pair<std::string, Client*> pair : _users) {
+		Client *c = pair.second;
+		ms = ":" + client->servername + " 352 " + client->nick + " " + getName() + " ";
+		ms += c->username + " " + c->hostname + " " + c->servername + " " + c->nick;
+		ms += " H :" + std::to_string(c->hop_count) + " " + c->realname;
+		custom_send(ms, client);
+	}
+	ms = ":" + client->servername + " 315 " + client->nick + " " + getName() + " :End of /WHO list";
+	custom_send(ms, client);
+	return (true);
+}

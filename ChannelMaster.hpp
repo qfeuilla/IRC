@@ -66,6 +66,7 @@ public:
 	const std::string &guyToKick, const std::string &reason);
 
 	void		doQuit(Client *client, const std::vector<std::string> &args);
+	bool		localChanWHO(Client *client, const std::vector<std::string> &args);
 };
 
 #endif

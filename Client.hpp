@@ -118,6 +118,8 @@ public:
 
 	OtherServ			*serv;
 
+	int					hop_count = 0;
+
 	static bool	thereIsAFullCmd(size_t &pos, size_t& charsToJump, const std::string &str);
 
 	OtherServ	*getServByChannelName(const std::string &nickname);
