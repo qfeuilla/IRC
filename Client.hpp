@@ -135,6 +135,7 @@ private:
 	std::string			_stream;
 
 	bool	_cmdNeedAuth(int cmdCode) const;
+	bool	isVisible(Client *otherClient);
 };
 
 std::ostream &			operator<<( std::ostream & o, Client const & i );
