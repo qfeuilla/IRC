@@ -112,6 +112,13 @@ bool				Channel::join(Client *client, const std::string &passwd)
 		rplMsg(join_msg, client);
 		if (!_modes.q)
 			broadcastMsg(client, join_msg);
+		if (getTopic() != "") {
+			ms = reply_formating(client->servername.c_str(), RPL_TOPIC, std::vector<std::string>({getName(), getTopic()}), client->nick.c_str());
+			rplMsg(ms, client);
+		}
+
+		usrList(client);
+		
 		updateServsChan(client); // update servers chan
 		return (true);
 	}
@@ -807,4 +814,53 @@ void		Channel::showChanCreator(Client *client) const
 	ms = reply_formating(client->servername.c_str(), RPL_UNIQOPIS,
 	std::vector<std::string>({getName(), getCreator()}), client->nick.c_str());
 	rplMsg(ms, client);
+}
+
+// :orwell.freenode.net 353 adwonno__ @ #superxd :adwonno__ ratata
+// :wilhelm.freenode.net 353 ratata @ #superxd :ratata adwonno
+bool		Channel::usrList(Client *client) const
+{
+	std::string	ms;
+	if (!isInChan(client->nick)) {
+		ms = reply_formating(client->servername.c_str(), RPL_ENDOFNAMES, {getName()}, client->nick.c_str());
+		rplMsg(ms, client);
+		return (true);
+	}
+	ms = ":" + client->servername + " 353 " + client->nick + " @ " + getName() + " :";
+	for (std::pair<std::string, Client*> pair : _users) {
+		Client *c = pair.second;
+		if (_hasRights(c->nick))
+			ms += "@";
+		if (_isInList(c->nick, _modes.v))
+			ms += "+";
+		ms += c->nick + " ";
+	}
+	rplMsg(ms, client);
+	ms = reply_formating(client->servername.c_str(), RPL_ENDOFNAMES, {getName()}, client->nick.c_str());
+	rplMsg(ms, client);
+	return (true);
+}
+
+
+// :192.168.0.13 352 bob #1 ~adwonno 127.0.0.1 192.168.0.13 bob H :0 boby
+// :orwell.freenode.net 352 adwonno__ #tructruc ~pokemon ip-46.net-80-236-89.joinville.rev.numericable.fr orwell.freenode.net adwonno__ H :0 tortipouss
+// :wilhelm.freenode.net 315 ratata #superxd :End of /WHO list.
+bool		Channel::who(Client *client) const
+{
+	std::string	ms;
+	if (!isInChan(client->nick)) {
+		ms = ":" + client->servername + " 315 " + client->nick + " " + getName() + " :End of /WHO list";
+		custom_send(ms, client);
+		return (true);
+	}
+	for (std::pair<std::string, Client*> pair : _users) {
+		Client *c = pair.second;
+		ms = ":" + client->servername + " 352 " + client->nick + " " + getName() + " ";
+		ms += c->username + " " + c->hostname + " " + c->servername + " " + c->nick;
+		ms += " H :" + std::to_string(c->hop_count) + " " + c->realname;
+		custom_send(ms, client);
+	}
+	ms = ":" + client->servername + " 315 " + client->nick + " " + getName() + " :End of /WHO list";
+	custom_send(ms, client);
+	return (true);
 }

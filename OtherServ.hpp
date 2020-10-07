@@ -52,6 +52,7 @@ public:
 	void			KICK(Command *);
 	void			TOPIC(Command *);
 	void			INVITE(Command *);
+	void			NAMES(Command *);
 
 	void			chanModes(Command *);
 
@@ -86,6 +87,7 @@ public:
 	
 	std::vector<Chan>		chans;
 	std::vector<Chan>::iterator	getChan(const std::string &name);
+	bool	chanWHO(Client *client, const std::vector<std::string> &args);
 private :
 	Environment		*ev;
 

@@ -50,6 +50,8 @@ public:
 	// * list always return true
 	bool	list(Client *client, const std::vector<std::string> &args);
 
+	bool	names(Client *client, const std::vector<std::string> &args);
+	bool	chanNames(Client *client, const std::string &channelName);
 
 	bool	getChanModes(Client *client, const std::vector<std::string> &args);
 
@@ -66,6 +68,7 @@ public:
 	const std::string &guyToKick, const std::string &reason);
 
 	void		doQuit(Client *client, const std::vector<std::string> &args);
+	bool		localChanWHO(Client *client, const std::vector<std::string> &args);
 };
 
 #endif

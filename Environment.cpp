@@ -135,6 +135,17 @@ std::vector<OtherServ *>	Environment::search_othersrv_nick(std::string nk) {
 	return (buff);
 }
 
+Client		*Environment::getOtherServClientByNick(const std::string &nick)
+{
+	for (OtherServ *srv : otherServers) {
+		for (Client *c : srv->clients) {
+			if (utils::strCmp(c->nick, nick))
+				return (c);
+		}
+	}
+	return (nullptr);
+}
+
 std::vector<OtherServ *>	Environment::search_othersrv_history_nick(std::string nk) {
 	std::vector<OtherServ *> buff;
 

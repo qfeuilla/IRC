@@ -788,6 +788,41 @@ void	OtherServ::INVITE(Command *cmd)
 	}
 }
 
+void	OtherServ::NAMES(Command *cmd)
+{
+	std::string	ms;
+	std::string	chanName;
+	std::vector<Client *>::iterator	client;
+
+	if (cmd->prefix.empty())
+		return ;
+	if (cmd->arguments.size() >= 1) {
+		chanName = cmd->arguments[0];
+		// check if we have the channel
+		if (ev->channels->getChannel(chanName)) {
+			// if we have channel, we use ChannelMaster.invite() method
+			client = search_nick(cmd->prefix);
+			if (client == clients.end())
+				return ; // message forgery won't error the server
+			ev->channels->chanNames(*client, chanName);
+			return ;
+		}
+		// if we do not have the channel, we forward the msg to the right serv
+		for (OtherServ *sv : ev->otherServers) {
+			if (sv != this) {
+				for (Chan &chan : sv->chans) {
+					if (utils::strCmp(chan.name, chanName)) {
+						// forward the request to this serv
+						ms = ":" + cmd->prefix + " INVITE " + chanName;
+						custom_send(ms, sv);
+						return ;
+					}
+				}
+			}
+		}
+	}
+}
+
 int		OtherServ::execute_parsed(Command *parsed) {
 	switch (parsed->cmd_code()) {
 	case NICK_CC:
@@ -855,6 +890,9 @@ int		OtherServ::execute_parsed(Command *parsed) {
 		break;
 	case INVITE_CC:
 		INVITE(parsed);
+		break;
+	case NAMES_CC:
+		NAMES(parsed);
 		break;
 	default:
 		break;
@@ -999,4 +1037,41 @@ std::vector<Chan>::iterator	OtherServ::getChan(const std::string &name)
 		++current;
 	}
 	return (chans.end());
+}
+
+bool		OtherServ::chanWHO(Client *client, const std::vector<std::string> &args)
+{
+	std::string	ms;
+	Client		*c;
+	std::vector<Chan>::iterator	chan = getChan(args[0]);
+	std::vector<std::string>::iterator	end;
+
+	if (chan == chans.end())
+		return (false);
+	end = chan->nicknames.end();
+	if (std::find(chan->nicknames.begin(), end, utils::ircLowerCase(client->nick)) == end) {
+		ms = ":" + client->servername + " 315 " + client->nick + " " + args[0] + " :End of /WHO list";
+		custom_send(ms, client);
+		return (true);
+	}
+	for (std::string clientNick : chan->nicknames) {
+		if (utils::strCmp(clientNick, client->nick)) {
+			ms = ":" + client->servername + " 352 " + client->nick + " " + args[0] + " ";
+			ms += client->username + " " + client->hostname + " " + client->servername + " " + client->nick;
+			ms += " H :" + std::to_string(client->hop_count) + " " + client->realname;
+			custom_send(ms, client);
+		}
+		c = ev->getOtherServClientByNick(clientNick);
+		if (!c)
+			continue ;
+
+		ms = ":" + client->servername + " 352 " + client->nick + " " + args[0] + " ";
+		ms += c->username + " " + c->hostname + " " + c->servername + " " + c->nick;
+		ms += " H :" + std::to_string(c->hop_count) + " " + c->realname;
+		custom_send(ms, client);
+	}
+
+	ms = ":" + client->servername + " 315 " + client->nick + " " + args[0] + " :End of /WHO list";
+	custom_send(ms, client);
+	return (true);
 }

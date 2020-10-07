@@ -74,6 +74,7 @@ public:
 	void				TRACE(Command *);
 	void				SQUIT(Command *);
 	void				CONNECT(Command *);
+	void				NAMES(Command *);
 
 	int					execute_parsed(Command *);
 
@@ -118,6 +119,8 @@ public:
 
 	OtherServ			*serv;
 
+	int					hop_count = 0;
+
 	static bool	thereIsAFullCmd(size_t &pos, size_t& charsToJump, const std::string &str);
 
 	OtherServ	*getServByChannelName(const std::string &nickname);
@@ -135,6 +138,7 @@ private:
 	std::string			_stream;
 
 	bool	_cmdNeedAuth(int cmdCode) const;
+	bool	isVisible(Client *otherClient);
 };
 
 std::ostream &			operator<<( std::ostream & o, Client const & i );

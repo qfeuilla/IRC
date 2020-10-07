@@ -38,6 +38,8 @@ bool	utils::strMatch(const std::string &filter, const std::string &str)
 		++strI;
 		++filterI;
 	}
+	while (filterI < filter.size() && filter[filterI] == '*')
+		++filterI;
 	if (strI < str.size())
 		return (false);
 	if (filterI < filter.size())

@@ -72,6 +72,7 @@ Client::Client(std::string nc, OtherServ *srv) {
 	sock = -1;
 	nick = nc;
 	serv = srv;
+	hop_count = 1;
 }
 
 Client::~Client() {
@@ -956,20 +957,39 @@ void	Client::WHO(Command *cmd) {
 		std::map<std::string, Fd *>	matchMap;
 		std::string					mask = cmd->arguments[0];
 
+		if (ev->channels->localChanWHO(this, cmd->arguments))
+			return ;
+		for (OtherServ *serv : ev->otherServers) {
+			if (serv->chanWHO(this, cmd->arguments))
+				return ;
+		}
 		for (Fd *f: ev->clients_fd) {
 			if (f->type == FD_CLIENT) {
 				Client *c = reinterpret_cast<Client *>(f);
-				if (utils::strMatchToLower(mask, c->realname) && !c->i_mode)
+				if (utils::strMatchToLower(mask, c->hostname) && isVisible(c))
 					matchMap[c->nick] = c;
-				if (utils::strMatchToLower(mask, c->nick) && !c->i_mode)
+				if (utils::strMatchToLower(mask, c->servername) && isVisible(c))
+					matchMap[c->nick] = c;
+				if (utils::strMatchToLower(mask, c->realname) && isVisible(c))
+					matchMap[c->nick] = c;
+				if (utils::strMatchToLower(mask, c->username) && isVisible(c))
+					matchMap[c->nick] = c;
+				if (utils::strMatchToLower(mask, c->nick) && isVisible(c))
 					matchMap[c->nick] = c;
 			}
 		}
 		for (OtherServ *sv: ev->otherServers) {
 			for (Client *c : sv->clients) {
-				if (utils::strMatchToLower(mask, c->realname) && !c->i_mode)
+				c->hop_count = sv->hop_count;
+				if (utils::strMatchToLower(mask, c->hostname) && isVisible(c))
 					matchMap[c->nick] = c;
-				if (utils::strMatchToLower(mask, c->nick) && !c->i_mode)
+				if (utils::strMatchToLower(mask, c->servername) && isVisible(c))
+					matchMap[c->nick] = c;
+				if (utils::strMatchToLower(mask, c->realname) && isVisible(c))
+					matchMap[c->nick] = c;
+				if (utils::strMatchToLower(mask, c->username) && isVisible(c))
+					matchMap[c->nick] = c;
+				if (utils::strMatchToLower(mask, c->nick) && isVisible(c))
 					matchMap[c->nick] = c;
 			}
 		}
@@ -984,7 +1004,7 @@ void	Client::WHO(Command *cmd) {
 				ms += c->servername;
 				ms += " ";
 				ms += c->nick;
-				ms += " H :0 ";
+				ms += " H :" + std::to_string(c->hop_count) + " ";
 				ms += c->realname;
 				ms = reply_formating(servername.c_str(), RPL_WHOREPLY, {ms},nick.c_str());
 				custom_send(ms, this);
@@ -994,9 +1014,8 @@ void	Client::WHO(Command *cmd) {
 		for (Fd *f: ev->clients_fd) {
 			if (f->type == FD_CLIENT) {
 				Client *c = reinterpret_cast<Client *>(f);
-				// TODO : addind same channel checking (WHEN MULTISERV CHANNELS WILL BE DONE)
-				if (!c->i_mode) {
-					ms += c->username;
+				if (isVisible(c)) {
+					ms = c->username;
 					ms += " ";
 					ms += c->hostname;
 					ms += " ";
@@ -1012,7 +1031,8 @@ void	Client::WHO(Command *cmd) {
 		}
 		for (OtherServ *sv: ev->otherServers) {
 			for (Client *c : sv->clients) {
-				if (!c->i_mode) {
+				c->hop_count = sv->hop_count;
+				if (isVisible(c)) {
 					ms = c->username;
 					ms += " ";
 					ms += c->hostname;
@@ -1020,7 +1040,7 @@ void	Client::WHO(Command *cmd) {
 					ms += c->servername;
 					ms += " ";
 					ms += c->nick;
-					ms += " H :0 ";
+					ms += " H :" + std::to_string(c->hop_count) + " ";
 					ms += c->realname;
 					ms = reply_formating(servername.c_str(), RPL_WHOREPLY, {ms},nick.c_str());
 					custom_send(ms, this);
@@ -1320,7 +1340,6 @@ void	Client::JOIN(Command *cmd) {
 		if (cmd->arguments[0] == "0") {
 			for (OtherServ *serv : ev->otherServers) {
 				for (Chan chan : serv->chans) {
-					std::cout << "leaving " + chan.name << "\n";
 					if (std::find(chan.nicknames.begin(), chan.nicknames.end(), utils::ircLowerCase(nick)) != chan.nicknames.end()) {
 						ev->channels->leaveChannel(this, chan.name, "Leaving all channels");
 					} 
@@ -1329,7 +1348,6 @@ void	Client::JOIN(Command *cmd) {
 			std::list<Channel *>::iterator	current = channels.begin();
 			while (current != channels.end()) {
 				Channel	*ch = *current;
-				std::cout << "leaving local " + ch->getName() << "\n";
 				if (ev->channels->leaveChannel(this, ch->getName(), "Leaving all channels"))
 					current = channels.begin();
 				else
@@ -1536,6 +1554,10 @@ void	Client::LIST(Command *cmd) {
 	ev->channels->list(this, cmd->arguments);
 }
 
+void	Client::NAMES(Command *cmd) {
+	ev->channels->names(this, cmd->arguments);
+}
+
 bool	Client::_cmdNeedAuth(int cmdCode) const
 {
 	if (cmdCode == PASS_CC || cmdCode == NICK_CC
@@ -1669,6 +1691,9 @@ int		Client::execute_parsed(Command *parsed) {
 		break;
 	case CONNECT_CC:
 		CONNECT(parsed);
+		break;
+	case NAMES_CC:
+		NAMES(parsed);
 		break;
 	default:
 		break;
@@ -1884,4 +1909,29 @@ void	Client::sendToAllServs(const std::string &ms)
 void	Client::setEnv(Environment *env)
 {
 	ev = env;
+}
+
+bool	Client::isVisible(Client *otherClient)
+{
+	std::string	myNick = utils::ircLowerCase(nick);
+	std::string	hisNick = utils::ircLowerCase(otherClient->nick);
+	std::vector<std::string>::iterator	end;
+
+	if (!otherClient->i_mode)
+		return (true);
+
+	for (OtherServ *serv : ev->otherServers) {
+		for (Chan chan : serv->chans) {
+			end = chan.nicknames.end();
+			if (std::find(chan.nicknames.begin(), end, myNick) != end) {
+				if (std::find(chan.nicknames.begin(), end, hisNick) != end)
+					return (true);
+			}
+		}
+	}
+	for (Channel *ch : channels) {
+		if (ch->isInChan(hisNick))
+			return (true);
+	}
+	return (false);
 }
