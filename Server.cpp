@@ -182,7 +182,7 @@ bool			Server::load_other_servs(std::string servinfo) {
 	other->info = "";
 	delete ev->clients_fd[_sock];
 	ev->clients_fd[_sock] = other;
-	std::cerr << "Fd adding Ok" << std::endl;s
+	std::cerr << "Fd adding Ok" << std::endl;
 	ev->otherServers.push_back(other);
 	std::cerr << "OtherServ adding Ok" << std::endl;
 	int i = 0;
