@@ -74,6 +74,7 @@ public:
 	void				TRACE(Command *);
 	void				SQUIT(Command *);
 	void				CONNECT(Command *);
+	void				NAMES(Command *);
 
 	int					execute_parsed(Command *);
 

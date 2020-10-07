@@ -788,6 +788,41 @@ void	OtherServ::INVITE(Command *cmd)
 	}
 }
 
+void	OtherServ::NAMES(Command *cmd)
+{
+	std::string	ms;
+	std::string	chanName;
+	std::vector<Client *>::iterator	client;
+
+	if (cmd->prefix.empty())
+		return ;
+	if (cmd->arguments.size() >= 1) {
+		chanName = cmd->arguments[0];
+		// check if we have the channel
+		if (ev->channels->getChannel(chanName)) {
+			// if we have channel, we use ChannelMaster.invite() method
+			client = search_nick(cmd->prefix);
+			if (client == clients.end())
+				return ; // message forgery won't error the server
+			ev->channels->chanNames(*client, chanName);
+			return ;
+		}
+		// if we do not have the channel, we forward the msg to the right serv
+		for (OtherServ *sv : ev->otherServers) {
+			if (sv != this) {
+				for (Chan &chan : sv->chans) {
+					if (utils::strCmp(chan.name, chanName)) {
+						// forward the request to this serv
+						ms = ":" + cmd->prefix + " INVITE " + chanName;
+						custom_send(ms, sv);
+						return ;
+					}
+				}
+			}
+		}
+	}
+}
+
 int		OtherServ::execute_parsed(Command *parsed) {
 	switch (parsed->cmd_code()) {
 	case NICK_CC:
@@ -855,6 +890,9 @@ int		OtherServ::execute_parsed(Command *parsed) {
 		break;
 	case INVITE_CC:
 		INVITE(parsed);
+		break;
+	case NAMES_CC:
+		NAMES(parsed);
 		break;
 	default:
 		break;

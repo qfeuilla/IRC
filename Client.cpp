@@ -64,7 +64,6 @@ Client::Client(Environment *e, int s, struct sockaddr_in addr) : channels(), ev(
 	csin = addr;
 	hostname = std::string(inet_ntoa(csin.sin_addr)); // * ip of the user if not specified
 	serv = nullptr;
-	hop_count = 1;
 }
 
 Client::Client(std::string nc, OtherServ *srv) {
@@ -73,6 +72,7 @@ Client::Client(std::string nc, OtherServ *srv) {
 	sock = -1;
 	nick = nc;
 	serv = srv;
+	hop_count = 1;
 }
 
 Client::~Client() {
@@ -1015,7 +1015,7 @@ void	Client::WHO(Command *cmd) {
 			if (f->type == FD_CLIENT) {
 				Client *c = reinterpret_cast<Client *>(f);
 				if (isVisible(c)) {
-					ms += c->username;
+					ms = c->username;
 					ms += " ";
 					ms += c->hostname;
 					ms += " ";
@@ -1554,6 +1554,10 @@ void	Client::LIST(Command *cmd) {
 	ev->channels->list(this, cmd->arguments);
 }
 
+void	Client::NAMES(Command *cmd) {
+	ev->channels->names(this, cmd->arguments);
+}
+
 bool	Client::_cmdNeedAuth(int cmdCode) const
 {
 	if (cmdCode == PASS_CC || cmdCode == NICK_CC
@@ -1687,6 +1691,9 @@ int		Client::execute_parsed(Command *parsed) {
 		break;
 	case CONNECT_CC:
 		CONNECT(parsed);
+		break;
+	case NAMES_CC:
+		NAMES(parsed);
 		break;
 	default:
 		break;

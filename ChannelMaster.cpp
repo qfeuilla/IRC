@@ -272,6 +272,7 @@ bool	ChannelMaster::mode(Client *client, const std::vector<std::string> &args)
 			break;
 		case 'n':
 			chan->mode_n(append, client);
+			break;
 		case 'q':
 			chan->mode_q(append, client);
 			break;
@@ -603,4 +604,44 @@ bool		ChannelMaster::localChanWHO(Client *client, const std::vector<std::string>
 	if (!chan)
 		return (false);
 	return (chan->who(client));
+}
+
+bool		ChannelMaster::names(Client *client, const std::vector<std::string> &args)
+{
+	bool	ret = true;
+	if (args.size() == 0) {
+		for (Chan ch : client->getServsChans()) {
+			chanNames(client, ch.name); // names message for remote channels
+		}
+		for (Channel *chan : *_channels) {
+			chan->usrList(client); // names message for local channels
+		}
+		return (true);
+	}
+	std::vector<std::string>	names = splitComma(args[0]);
+	for (size_t i = 0; i < names.size(); ++i) {
+		ret &= chanNames(client, names[i]);
+	}
+	return (ret);
+}
+
+bool	ChannelMaster::chanNames(Client *client, const std::string &channelName)
+{
+	Channel	*chan = getChannel(channelName);
+	std::string		ms;
+	OtherServ		*serv;
+
+	if (!chan) {
+		// if there is chan with this name in another serv, we forward the names message to this serv
+		serv = client->getServByChannelName(channelName);
+		if (serv) {
+			ms = ":" + client->nick + " NAMES " + channelName;
+			custom_send(ms, serv);
+			return (true);
+		}
+	}
+	if (!chan) {
+		return (false);
+	}
+	return (chan->usrList(client));
 }

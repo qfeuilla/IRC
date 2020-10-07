@@ -52,6 +52,7 @@ public:
 	void			KICK(Command *);
 	void			TOPIC(Command *);
 	void			INVITE(Command *);
+	void			NAMES(Command *);
 
 	void			chanModes(Command *);
 
