@@ -37,7 +37,7 @@ void	free_all(Server *se) {
 	} for (Fd *f : tmp->client_history) {
 		delete f;
 	}
-	close(se->sock);
+	delete tmp;
 }
 
 void	main_loop(Server *se)

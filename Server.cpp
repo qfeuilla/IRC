@@ -19,7 +19,7 @@
 #include <string.h>
 
 Server::~Server() {
-	delete ev;
+	close(sock);
 	std::cout << "server destructed" << std::endl;
 }
 
