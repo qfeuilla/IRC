@@ -84,12 +84,12 @@ void LoadCertificates(SSL_CTX* ctx, char* CertFile, char* KeyFile, bool serv)
 		fprintf(stderr, "Private key does not match the public certificate\n");
 		abort();
 	}
-		
+
     /*
-    //New lines - Force the client-side have a certificate
-    SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL);
-    SSL_CTX_set_verify_depth(ctx, 4);
-    //End new lines
+		//New lines Force the client-side have a certificate
+		SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL);
+		SSL_CTX_set_verify_depth(ctx, 4);
+		//End new lines
 	*/
 }
 
@@ -159,7 +159,7 @@ bool			Server::load_other_servs(std::string servinfo) {
 	if (porti == TLS_PORT) {
 		SSL_CTX		*ctx;
 		char CertFile[] = "ft_irc.pem";
-    	char KeyFile[] = "../myCA.key";
+    	char KeyFile[] = "ft_irc.key";
 
 		ctx = InitCTX();
 		LoadCertificates(ctx, CertFile, KeyFile, false);
@@ -235,7 +235,7 @@ SSL_CTX* InitServerCTX(void) {
 void		Server::create() {
 	if (port == TLS_PORT) {
 		char CertFile[] = "ft_irc.pem";
-		char KeyFile[] = "../myCA.key";
+		char KeyFile[] = "ft_irc.key";
 
 		SSL_library_init();
 
