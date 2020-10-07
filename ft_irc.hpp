@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 18:24:57 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/23 17:16:02 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/07 15:06:23 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,6 +25,8 @@
 # include <arpa/inet.h>
 # include <map>
 # include <algorithm>
+# include <openssl/ssl.h>
+# include <openssl/err.h>
 
 // TODO check what we can withdraw from the list of includes
 # include <sstream>

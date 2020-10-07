@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/20 16:41:00 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/09/24 14:15:58 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/07 19:39:02 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -143,6 +143,8 @@ int		Command::cmd_code() const {
 		return (CHAN_CHG_CC);
 	else if (upperCaseCommand == "CHAN_RPL" || upperCaseCommand == ":CHAN_RPL")
 		return (CHAN_RPL_CC);
+	else if (upperCaseCommand == "READY" || upperCaseCommand == ":READY")
+		return (READY_CC);
 	else
 		return (WRONG_CMD);
 }

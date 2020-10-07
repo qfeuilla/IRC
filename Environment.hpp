@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:54:23 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/03 17:34:37 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/07 14:50:08 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -55,6 +55,7 @@ public:
 	std::map<std::string, int> cmd_count;
 	struct sockaddr_in	sin;
 
+	int							servport;
 	std::vector<std::string>	emails;
 	std::string					loc1;
 	std::string					loc2;

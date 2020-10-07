@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:50:59 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/05 23:27:56 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/07 19:45:12 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -82,7 +82,7 @@ public:
 	std::string			get_userMODEs_ms(bool);
 	bool				set_uMODE(char c, bool add);
 
-	void				share_Client(int socket, int port);
+	void				share_Client(OtherServ *);
 
 	Client				*getOtherClient(const std::string &name);
 	void				updateNickInChannels(const std::string &oldNick, const std::string &newNick);
@@ -118,6 +118,7 @@ public:
 	bool				nick_set;
 
 	OtherServ			*serv;
+	SSL					*ssl;
 
 	int					hop_count = 0;
 
@@ -129,9 +130,9 @@ public:
 
 	void		sendToAllServs(const std::string &ms);
 	void		setEnv(Environment *env);
+	Environment			*ev;
 
 private:
-	Environment			*ev;
 	bool				pass_set;
 	bool				is_setup;
 

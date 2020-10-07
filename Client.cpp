@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:51:25 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/05 23:36:41 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/07 19:51:32 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,17 +22,18 @@ bool		custom_send(std::string ms, Client *c) {
 	c->recv_ms += 1;
 	c->Kb_recv += sizeof(ms);
 	ms += CRLF;
-	send(c->sock, ms.c_str(), ms.length(), 0);
+	if (c->ev->servport == TLS_PORT) {
+		SSL_write(c->ssl, ms.c_str(), ms.length());
+	} else {
+		send(c->sock, ms.c_str(), ms.length(), 0);
+	}
 	return (true);
 }
 
 bool		custom_send(std::string ms, OtherServ *s) {
 	s->recv_ms += 1;
 	s->Kb_recv += sizeof(ms);
-	if (s->porti == TLS_PORT)
-		ms = utils::encrypt(ms);
-	else
-		ms += CRLF;
+	ms += CRLF;
 	send(s->sock, ms.c_str(), ms.length(), 0);
 	return (true);
 }
@@ -481,6 +482,7 @@ void	Client::QUIT(Command *cmd) {
 	std::string ms;
 	ev->cmd_count["QUIT"] += 1;
 
+	std::cout << "Client : " << nick << "Quit serv" << std::endl;
 	if (cmd->arguments.size()) {
 		for (size_t i = 0; i < cmd->arguments.size(); i++) {
 			ms += cmd->arguments[i];
@@ -1417,7 +1419,7 @@ void	Client::SERVER(Command *cmd) {
 
 	if (!is_setup) {
 		if (cmd->arguments.size() >= 5 && cmd->arguments[4] == *ev->password) {
-			OtherServ *other = new OtherServ(sock, true, ev, cmd->arguments[3]);
+			OtherServ *other = new OtherServ(sock, ev, cmd->arguments[3]);
 			other->name = cmd->arguments[0];
 			other->hop_count = std::atoi(cmd->arguments[1].c_str());
 			other->token = std::atoi(cmd->arguments[2].c_str());
@@ -1429,25 +1431,12 @@ void	Client::SERVER(Command *cmd) {
 			delete ev->clients_fd[sock];
 			ev->clients_fd[sock] = other;
 
-			int tmp = 1;
-			for (OtherServ *sv : ev->otherServers) {
-				tmp += sv->connected;
-			}
-			// Notify incoming server of number of servers
-			ms = "NSERV ";
-			ms += std::to_string(tmp);
-			if (other->porti == TLS_PORT)
-				ms = utils::encrypt(ms);
-			else
-				ms += CRLF;
-			send(sock, ms.c_str(), ms.length(), 0);
-
 			// Notify other serv that a new server as been add
 			ms = "ADDS";
 			for (OtherServ *sv : ev->otherServers) {
 				custom_send(ms, sv);
 			}
-
+			SSL_free(ssl);         /* release SSL state */
 			std::cerr << "Fd adding Ok" << std::endl;
 			ev->otherServers.push_back(other);
 			std::cerr << "OtherServ adding Ok" << std::endl;
@@ -1740,11 +1729,18 @@ void	Client::read_func() {
 
 	fcntl(sock, F_SETFL, O_NONBLOCK);
 	utils::memset(&buf_read, 0, BUF_SIZE + 1);
-	recv(sock, &buf_read, BUF_SIZE, 0);
+	if (ev->servport == TLS_PORT) {
+		SSL_read(ssl, &buf_read, BUF_SIZE);
+	} else {
+		recv(sock, &buf_read, BUF_SIZE, 0);
+	}
 	time(&last);
 	_stream += std::string(buf_read);
 
-	std::cout << "now _stream is: " << _stream << "\n\n";
+	std::cout << nick << " now _stream is: " << _stream << "\n\n";
+
+	if (std::string(buf_read).empty())
+		QUIT(parse("QUIT :bug"));
 
 	while (thereIsAFullCmd(pos, charsToJump, _stream)) {
 		line = _stream.substr(0, pos);
@@ -1806,18 +1802,14 @@ void	Client::updateNickInChannels(const std::string &oldNick, const std::string 
 	}
 }
 
-void	Client::share_Client(int socket, int port) {
+void	Client::share_Client(OtherServ *sv) {
 	// Send all Client Data to the socket, starting by NICK and all command prefixed by the nickname
 	std::string ms;
-	
+
 	ms = "";
 	ms += "NICK ";
 	ms += nick;
-	if (port == TLS_PORT)
-		ms = utils::encrypt(ms);
-	else
-		ms += CRLF;
-	send(socket, ms.c_str(), ms.length(), 0);
+	custom_send(ms, sv);
 
 	ms = ":";
 	ms += nick;
@@ -1829,11 +1821,7 @@ void	Client::share_Client(int socket, int port) {
 	ms += servername;
 	ms += " :";
 	ms += realname;
-	if (port == TLS_PORT)
-		ms = utils::encrypt(ms);
-	else
-		ms += CRLF;
-	send(socket, ms.c_str(), ms.length(), 0);
+	custom_send(ms, sv);
 
 	ms = ":";
 	ms += nick;
@@ -1841,31 +1829,19 @@ void	Client::share_Client(int socket, int port) {
 	ms += nick;
 	ms += " ";
 	ms += get_userMODEs_ms(false);
-	if (port == TLS_PORT)
-		ms = utils::encrypt(ms);
-	else
-		ms += CRLF;
-	send(socket, ms.c_str(), ms.length(), 0);
+	custom_send(ms, sv);
 
 	if (is_away) {
 		ms = ":";
 		ms += nick;
 		ms += " AWAY ";
 		ms += away_ms;
-		if (port == TLS_PORT)
-			ms = utils::encrypt(ms);
-		else
-			ms += CRLF;
 	} else {
 		ms = ":";
 		ms += nick;
 		ms += " AWAY";
-		if (port == TLS_PORT)
-			ms = utils::encrypt(ms);
-		else
-			ms += CRLF;
 	}
-	send(socket, ms.c_str(), ms.length(), 0);
+	custom_send(ms, sv);
 
 	ms = ":";
 	ms += nick;
@@ -1873,13 +1849,7 @@ void	Client::share_Client(int socket, int port) {
 	ms += std::to_string(creation);
 	ms += " ";
 	ms += std::to_string(last);
-	if (port == TLS_PORT)
-		ms = utils::encrypt(ms);
-	else
-		ms += CRLF;
-	send(socket, ms.c_str(), ms.length(), 0);
-
-	
+	custom_send(ms, sv);
 }
 
 OtherServ	*Client::getServByChannelName(const std::string &chanName) {

@@ -6,16 +6,14 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/24 21:36:03 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/05 23:52:53 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/07 19:57:18 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "OtherServ.hpp"
 #include <iterator>
 
-OtherServ::OtherServ(int socket, bool share_data, Environment *e, std::string prt): _stream() {
-	std::string ms;
-	
+OtherServ::OtherServ(int socket, Environment *e, std::string prt): _stream() {	
 	creation = time(NULL);
 	sock = socket;
 	type = FD_OTHER;
@@ -23,74 +21,6 @@ OtherServ::OtherServ(int socket, bool share_data, Environment *e, std::string pr
 	port = prt;
 	std::cout << "other serv port : " << port << std::endl;
 	porti = std::stoi(port);
-	if (share_data) {
-		// TODO : share all the Server data to the new server
-		
-		// * **CHANNELS
-		std::vector<Chan>	thisServChans = ev->channels->getChans();
-		for (Chan &chan : thisServChans) {
-			std::string	usersStr = utils::strJoin(chan.nicknames, ',');
-			if (usersStr.size() == 0)
-				usersStr = "nobody";
-			ms = "CHAN_CHG ";
-			ms += chan.name + "," + chan.usersNum + "," + chan.modes + " ";
-			ms += usersStr + " ";
-			ms += (chan.topic != "") ? ":" + chan.topic : ":!";
-			ms += CRLF;
-			send(socket, ms.c_str(), ms.length(), 0);
-		}
-		for (OtherServ *sv : ev->otherServers) {
-			if (sv != this) {
-				for (Chan &chan : sv->chans) {
-					std::string	usersStr = utils::strJoin(chan.nicknames, ',');
-					if (usersStr.size() == 0)
-						usersStr = "nobody";
-					ms = "CHAN_CHG ";
-					ms += chan.name + "," + chan.usersNum + "," + chan.modes + " ";
-					ms += usersStr + " ";
-					ms += (chan.topic != "") ? ":" + chan.topic : ":!";
-					ms += CRLF;
-					send(socket, ms.c_str(), ms.length(), 0);
-				}
-			}
-		}
-
-		// * **NICKS
-		for (Fd *f: ev->clients_fd) {
-			if (f->type == FD_CLIENT) {
-				Client *c = reinterpret_cast<Client *>(f);
-
-				if (c->nick_set) {
-					c->share_Client(sock, porti);
-				}
-			}
-		}
-		for (Fd *f: ev->client_history) {
-			Client *c = reinterpret_cast<Client *>(f);
-
-			if (c->nick_set) {
-				c->share_Client(sock, porti);
-				ms = ":";
-				ms += c->nick;
-				ms += " QUIT";
-				custom_send(ms, this);
-			}
-		}
-		for (OtherServ *sv : ev->otherServers) {
-			if (sv != this) {
-				for (Client *c : sv->clients) {
-					c->share_Client(sock, porti);
-				}
-				for (Client *c : sv->clients_history) {
-					c->share_Client(sock, porti);
-					ms = ":";
-					ms += c->nick;
-					ms += " QUIT";
-					custom_send(ms, this);
-				}
-			}	
-		}
-	}
 }
 
 OtherServ::OtherServ(const OtherServ &cpy) {
@@ -106,6 +36,84 @@ OtherServ::~OtherServ() {
 		delete c;
 	} for (Client *c : clients_history) {
 		delete c;
+	}
+}
+
+void	OtherServ::READY(Command *cmd) {
+	std::string ms;
+	(void)cmd;
+
+	int tmp = 0;
+	for (OtherServ *sv : ev->otherServers) {
+		tmp += sv->connected;
+	}
+
+	// Notify incoming server of number of servers
+	ms = "NSERV ";
+	ms += std::to_string(tmp);
+	custom_send(ms, this);
+
+	// * **CHANNELS
+	std::vector<Chan>	thisServChans = ev->channels->getChans();
+	for (Chan &chan : thisServChans) {
+		std::string	usersStr = utils::strJoin(chan.nicknames, ',');
+		if (usersStr.size() == 0)
+			usersStr = "nobody";
+		ms = "CHAN_CHG ";
+		ms += chan.name + "," + chan.usersNum + "," + chan.modes + " ";
+		ms += usersStr + " ";
+		ms += (chan.topic != "") ? ":" + chan.topic : ":!";
+		custom_send(ms, this);
+	}
+	for (OtherServ *sv : ev->otherServers) {
+		if (sv != this) {
+			for (Chan &chan : sv->chans) {
+				std::string	usersStr = utils::strJoin(chan.nicknames, ',');
+				if (usersStr.size() == 0)
+					usersStr = "nobody";
+				ms = "CHAN_CHG ";
+				ms += chan.name + "," + chan.usersNum + "," + chan.modes + " ";
+				ms += usersStr + " ";
+				ms += (chan.topic != "") ? ":" + chan.topic : ":!";
+				custom_send(ms, this);
+			}
+		}
+	}
+
+	// * **NICKS
+	for (Fd *f: ev->clients_fd) {
+		if (f->type == FD_CLIENT) {
+			Client *c = reinterpret_cast<Client *>(f);
+
+			if (c->nick_set) {
+				c->share_Client(this);
+			}
+		}
+	}
+	for (Fd *f: ev->client_history) {
+		Client *c = reinterpret_cast<Client *>(f);
+
+		if (c->nick_set) {
+			c->share_Client(this);
+			ms = ":";
+			ms += c->nick;
+			ms += " QUIT";
+			custom_send(ms, this);
+		}
+	}
+	for (OtherServ *sv : ev->otherServers) {
+		if (sv != this) {
+			for (Client *c : sv->clients) {
+				c->share_Client(this);
+			}
+			for (Client *c : sv->clients_history) {
+				c->share_Client(this);
+				ms = ":";
+				ms += c->nick;
+				ms += " QUIT";
+				custom_send(ms, this);
+			}
+		}	
 	}
 }
 
@@ -570,7 +578,7 @@ void	OtherServ::CHAN_RPL(Command *cmd) {
 	if (!(tmpc = ev->search_list_nick(nickName)).empty()) {
 		c = reinterpret_cast<Client *>(tmpc[0]);
 		// delete the part ":prefix CHAN_RPL " of the message
-		ms = utils::delFirstWord(utils::delFirstWord(cmd->line)) + CRLF;
+		ms = utils::delFirstWord(utils::delFirstWord(cmd->line));
 		custom_send(ms, c);
 	} else if (!(tmpo = ev->search_othersrv_nick(nickName)).empty()) {
 		ms = cmd->line;
@@ -895,6 +903,9 @@ int		OtherServ::execute_parsed(Command *parsed) {
 	case NAMES_CC:
 		NAMES(parsed);
 		break;
+	case READY_CC:
+		READY(parsed);
+		break;
 	default:
 		break;
 	}
@@ -949,8 +960,6 @@ void	OtherServ::read_func() {
 		while (Client::thereIsAFullCmd(pos, charsToJump, _stream)) {
 			line = _stream.substr(0, pos);
 			std::cout << "old :" << line << std::endl;
-			if (htons(ev->sin.sin_port) == TLS_PORT)
-				line = utils::decrypt(line);
 			std::cout << "OK" << std::endl;
 			_stream = _stream.substr(pos + charsToJump);
 
