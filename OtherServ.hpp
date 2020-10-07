@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/24 21:36:23 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/05 23:32:36 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/07 19:51:09 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,7 +24,7 @@ class Client;
 
 class OtherServ: public Fd {
 public:
-	OtherServ(int, bool, Environment *, std::string);
+	OtherServ(int, Environment *, std::string);
 	OtherServ(const OtherServ &);
 
 	~OtherServ();
@@ -44,6 +44,7 @@ public:
 	void			TRACE(Command *);
 	void			TRACEUP(Command *);
 	void			SQUIT(Command *);
+	void			READY(Command *);
 
 	void			CHAN_CHG(Command *);
 	void			CHAN_RPL(Command *);
@@ -53,6 +54,7 @@ public:
 	void			TOPIC(Command *);
 	void			INVITE(Command *);
 	void			NAMES(Command *);
+
 
 	void			chanModes(Command *);
 

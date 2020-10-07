@@ -16,6 +16,8 @@
 #include "Environment.hpp"
 #include "Client.hpp"
 #include <string>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
 
 class Server : public Fd {
 public:
@@ -43,6 +45,7 @@ public:
 
 	Environment			*ev;
 private:
+	SSL_CTX				*ctx;
 	int					port;
 	int					action;
 };

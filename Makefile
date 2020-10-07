@@ -17,10 +17,10 @@ OBJS := $(patsubst %.cpp,%.o,$(SRCS))
 DEPENDS := $(patsubst %.cpp,%.d,$(SRCS))
 
 # c++ flags
-FLAGS = -Wall -Wextra -Werror
+FLAGS = -Wall -Wextra -Werror 
 
 # Compiler
-CC = clang++
+CC = g++
 
 # Output name
 NAME = bircd
@@ -30,7 +30,7 @@ all: $(NAME)
 
 # Linking the executable ($@ = target) from the object files (here $^ = .o files)
 $(NAME): $(OBJS)
-	$(CC) $(FLAGS) $^ -o $@
+	$(CC) $(FLAGS) $^ -o $@ -L/usr/local/ssl/lib -lssl -lcrypto
 
 -include $(DEPENDS)
 

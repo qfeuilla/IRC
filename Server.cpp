@@ -36,6 +36,63 @@ Server::Server() {
 	ev->emails.push_back("m.lemoniesdesagazan@gmail.com");
 }
 
+SSL_CTX* InitCTX(void)
+{   
+	const SSL_METHOD *method;
+    SSL_CTX *ctx;
+
+    OpenSSL_add_all_algorithms();  /* Load cryptos, et.al. */
+    SSL_load_error_strings();   /* Bring in and register error messages */
+    method = SSLv23_client_method();  /* Create new client-method instance */
+    ctx = SSL_CTX_new(method);   /* Create new context */
+    if ( ctx == NULL )
+    {
+        ERR_print_errors_fp(stderr);
+        abort();
+    }
+    return ctx;
+}
+
+
+void LoadCertificates(SSL_CTX* ctx, char* CertFile, char* KeyFile, bool serv)
+{
+	if (serv) {
+		//New lines 
+		if (SSL_CTX_load_verify_locations(ctx, CertFile, KeyFile) != 1)
+			ERR_print_errors_fp(stderr);
+
+		if (SSL_CTX_set_default_verify_paths(ctx) != 1)
+			ERR_print_errors_fp(stderr);
+		//End new lines
+	}
+
+    /* set the local certificate from CertFile */
+    if (SSL_CTX_use_certificate_file(ctx, CertFile, SSL_FILETYPE_PEM) <= 0)
+    {
+        ERR_print_errors_fp(stderr);
+        abort();
+    }
+	/* set the private key from KeyFile (may be the same as CertFile) */
+	if (SSL_CTX_use_PrivateKey_file(ctx, KeyFile, SSL_FILETYPE_PEM) <= 0)
+	{
+		ERR_print_errors_fp(stderr);
+		abort();
+	}
+	/* verify private key */
+	if (!SSL_CTX_check_private_key(ctx))
+	{
+		fprintf(stderr, "Private key does not match the public certificate\n");
+		abort();
+	}
+		
+    /*
+    //New lines - Force the client-side have a certificate
+    SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL);
+    SSL_CTX_set_verify_depth(ctx, 4);
+    //End new lines
+	*/
+}
+
 bool			Server::load_other_servs(std::string servinfo) {
 	(void)servinfo;
 	// 1 : connect
@@ -49,7 +106,7 @@ bool			Server::load_other_servs(std::string servinfo) {
 	std::string			ms;
 	int					_sock = 0;
 	struct sockaddr_in	serv_addr;
-	
+
 	for (size_t i = 0; i < servinfo.length(); i++) {
 		if (servinfo[i] == ':') {
 			switch (tp)
@@ -86,6 +143,8 @@ bool			Server::load_other_servs(std::string servinfo) {
 	if (connect(_sock, reinterpret_cast<struct sockaddr *>(&serv_addr), sizeof(serv_addr)) < 0) {
 		return (false);
 	}
+
+	SSL			*ssl;
 	ms += "SERVER ";
 	ms += inet_ntoa(ev->sin.sin_addr);
 	ms += " ";
@@ -97,18 +156,40 @@ bool			Server::load_other_servs(std::string servinfo) {
 	ms += " ";
 	ms += pass;
 	ms += CRLF;
-	send(_sock, ms.c_str(), ms.length(), 0);
+	if (porti == TLS_PORT) {
+		SSL_CTX		*ctx;
+		char CertFile[] = "ft_irc.pem";
+    	char KeyFile[] = "../myCA.key";
 
-	OtherServ *other = new OtherServ(_sock, false, ev, std::to_string(porti));
+		ctx = InitCTX();
+		LoadCertificates(ctx, CertFile, KeyFile, false);
+		ssl = SSL_new(ctx);
+		SSL_set_fd(ssl, _sock);
+		if ( SSL_connect(ssl) == -1 )   /* perform the connection */ {
+	    	ERR_print_errors_fp(stderr);
+			exit(EXIT_FAILURE);
+		}
+		SSL_write(ssl, ms.c_str(), ms.length());
+	} else {
+		send(_sock, ms.c_str(), ms.length(), 0);
+	}
+
+	std::cout << "Setup ...." << std::endl;
+	OtherServ *other = new OtherServ(_sock, ev, std::to_string(porti));
 	other->name = addr;
 	other->hop_count = 1;
 	other->token = 42;
 	other->info = "";
 	delete ev->clients_fd[_sock];
 	ev->clients_fd[_sock] = other;
-	std::cerr << "Fd adding Ok" << std::endl;
+	std::cerr << "Fd adding Ok" << std::endl;s
 	ev->otherServers.push_back(other);
 	std::cerr << "OtherServ adding Ok" << std::endl;
+	int i = 0;
+	while (i < 10000000) i++;
+	ms = "READY";
+	ms += CRLF;
+	send(_sock, ms.c_str(), ms.length(), 0);
 	return (true);
 }
 
@@ -125,17 +206,43 @@ void		Server::load_options(int ac, char **av) {
 		create();
 		if (!load_other_servs(av[1])) {
 			std::cerr << "Error on link server info" << std::endl;
-			std::cerr << "Usage: " << av[0] <<"[host:port:password] <port> <password>" << std::endl;
+			std::cerr << "Usage: " << av[0] <<" [host:port:password] <port> <password>" << std::endl;
 			exit(EXIT_FAILURE);
 		}
 	}
 	else {
-		std::cerr << "Usage: " << av[0] <<"[host:port:password] <port> <password>" << std::endl;
+		std::cerr << "Usage: " << av[0] <<" [host:port:password] <port> <password>" << std::endl;
 		exit(EXIT_FAILURE);
 	}
 }
 
+
+SSL_CTX* InitServerCTX(void) {   
+	const SSL_METHOD *method;
+    SSL_CTX *ctx;
+
+    OpenSSL_add_all_algorithms();  /* load & register all cryptos, etc. */
+    SSL_load_error_strings();   /* load all error messages */
+    method = SSLv23_server_method();  /* create new server-method instance */
+    ctx = SSL_CTX_new(method);   /* create new context from method */
+    if ( ctx == NULL ) {
+        ERR_print_errors_fp(stderr);
+        abort();
+    }
+    return ctx;
+}
+
 void		Server::create() {
+	if (port == TLS_PORT) {
+		char CertFile[] = "ft_irc.pem";
+		char KeyFile[] = "../myCA.key";
+
+		SSL_library_init();
+
+		ctx = InitServerCTX();
+		LoadCertificates(ctx, CertFile, KeyFile, true);
+	}
+
 	struct sockaddr_in	sin;
 	struct protoent		*pe;
 	int					opt = 1;
@@ -157,6 +264,28 @@ void		Server::create() {
 	ev->serv = new std::string(getIP());
 	std::cout << "IP = " << *ev->serv << "\n";
 	ev->channels->setSrvName(*(ev->serv));
+	ev->servport = port;
+}
+
+
+void ShowCerts(SSL* ssl)
+{   X509 *cert;
+    char *line;
+
+    cert = SSL_get_peer_certificate(ssl); /* Get certificates (if available) */
+    if ( cert != NULL )
+    {
+        printf("Server certificates:\n");
+        line = X509_NAME_oneline(X509_get_subject_name(cert), 0, 0);
+        printf("Subject: %s\n", line);
+        free(line);
+        line = X509_NAME_oneline(X509_get_issuer_name(cert), 0, 0);
+        printf("Issuer: %s\n", line);
+        free(line);
+        X509_free(cert);
+    }
+    else
+        printf("No certificates.\n");
 }
 
 void		Server::accept_srv() {
@@ -170,7 +299,20 @@ void		Server::accept_srv() {
 		<< inet_ntoa(csin.sin_addr) << ":"
 		<< ntohs(csin.sin_port) << std::endl;
 	delete ev->clients_fd[cs];
-	ev->clients_fd[cs] = new Client(ev, cs, csin);
+	Client		*nw = new Client(ev, cs, csin);
+	ev->clients_fd[cs] = nw;
+	if (port == TLS_PORT) {
+		SSL		*ssl;
+		ssl = SSL_new(ctx);
+		SSL_set_fd(ssl, cs);
+		if ( SSL_accept(ssl) == -1 )
+       		ERR_print_errors_fp(stderr);
+		else {
+			std::cout << "client connected" << std::endl;
+			ShowCerts(ssl);
+		}
+		nw->ssl = ssl;
+	}
 }
 
 void		Server::read_func() {

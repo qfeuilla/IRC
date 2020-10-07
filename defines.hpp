@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/20 17:01:28 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/05 23:20:37 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/07 19:37:12 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -88,6 +88,8 @@
 # define TRACEUP_CC		51 // * Used for trace
 # define CHAN_CHG_CC	52 // * Used between servs to notify the changes of a channel in the network
 # define CHAN_RPL_CC	53 // * Used between servs to forward a RPL / ERR to the user that triggered it
+# define READY_CC		54 // * used to notify  the a server that he is ready to get his config files
+
 
 // * Messages necessay rights to execute
 

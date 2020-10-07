@@ -162,22 +162,6 @@ std::string	utils::delFirstWord(const std::string &str)
 	return (newStr);
 }
 
-std::string	utils::encrypt(const std::string &str) {
-	std::list<char> _str(str.begin(), str.end());
-	_str.reverse();
-	std::string ms = std::string(_str.begin(), _str.end());
-	ms += CRLF;
-	return ms;
-}
-
-
-std::string	utils::decrypt(const std::string &str) {
-	std::list<char> _str(str.begin(), str.end());
-	_str.reverse();
-	std::string ms = std::string(_str.begin(), _str.end());
-	return ms;
-}
-
 std::string	utils::strJoin(const std::vector<std::string> &vec, char sep)
 {
 	std::string	users;
