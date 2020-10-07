@@ -165,7 +165,6 @@ bool	Channel::mode_O(bool append, Client *client, const std::string &target)
 		_creator = target;
 		ms = ":" + client->nick + "!" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " +O " + utils::ircLowerCase(target);
-		ms += CRLF;
 		broadcastMsg(client, ms);
 		return (rplMsg(ms, client));
 	}
@@ -244,7 +243,6 @@ bool	Channel::mode_b(bool append, Client *client, const std::string &mask)
 		_modes.b[utils::ircLowerCase(mask)] = std::pair<std::string, time_t>(fullmask, time);
 		ms = ":" + client->nick + "!" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " +b " + utils::ircLowerCase(mask);
-		ms += CRLF;
 		broadcastMsg(client, ms);
 		return (rplMsg(ms, client));
 	}
@@ -254,7 +252,6 @@ bool	Channel::mode_b(bool append, Client *client, const std::string &mask)
 			return (true);
 		ms = ":" + client->nick + "!" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " -b " + utils::ircLowerCase(mask);
-		ms += CRLF;
 		broadcastMsg(client, ms);
 		return (rplMsg(ms, client));
 	}
@@ -273,7 +270,6 @@ bool	Channel::mode_e(bool append, Client *client, const std::string &mask)
 		_modes.e[utils::ircLowerCase(mask)] = std::pair<std::string, time_t>(fullmask, time);
 		ms = ":" + client->nick + "!" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " +e " + utils::ircLowerCase(mask);
-		ms += CRLF;
 		broadcastMsg(client, ms);
 		return (rplMsg(ms, client));
 	}
@@ -283,7 +279,6 @@ bool	Channel::mode_e(bool append, Client *client, const std::string &mask)
 			return (true);
 		ms = ":" + client->nick + "!" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " -e " + utils::ircLowerCase(mask);
-		ms += CRLF;
 		broadcastMsg(client, ms);
 		return (rplMsg(ms, client));
 	}
@@ -302,7 +297,6 @@ bool	Channel::mode_I(bool append, Client *client, const std::string &mask)
 		_modes.I[utils::ircLowerCase(mask)] = std::pair<std::string, time_t>(fullmask, time);
 		ms = ":" + client->nick + "!" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " +I " + utils::ircLowerCase(mask);
-		ms += CRLF;
 		broadcastMsg(client, ms);
 		return (rplMsg(ms, client));
 	}
@@ -312,7 +306,6 @@ bool	Channel::mode_I(bool append, Client *client, const std::string &mask)
 			return (true);
 		ms = ":" + client->nick + "!" + client->username + "@";
 		ms += client->servername + " MODE " + getName() + " -I " + utils::ircLowerCase(mask);
-		ms += CRLF;
 		broadcastMsg(client, ms);
 		return (rplMsg(ms, client));
 	}
@@ -775,7 +768,7 @@ void		Channel::showBanlist(Client *client) const
 	std::string	ms;
 	for (std::pair<std::string, std::pair<std::string, time_t> > pair : _modes.b) {
 		ms = ":" + client->servername + " 367 " + client->nick + " " + getName() + " " + pair.first;
-		ms += " " + pair.second.first + " " + std::to_string(pair.second.second) + CRLF;
+		ms += " " + pair.second.first + " " + std::to_string(pair.second.second);
 		//:barjavel.freenode.net 367 ratata #superchan *super*!*@* ratata!~pokemon@ip-46.net-80-236-89.joinville.rev.numericable.fr 1601899407
 		rplMsg(ms, client);
 	}
@@ -788,7 +781,7 @@ void		Channel::showInvitelist(Client *client) const
 	std::string	ms;
 	for (std::pair<std::string, std::pair<std::string, time_t> > pair : _modes.I) {
 		ms = ":" + client->servername + " 346 " + client->nick + " " + getName() + " " + pair.first;
-		ms += " " + pair.second.first + " " + std::to_string(pair.second.second) + CRLF;
+		ms += " " + pair.second.first + " " + std::to_string(pair.second.second);
 		rplMsg(ms, client);
 	}
 	ms = reply_formating(client->servername.c_str(), RPL_ENDOFINVITELIST, {getName()}, client->nick.c_str());
@@ -800,7 +793,7 @@ void		Channel::showExceptionlist(Client *client) const
 	std::string	ms;
 	for (std::pair<std::string, std::pair<std::string, time_t> > pair : _modes.e) {
 		ms = ":" + client->servername + " 348 " + client->nick + " " + getName() + " " + pair.first;
-		ms += " " + pair.second.first + " " + std::to_string(pair.second.second) + CRLF;
+		ms += " " + pair.second.first + " " + std::to_string(pair.second.second);
 		rplMsg(ms, client);
 	}
 	ms = reply_formating(client->servername.c_str(), RPL_ENDOFEXCEPTLIST, {getName()}, client->nick.c_str());

@@ -578,7 +578,7 @@ void	OtherServ::CHAN_RPL(Command *cmd) {
 	if (!(tmpc = ev->search_list_nick(nickName)).empty()) {
 		c = reinterpret_cast<Client *>(tmpc[0]);
 		// delete the part ":prefix CHAN_RPL " of the message
-		ms = utils::delFirstWord(utils::delFirstWord(cmd->line)) + CRLF;
+		ms = utils::delFirstWord(utils::delFirstWord(cmd->line));
 		custom_send(ms, c);
 	} else if (!(tmpo = ev->search_othersrv_nick(nickName)).empty()) {
 		ms = cmd->line;
