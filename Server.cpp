@@ -152,6 +152,7 @@ void		Server::create() {
 	X(-1, bind(sock, (struct sockaddr*)&sin, sizeof(sin)), "bind");
 	X(-1, listen(sock, 42), "listen");
 	ev->sin = sin;
+	delete ev->clients_fd[sock];
 	ev->clients_fd[sock] = this;
 	ev->serv = new std::string(getIP());
 	std::cout << "IP = " << *ev->serv << "\n";

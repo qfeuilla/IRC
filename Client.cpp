@@ -514,6 +514,7 @@ void	Client::QUIT(Command *cmd) {
 		(*current)->quit(this, cmd->arguments);
 		++current;
 	}
+	// ? leak ?
 	ev->clients_fd[sock] = new Fd();
 	close(sock);
 }
@@ -1451,6 +1452,7 @@ void	Client::SERVER(Command *cmd) {
 			ev->otherServers.push_back(other);
 			std::cerr << "OtherServ adding Ok" << std::endl;
 		} else {
+			// ? leak ?
 			ev->clients_fd[sock] = new Fd();
 			close(sock);
 		}
@@ -1730,6 +1732,7 @@ void	Client::read_func() {
 		}
 		if (type == FD_CLIENT)
 			ev->client_history.push_back(this);
+		delete ev->clients_fd[sock];
 		ev->clients_fd[sock] = new Fd();
 		close(sock);
 		return ;

@@ -385,6 +385,7 @@ void	OtherServ::KILL(Command *cmd) {
 		ans += " You have been kick of the server with the message : ";
 		ans += ms;
 		custom_send(ans, c);
+		// ? leak ?
 		ev->clients_fd[c->sock] = new Fd();
 		close(c->sock);
 	}
@@ -940,6 +941,7 @@ void	OtherServ::read_func() {
 				custom_send(ms, sv);
 			}
 		}
+		delete ev->clients_fd[sock];
 		ev->clients_fd[sock] = new Fd();
 		std::cerr << "Other serv quit" << std::endl;
 	} else {
