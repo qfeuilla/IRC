@@ -22,11 +22,7 @@ void	free_all(Server *se) {
 	delete tmp->password;
 	delete tmp->serv;
 	delete tmp->version;
-	for (OtherServ *sv : tmp->otherServers) {
-		delete sv;
-	} for (OtherServ *sv : tmp->lostServers) {
-		delete sv;
-	}
+	
 	for (Fd *f : tmp->clients_fd) {
 		if (f->type == FD_WAITC || f->type == FD_CLIENT) {
 			close(f->sock);
@@ -38,7 +34,13 @@ void	free_all(Server *se) {
             }
             delete f;
         }
-	} for (Fd *f : tmp->client_history) {
+	} 
+	for (OtherServ *sv : tmp->otherServers) {
+		delete sv;
+	} for (OtherServ *sv : tmp->lostServers) {
+		delete sv;
+	}
+	for (Fd *f : tmp->client_history) {
 		if (tmp->servport == TLS_PORT && f->type == FD_CLIENT) {
 			Client *c = reinterpret_cast<Client *>(f);
 			SSL_free(c->ssl);

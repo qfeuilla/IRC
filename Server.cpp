@@ -193,6 +193,9 @@ bool			Server::load_other_servs(std::string servinfo) {
 	while (i < 10000000) i++;
 	ms = "READY";
 	ms += CRLF;
+	if (porti == TLS_PORT) {
+		SSL_free(ssl);
+	}
 	send(_sock, ms.c_str(), ms.length(), 0);
 	return (true);
 }
