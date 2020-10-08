@@ -149,7 +149,7 @@ bool			Server::load_other_servs(std::string servinfo) {
 
 	SSL			*ssl;
 	ms += "SERVER ";
-	ms += inet_ntoa(ev->sin.sin_addr);
+	ms += *ev->serv;
 	ms += " ";
 	ms += "1";
 	ms += " ";
