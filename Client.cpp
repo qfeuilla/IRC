@@ -514,6 +514,7 @@ void	Client::QUIT(Command *cmd) {
 
 	while (current != end) {
 		(*current)->quit(this, cmd->arguments);
+		ev->channels->delChanIfEmpty(*current);
 		++current;
 	}
 	// ? leak ?
@@ -1717,6 +1718,7 @@ void	Client::read_func() {
 
 		while (current != end) {
 			(*current)->quit(this, std::vector<std::string>({":Leaving"}));
+			ev->channels->delChanIfEmpty(*current);
 			++current;
 		}
 		if (type == FD_CLIENT)

@@ -593,6 +593,7 @@ void		ChannelMaster::doQuit(Client *client, const std::vector<std::string> &args
 	for (Channel *nextChannel : *_channels) {
 		if (nextChannel->isInChan(client->nick)) {
 			nextChannel->quit(client, args);
+			delChanIfEmpty(nextChannel);
 		}
 	}
 }
@@ -644,4 +645,14 @@ bool	ChannelMaster::chanNames(Client *client, const std::string &channelName)
 		return (false);
 	}
 	return (chan->usrList(client));
+}
+
+bool		ChannelMaster::delChanIfEmpty(Channel *chan)
+{
+	if (chan->isEmpty()) {
+		_channels->remove(chan); // channel is empty -> we delete it
+		delete chan;
+		return (true);
+	}
+	return (false);
 }

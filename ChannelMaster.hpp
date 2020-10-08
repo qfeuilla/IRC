@@ -69,6 +69,8 @@ public:
 
 	void		doQuit(Client *client, const std::vector<std::string> &args);
 	bool		localChanWHO(Client *client, const std::vector<std::string> &args);
+
+	bool		delChanIfEmpty(Channel *chan);
 };
 
 #endif

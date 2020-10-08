@@ -674,6 +674,7 @@ bool		Channel::quit(Client *client, const std::vector<std::string> &args)
 	}
 	broadcastMsg(client, ms);
 	leave(client, "", true);
+	updateServsChan(client);
 	return (true);
 }
 
