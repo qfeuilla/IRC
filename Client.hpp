@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:50:59 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/07 19:45:12 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/08 17:14:19 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -115,7 +115,7 @@ public:
 	
 	std::list<Channel*>	channels;
 
-	bool				nick_set;
+	bool				nick_set = false;
 
 	OtherServ			*serv;
 	SSL					*ssl;

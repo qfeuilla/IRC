@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/24 21:36:03 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/08 13:52:06 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/08 17:13:33 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -393,7 +393,7 @@ void	OtherServ::KILL(Command *cmd) {
 		ans += " You have been kick of the server with the message : ";
 		ans += ms;
 		custom_send(ans, c);
-		// ? leak ?
+		ev->client_history.push_back(c);
 		ev->clients_fd[c->sock] = new Fd();
 		close(c->sock);
 	}

@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 18:28:49 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/08 14:32:59 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/08 17:23:25 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,7 +28,7 @@ void	free_all(Server *se) {
 			close(f->sock);
 		}
 		if (f->type != FD_OTHER) {
-            if (tmp->servport == TLS_PORT && f->type == FD_CLIENT) {
+            if (tmp->servport == TLS_PORT && (f->type == FD_CLIENT || f->type == FD_WAITC)) {
                 Client *c = reinterpret_cast<Client *>(f);
                 SSL_free(c->ssl);
             }
@@ -45,6 +45,9 @@ void	free_all(Server *se) {
 			Client *c = reinterpret_cast<Client *>(f);
 			SSL_free(c->ssl);
 		}
+		delete f;
+	}
+	for (Fd *f : tmp->trash) {
 		delete f;
 	}
 	delete tmp;

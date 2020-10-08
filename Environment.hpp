@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:54:23 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/07 14:50:08 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/08 17:06:17 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -43,6 +43,7 @@ public:
 
 	std::vector<Fd *>	clients_fd;
 	std::vector<Fd *>	client_history;
+	std::vector<Fd *>	trash;
 	fd_set				fd_read;
 	fd_set				fd_write;
 	int					maxfd;

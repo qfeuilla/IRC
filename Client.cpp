@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:51:25 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/08 14:32:22 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/08 17:10:13 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -493,6 +493,9 @@ void	Client::QUIT(Command *cmd) {
 	}
 	if (type == FD_CLIENT)
 		ev->client_history.push_back(this);
+	else {
+		ev->trash.push_back(this);
+	}
 	ans += ":";
 	ans += nick;
 	ans += " You have been kick of the server with the message : ";
@@ -517,7 +520,6 @@ void	Client::QUIT(Command *cmd) {
 		ev->channels->delChanIfEmpty(*current);
 		++current;
 	}
-	// ? leak ?
 	ev->clients_fd[sock] = new Fd();
 	close(sock);
 }
@@ -1442,7 +1444,7 @@ void	Client::SERVER(Command *cmd) {
 			ev->otherServers.push_back(other);
 			std::cerr << "OtherServ adding Ok" << std::endl;
 		} else {
-			// ? leak ?
+			ev->trash.push_back(this);
 			ev->clients_fd[sock] = new Fd();
 			close(sock);
 		}
