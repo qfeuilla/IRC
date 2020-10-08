@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:51:25 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/08 17:10:13 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/08 18:25:16 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -593,8 +593,6 @@ void	Client::NOTICE(Command *cmd) {
 		for (std::string targ : parse_comma(cmd->arguments[0])) {
 			if (targ[0] == '#' || targ[0] == '&' || targ[0] == '+' || targ[0] == '!') {
 				ev->channels->broadcastMsg(this, targ, cmd->arguments, false);
-			} else if (targ[0] == '$') {
-				// TODO : multi server
 			} else {
 				ms += ":";
 				ms += nick + "!" + username + "@" + servername;
@@ -707,7 +705,6 @@ void	Client::LUSERS(Command *cmd) {
 	size_t	channelNumber = ev->channels->size();
 	ms = reply_formating(servername.c_str(), RPL_LUSERCHANNELS,
 	std::vector<std::string>({std::to_string(channelNumber)}), nick.c_str());
-	// ! this shows only the local chans
 	custom_send(ms, this);
 	
 	// * 255
@@ -833,7 +830,6 @@ void	Client::STATS(Command *cmd) {
 				custom_send(ms, this);
 				ms = reply_formating(servername.c_str(), RPL_ENDOFSTATS, {"u"}, nick.c_str());
 				custom_send(ms, this);
-				// TODO : test long time after solving PING
 			} else {
 				ms = reply_formating(servername.c_str(), RPL_ENDOFSTATS, {std::string(&cmd->arguments[0][0], &cmd->arguments[0][1])}, nick.c_str());
 				custom_send(ms, this);
@@ -1059,7 +1055,6 @@ void	Client::WHO(Command *cmd) {
 }
 
 void	Client::WHOIS(Command *cmd) {
-	// ! ignoring server parametre because no multi server for the moment
 	std::string ms;
 	ev->cmd_count["WHOIS"] += 1;
 	std::vector<Fd *> tmp;

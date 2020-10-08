@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:50:59 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/08 17:14:19 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/08 18:11:30 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -97,10 +97,10 @@ public:
 	std::string			servername;
 	std::string			realname;
 
-	bool				i_mode;
-	bool				o_mode;
-	bool				w_mode;
-	bool				s_mode;
+	bool				i_mode = false;
+	bool				o_mode = false;
+	bool				w_mode = false;
+	bool				s_mode = false;
 	
 	struct sockaddr_in	csin;
 
@@ -133,8 +133,8 @@ public:
 	Environment			*ev;
 
 private:
-	bool				pass_set;
-	bool				is_setup;
+	bool				pass_set = false;
+	bool				is_setup = false;
 
 	std::string			_stream;
 

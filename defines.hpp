@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/20 17:01:28 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/07 22:15:44 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/08 18:21:35 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,35 +42,35 @@
 # define MODE_CC		5 // * done
 # define SERVICE_CC		6 // * Not implemented, used for chat bot
 # define QUIT_CC		7 // * done
-# define SQUIT_CC		8 // TODO : When server to server will be implmented
-# define JOIN_CC		9 // TODO : When biniding channel to this branch
-# define PART_CC		10 // TODO : When binding channel to this branch
-# define TOPIC_CC		11 // TODO : When binding channel to this branch
-# define NAMES_CC		12 // TODO : When binding channel to this branch
-# define LIST_CC		13 // TODO : When binding channel to this branch
-# define INVITE_CC		14 // TODO : When binding channel to this branch
-# define KICK_CC		15 // TODO : When binding channel to this branch
-# define PRIVMSG_CC		16 // TODO : extanding when multi server
-# define NOTICE_CC		17 // TODO : same as PRIVMSG
+# define SQUIT_CC		8 
+# define JOIN_CC		9 
+# define PART_CC		10 
+# define TOPIC_CC		11 
+# define NAMES_CC		12 
+# define LIST_CC		13 
+# define INVITE_CC		14 
+# define KICK_CC		15 
+# define PRIVMSG_CC		16
+# define NOTICE_CC		17 
 # define MOTD_CC		18 // * done
-# define LUSERS_CC		19 // TODO : extanding when multi server
-# define VERSION_CC		20 // TODO : extanding when multi server
-# define STATS_CC		21 // TODO : extanding when multi server
-# define LINKS_CC		22 // TODO : extanding when multi server
-# define TIME_CC		23 // TODO : extanding when multi server
-# define CONNECT_CC		24 // TODO : when server to server
-# define TRACE_CC		25 // TODO : when server to server
-# define ADMIN_CC		26 // TODO : extanding when multi server
-# define INFO_CC		27 // TODO : extanding when multi server
-# define SERVLIST_CC	28 // TODO : when server to server
+# define LUSERS_CC		19
+# define VERSION_CC		20
+# define STATS_CC		21
+# define LINKS_CC		22
+# define TIME_CC		23
+# define CONNECT_CC		24
+# define TRACE_CC		25
+# define ADMIN_CC		26
+# define INFO_CC		27
+# define SERVLIST_CC	28
 # define SQUERY_CC		29 // * only use for services (bots) so not implemented
-# define WHO_CC			30 // TODO : extanding when multi server
-# define WHOIS_CC		31 // TODO : extanding when multi server
-# define WHOWAS_CC		32 // TODO : extanding when multi server
+# define WHO_CC			30
+# define WHOIS_CC		31
+# define WHOWAS_CC		32
 # define KILL_CC		33 // * done
-# define PING_CC		34 // TODO : extanding when multi server
+# define PING_CC		34
 # define PONG_CC		35 // * Only reply
-# define ERROR_CC		36 // TODO : when server to server
+# define ERROR_CC		36
 # define AWAY_CC		37 // * done
 # define REHASH_CC		38 // * No config file for server 
 # define DIE_CC			39 // * done
@@ -80,8 +80,8 @@
 # define WALLOPS_CC		43 // * done
 # define USERHOST_CC	44 // * done
 # define ISON_CC		45 // * done
-# define SERVER_CC		46 // TODO : when server to server
-# define NJOIN_CC		47 // TODO : when server to server
+# define SERVER_CC		46
+# define NJOIN_CC		47
 # define ADDS_CC		48 // * Command used to notify adding of a new server
 # define NSERV_CC		49 // * Command to notify entrying server of num of SERVERS
 # define DELS_CC		50 // * Command used to notify deleting of a new server

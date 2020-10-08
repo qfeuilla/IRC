@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 18:24:57 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/07 15:06:23 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/08 18:24:16 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,15 +27,10 @@
 # include <algorithm>
 # include <openssl/ssl.h>
 # include <openssl/err.h>
-
-// TODO check what we can withdraw from the list of includes
-# include <sstream>
-# include <stdio.h>
-# include <unistd.h>
-# include <sys/socket.h>
-# include <cstring>
-# include <sys/types.h>
 # include <fcntl.h>
+# include <sys/socket.h>
+# include <sys/types.h>
+# include <unistd.h>
 
 # define Xv(err,res,str)	(x_void(err,res,str,__FILE__,__LINE__))
 # define X(err,res,str)		(x_int(err,res,str,__FILE__,__LINE__))

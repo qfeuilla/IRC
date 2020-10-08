@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/24 21:36:03 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/08 17:13:33 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/08 18:25:54 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -314,9 +314,7 @@ void	OtherServ::TIME(Command *cmd) {
 	Client		*c;
 	
 	c = *search_nick(cmd->prefix);
-	std::cout << "before crash\n";
 	c->creation = std::strtoll(cmd->arguments[0].c_str(), NULL, 10);
-	std::cout << "after crash\n";
 	c->last = std::strtoll(cmd->arguments[1].c_str(), NULL, 10);
 
 	ms = cmd->line;
@@ -342,7 +340,6 @@ void	OtherServ::ADDS(Command *cmd) {
 void	OtherServ::DELS(Command *cmd) {
 	std::string ms;
 	
-	// TODO : adding deletion of client with server and host matching arg 1 and 2
 	connected -= std::atoi(cmd->arguments[0].c_str());
 	ms = cmd->line;
 	for (OtherServ *sv : ev->otherServers) {
@@ -387,7 +384,6 @@ void	OtherServ::KILL(Command *cmd) {
 		} else {
 			ms = c->nick;
 		}
-		ev->client_history.push_back(this);
 		ans = ":";
 		ans += c->nick;
 		ans += " You have been kick of the server with the message : ";
@@ -920,7 +916,7 @@ void	OtherServ::read_func() {
 	size_t		charsToJump;
 
 	fcntl(sock, F_SETFL, O_NONBLOCK);
-	memset(&buf_read, 0, BUF_SIZE + 1);
+	utils::memset(&buf_read, 0, BUF_SIZE + 1);
 	recv(sock, &buf_read, BUF_SIZE, 0);
 	std::string rd = std::string(buf_read);
 
@@ -943,6 +939,8 @@ void	OtherServ::read_func() {
 				}
 			}
 		}
+
+		// * oups
 
 		// * tell other serve that the server is disconnect
 		ms = "DELS ";
@@ -968,7 +966,6 @@ void	OtherServ::read_func() {
 			send_ms += 1;
 			std::cout << "Other :\n" << *parsed << std::endl;
 			execute_parsed(parsed);
-			// ! TEST :
 			std::cout << "Nick list : " << std::endl;
 			for (Client *tmp : clients) {
 				std::cout << "- " << tmp->nick << "-" << tmp->realname << std::endl;
