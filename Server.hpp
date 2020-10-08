@@ -48,6 +48,7 @@ private:
 	SSL_CTX				*ctx;
 	int					port;
 	int					action;
+	int					dummy;
 };
 
 #endif
