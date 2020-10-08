@@ -23,7 +23,7 @@ FLAGS = -Wall -Wextra -Werror
 CC = g++
 
 # Output name
-NAME = bircd
+NAME = ircserv
 
 # Default rule (so make, make all, and make $(NAME) are the same)
 all: $(NAME)
