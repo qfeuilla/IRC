@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:51:25 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/07 19:51:32 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/08 13:50:08 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -1512,9 +1512,9 @@ void	Client::SQUIT(Command *cmd) {
 	std::string ms;
 	ev->cmd_count["SQUIT"] += 1;
 
-	if (cmd->arguments.size() >= 2) {
+	if (cmd->arguments.size() >= 1) {
 		if (o_mode) {
-			if (servername == cmd->arguments[0] && std::to_string(htons(ev->sin.sin_port)) == cmd->arguments[1]) {
+			if (servername == cmd->arguments[0]) {
 				ev->active = false;
 			} else {
 				for (OtherServ *sv : ev->otherServers) {

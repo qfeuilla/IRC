@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/24 21:36:03 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/07 19:57:18 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/08 13:50:27 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -515,7 +515,7 @@ void	OtherServ::TRACEUP(Command *cmd) {
 void	OtherServ::SQUIT(Command *cmd) {
 	std::string ms;
 
-	if (*ev->serv == cmd->arguments[0] && std::to_string(htons(ev->sin.sin_port)) == cmd->arguments[1]) {
+	if (*ev->serv == cmd->arguments[0]) {
 		ev->active = false;
 	} else {
 		for (OtherServ *sv : ev->otherServers) {
