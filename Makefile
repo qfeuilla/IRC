@@ -47,7 +47,7 @@ fclean:		clean
 re:		fclean all
 
 install:
-	sudo apt-get update && sudo apt-get install libssl-dev
+	sudo apt-get update && sudo apt-get install libssl-dev hexchat
 
 # .PHONY means these rules get executed even if files of those names exist.
 .PHONY: all clean
