@@ -19,6 +19,7 @@
 #include <string.h>
 
 Server::~Server() {
+	SSL_CTX_free(ctx);
 	close(sock);
 	close(dummy);
 	std::cout << "server destructed" << std::endl;
@@ -159,19 +160,20 @@ bool			Server::load_other_servs(std::string servinfo) {
 	ms += pass;
 	ms += CRLF;
 	if (porti == TLS_PORT) {
-		SSL_CTX		*ctx;
+		SSL_CTX		*ctx2;
 		char CertFile[] = "ft_irc.pem";
     	char KeyFile[] = "ft_irc.key";
 
-		ctx = InitCTX();
-		LoadCertificates(ctx, CertFile, KeyFile, false);
-		ssl = SSL_new(ctx);
+		ctx2 = InitCTX();
+		LoadCertificates(ctx2, CertFile, KeyFile, false);
+		ssl = SSL_new(ctx2);
 		SSL_set_fd(ssl, _sock);
 		if ( SSL_connect(ssl) == -1 )   /* perform the connection */ {
 	    	ERR_print_errors_fp(stderr);
 			exit(EXIT_FAILURE);
 		}
 		SSL_write(ssl, ms.c_str(), ms.length());
+		SSL_CTX_free(ctx2);
 	} else {
 		send(_sock, ms.c_str(), ms.length(), 0);
 	}
