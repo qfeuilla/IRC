@@ -71,6 +71,8 @@ public:
 	bool		localChanWHO(Client *client, const std::vector<std::string> &args);
 
 	bool		delChanIfEmpty(Channel *chan);
+
+	void		changeNick(const std::string &oldNick, const std::string &newNick);
 };
 
 #endif

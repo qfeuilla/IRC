@@ -987,7 +987,9 @@ bool	OtherServ::change_nick(std::string old, std::string nw) {
 		if (c->nick == old) {
 			c->last = time(NULL);
 			clients_history.push_back(new Client(*c));
+			std::string	oldNick = c->nick;
 			c->nick = nw;
+			ev->channels->changeNick(oldNick, c->nick);
 			return (true);
 		}
 	}
