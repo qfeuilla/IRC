@@ -659,6 +659,7 @@ void		Channel::changeNick(const std::string &oldNick, const std::string &newNick
 	ms += " NICK :" + newNick;
 	if (!_modes.q)
 		broadcastMsg(client, ms);
+	updateServsChan(client);
 }
 
 bool		Channel::quit(Client *client, const std::vector<std::string> &args)

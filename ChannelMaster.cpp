@@ -656,3 +656,11 @@ bool		ChannelMaster::delChanIfEmpty(Channel *chan)
 	}
 	return (false);
 }
+
+void		ChannelMaster::changeNick(const std::string &oldNick, const std::string &newNick)
+{
+	for (Channel *chan : *_channels) {
+		if (chan->isInChan(oldNick))
+			chan->changeNick(oldNick, newNick);
+	}
+}
