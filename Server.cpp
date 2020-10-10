@@ -21,7 +21,6 @@
 Server::~Server() {
 	SSL_CTX_free(ctx);
 	close(sock);
-	close(dummy);
 	std::cout << "server destructed" << std::endl;
 }
 
@@ -272,16 +271,6 @@ void		Server::create() {
 	std::cout << "IP = " << *ev->serv << "\n";
 	ev->channels->setSrvName(*(ev->serv));
 	ev->servport = port;
-	dummy = X(-1, socket(PF_INET, SOCK_STREAM, pe->p_proto), "socket");
-	if (setsockopt(dummy, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt))) {
-		std::cout << "socket opt change failed\n";
-		exit (EXIT_FAILURE);
-	}
-	sin.sin_family = AF_INET;
-	sin.sin_addr.s_addr = INADDR_ANY;
-	sin.sin_port = htons(4200);
-	X(-1, bind(dummy, (struct sockaddr*)&sin, sizeof(sin)), "You already have an instance of ft_irc running on the machine");
-	X(-1, listen(dummy, 1), "listen");
 }
 
 
