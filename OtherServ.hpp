@@ -90,6 +90,7 @@ public:
 	std::vector<Chan>		chans;
 	std::vector<Chan>::iterator	getChan(const std::string &name);
 	bool	chanWHO(Client *client, const std::vector<std::string> &args);
+	void	sendPartMessage(Chan &chan, const std::string &nickName);
 private :
 	Environment		*ev;
 

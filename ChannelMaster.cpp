@@ -590,10 +590,17 @@ std::vector<Chan>	ChannelMaster::getChans() const
 
 void		ChannelMaster::doQuit(Client *client, const std::vector<std::string> &args)
 {
-	for (Channel *nextChannel : *_channels) {
+	_channel_list::iterator	current = _channels->begin();
+	Channel *nextChannel;
+
+	while (current != _channels->end()) {
+		nextChannel = *current;
 		if (nextChannel->isInChan(client->nick)) {
 			nextChannel->quit(client, args);
+			++current;
 			delChanIfEmpty(nextChannel);
+		} else {
+			++current;
 		}
 	}
 }

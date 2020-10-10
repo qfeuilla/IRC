@@ -536,13 +536,15 @@ void	OtherServ::CHAN_CHG(Command *cmd)
 
 		std::vector<Chan>::iterator	ite = getChan(split[0]);
 		if (ite == chans.end()) { // this chan does not exist yet: insert new channel data
-			chans.push_back(Chan(
-				std::string(split[0]),
-				std::string(split[1]),
-				std::string(split[2]),
-				std::string(topic),
-				std::vector<std::string>(users)
-			));
+			if (split[1] != "0") { // if there is 0 users in the channel, ignore it
+				chans.push_back(Chan(
+					std::string(split[0]),
+					std::string(split[1]),
+					std::string(split[2]),
+					std::string(topic),
+					std::vector<std::string>(users)
+				));
+			}
 		} else { // channel exists, just update it
 			(*ite).name = std::string(split[0]);
 			(*ite).usersNum = std::string(split[1]);
@@ -550,6 +552,7 @@ void	OtherServ::CHAN_CHG(Command *cmd)
 			(*ite).topic = std::string(topic);
 			(*ite).nicknames = std::vector<std::string>(users);
 			if ((*ite).usersNum == "0") {
+				std::cout << "chan erased: " << ite->name << "\n\n";
 				chans.erase(ite);
 			}
 		}
@@ -938,9 +941,24 @@ void	OtherServ::read_func() {
 					custom_send(ms, sv);
 				}
 			}
+			ev->channels->doQuit(c, std::vector<std::string>({"Server quitted"}));
 		}
 
 		// * oups
+		for (Chan chan : chans) {
+			for (std::string nickName : chan.nicknames) {
+				sendPartMessage(chan, nickName);
+			}
+			for (OtherServ *sv : ev->otherServers) {
+				if (sv != this) {
+					ms = "CHAN_CHG ";
+					ms += chan.name + ",0," + chan.modes + " ";
+					ms += "nobody ";
+					ms += (chan.topic != "") ? ":" + chan.topic : ":!";
+					custom_send(ms, sv);
+				}
+			}
+		}
 
 		// * tell other serve that the server is disconnect
 		ms = "DELS ";
@@ -1084,4 +1102,31 @@ bool		OtherServ::chanWHO(Client *client, const std::vector<std::string> &args)
 	ms = ":" + client->servername + " 315 " + client->nick + " " + args[0] + " :End of /WHO list";
 	custom_send(ms, client);
 	return (true);
+}
+
+void		OtherServ::sendPartMessage(Chan &chan, const std::string &nickName)
+{
+	std::vector<Fd *>			tmpc;
+	std::vector<Client *>::iterator	client;
+	std::vector<OtherServ *>	tmpo;
+	Client	*c;
+	std::string	ms;
+	std::string	WITHDRAW_THIS_LATER;
+
+	if (!(tmpc = ev->search_list_nick(nickName)).empty()) {
+		c = reinterpret_cast<Client *>(tmpc[0]);
+		ms = ":" + c->nick + "!" + c->username + "@";
+		ms += c->servername + " PART " + chan.name;
+		ms += " :this channel's host server quitted";
+		custom_send(ms, c);
+	} else if (!(tmpo = ev->search_othersrv_nick(nickName)).empty()) {
+		if (tmpo[0] != this && ((client = tmpo[0]->search_nick(nickName)) != tmpo[0]->clients.end())) {
+			c = *client;
+			WITHDRAW_THIS_LATER = ":" + c->nick + " CHAN_RPL ";
+			ms = WITHDRAW_THIS_LATER + ":" + c->nick + "!" + c->username + "@";
+			ms += c->servername + " PART " + chan.name;
+			ms += " :this channel's host server quitted";
+			custom_send(ms, tmpo[0]);
+		}
+	}
 }
