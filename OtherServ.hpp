@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/24 21:36:23 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/07 19:51:09 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/10 22:57:38 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -73,7 +73,6 @@ public:
 	std::string				port;
 	int						porti;
 	int						hop_count = 1;
-	unsigned int			token;
 	std::string				info;
 	std::vector<Client *>	clients;
 	std::vector<Client *>	clients_history;

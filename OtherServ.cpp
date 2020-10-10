@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/24 21:36:03 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/08 18:25:54 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/10 22:57:58 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,7 +27,6 @@ OtherServ::OtherServ(const OtherServ &cpy) {
 	sock = cpy.sock;
 	name = cpy.name;
 	hop_count = cpy.hop_count;
-	token = cpy.token;
 	info = cpy.info;
 }
 

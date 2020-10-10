@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:51:25 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/10 20:22:53 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/10 23:17:58 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -129,7 +129,7 @@ void	Client::NICK(Command *cmd) {
 					ms += nick;
 					ms += " NICK ";
 					ms += cmd->arguments[0];
-
+					ms += " :1";
 					// * save old client for history purpose
 					if (type == FD_CLIENT) {
 						ev->client_history.push_back(new Client(*this));
@@ -142,6 +142,7 @@ void	Client::NICK(Command *cmd) {
 						std::string ms2;
 						ms2 = "NICK ";
 						ms2 += cmd->arguments[0];
+						ms2 += " :1";
 						for (OtherServ *serv : ev->otherServers) {
 							custom_send(ms2, serv);
 						}
@@ -175,6 +176,7 @@ void	Client::NICK(Command *cmd) {
 					for (OtherServ *serv : ev->otherServers) {
 						ms = "NICK ";
 						ms += cmd->arguments[0];
+						ms += " :1";
 						custom_send(ms, serv);
 					}
 					nick = cmd->arguments[0];
@@ -1415,13 +1417,12 @@ void	Client::SERVER(Command *cmd) {
 	std::string ms;
 	ev->cmd_count["SERVER"] += 1;
 
-	if (!is_setup) {
-		if (cmd->arguments.size() >= 5 && cmd->arguments[4] == *ev->password) {
+	if (!is_setup && pass_set && pass == *ev->password) {
+		if (cmd->arguments.size() >= 2) {
 			OtherServ *other = new OtherServ(sock, ev, cmd->arguments[3]);
 			other->name = cmd->arguments[0];
 			other->hop_count = std::atoi(cmd->arguments[1].c_str());
-			other->token = std::atoi(cmd->arguments[2].c_str());
-			for (size_t i = 5; i < cmd->arguments.size(); i++) {
+			for (size_t i = 2; i < cmd->arguments.size(); i++) {
 				ms += cmd->arguments[i];
 				ms += " ";
 			}
@@ -1444,8 +1445,15 @@ void	Client::SERVER(Command *cmd) {
 			close(sock);
 		}
 	} else {
-		ms = reply_formating(servername.c_str(), ERR_ALREADYREGISTRED, {}, nick.c_str());
-		custom_send(ms, this);
+		if (!(pass == *ev->password) && !is_setup) {
+			ms = reply_formating(servername.c_str(), ERR_PASSWDMISMATCH, {}, nick.c_str());
+			custom_send(ms, this);
+			close(sock);
+		}
+		else {
+			ms = reply_formating(servername.c_str(), ERR_ALREADYREGISTRED, {}, nick.c_str());
+			custom_send(ms, this);
+		}
 	}
 }
 
@@ -1808,6 +1816,7 @@ void	Client::share_Client(OtherServ *sv) {
 	ms = "";
 	ms += "NICK ";
 	ms += nick;
+	ms += " :1";
 	custom_send(ms, sv);
 
 	ms = ":";
