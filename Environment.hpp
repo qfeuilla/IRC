@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:54:23 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/08 17:06:17 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/10 20:21:49 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -54,9 +54,8 @@ public:
 	std::string			*serv;
 	std::string			*version;
 	std::map<std::string, int> cmd_count;
-	struct sockaddr_in	sin;
+	//struct sockaddr_in	sin;
 
-	int							servport;
 	std::vector<std::string>	emails;
 	std::string					loc1;
 	std::string					loc2;
@@ -66,6 +65,8 @@ public:
 
 	bool						active = true;
 	
+	int							tls_port;
+
 	ChannelMaster				*channels;
 };
 

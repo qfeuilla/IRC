@@ -37,6 +37,12 @@ Server::Server() {
 	ev->emails.push_back("m.lemoniesdesagazan@gmail.com");
 }
 
+Server::Server(Environment *e, int prt) {
+	type = FD_SERVER;
+	ev = e;
+	port = prt;
+}
+
 SSL_CTX* InitCTX(void)
 {   
 	const SSL_METHOD *method;
@@ -146,7 +152,6 @@ bool			Server::load_other_servs(std::string servinfo) {
 		return (false);
 	}
 
-	SSL			*ssl;
 	ms += "SERVER ";
 	ms += *ev->serv;
 	ms += " ";
@@ -158,24 +163,7 @@ bool			Server::load_other_servs(std::string servinfo) {
 	ms += " ";
 	ms += pass;
 	ms += CRLF;
-	if (porti == TLS_PORT) {
-		SSL_CTX		*ctx2;
-		char CertFile[] = "ft_irc.pem";
-    	char KeyFile[] = "ft_irc.key";
-
-		ctx2 = InitCTX();
-		LoadCertificates(ctx2, CertFile, KeyFile, false);
-		ssl = SSL_new(ctx2);
-		SSL_set_fd(ssl, _sock);
-		if ( SSL_connect(ssl) == -1 )   /* perform the connection */ {
-	    	ERR_print_errors_fp(stderr);
-			exit(EXIT_FAILURE);
-		}
-		SSL_write(ssl, ms.c_str(), ms.length());
-		SSL_CTX_free(ctx2);
-	} else {
-		send(_sock, ms.c_str(), ms.length(), 0);
-	}
+	send(_sock, ms.c_str(), ms.length(), 0);
 
 	std::cout << "Setup ...." << std::endl;
 	OtherServ *other = new OtherServ(_sock, ev, std::to_string(porti));
@@ -192,9 +180,6 @@ bool			Server::load_other_servs(std::string servinfo) {
 	while (i < 10000000) i++;
 	ms = "READY";
 	ms += CRLF;
-	if (porti == TLS_PORT) {
-		SSL_free(ssl);
-	}
 	send(_sock, ms.c_str(), ms.length(), 0);
 	return (true);
 }
@@ -202,11 +187,13 @@ bool			Server::load_other_servs(std::string servinfo) {
 void		Server::load_options(int ac, char **av) {
 	if (ac == 3) {
 		port = std::atoi(av[1]);
+		ev->tls_port = port + 1;
 		delete ev->password;
 		ev->password = new std::string(av[2]);
 		create();
 	} else if (ac == 4) {
 		port = std::atoi(av[2]);
+		ev->tls_port = port + 1;
 		delete ev->password;
 		ev->password = new std::string(av[3]);
 		create();
@@ -239,7 +226,8 @@ SSL_CTX* InitServerCTX(void) {
 }
 
 void		Server::create() {
-	if (port == TLS_PORT) {
+	if (port == ev->tls_port) {
+		std::cout << "asking passw for TLS certificate" << std::endl;
 		char CertFile[] = "ft_irc.pem";
 		char KeyFile[] = "ft_irc.key";
 
@@ -247,7 +235,8 @@ void		Server::create() {
 
 		ctx = InitServerCTX();
 		LoadCertificates(ctx, CertFile, KeyFile, true);
-	}
+	} else
+		tmp = new Server(ev, ev->tls_port);
 
 	struct sockaddr_in	sin;
 	struct protoent		*pe;
@@ -264,13 +253,16 @@ void		Server::create() {
 	sin.sin_port = htons(port);
 	X(-1, bind(sock, (struct sockaddr*)&sin, sizeof(sin)), "bind");
 	X(-1, listen(sock, 42), "listen");
-	ev->sin = sin;
+	std::cout << "sock : " << sock << std::endl;
+	std::cout << "port : " << port << std::endl;
 	delete ev->clients_fd[sock];
 	ev->clients_fd[sock] = this;
+	delete ev->serv;
 	ev->serv = new std::string(getIP());
 	std::cout << "IP = " << *ev->serv << "\n";
 	ev->channels->setSrvName(*(ev->serv));
-	ev->servport = port;
+	if (port != ev->tls_port)
+		tmp->create();
 }
 
 
@@ -299,6 +291,8 @@ void		Server::accept_srv() {
 	struct sockaddr_in	csin;
 	socklen_t			csin_len;
 
+	if (port == ev->tls_port)
+		std::cout << "TLS connection attempt" << std::endl;
 	csin_len = sizeof(csin);
 	cs = X(-1, accept(sock, (struct sockaddr*)&csin, &csin_len), "accept");
 	std::cout << "New client fd:" << cs << " from " 
@@ -307,7 +301,7 @@ void		Server::accept_srv() {
 	delete ev->clients_fd[cs];
 	Client		*nw = new Client(ev, cs, csin);
 	ev->clients_fd[cs] = nw;
-	if (port == TLS_PORT) {
+	if (port == ev->tls_port) {
 		SSL		*ssl;
 		ssl = SSL_new(ctx);
 		SSL_set_fd(ssl, cs);
@@ -318,6 +312,7 @@ void		Server::accept_srv() {
 			ShowCerts(ssl);
 		}
 		nw->ssl = ssl;
+		nw->is_ssl = true;
 	}
 }
 
