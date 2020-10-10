@@ -23,6 +23,7 @@ class Server : public Fd {
 public:
 	Server();
 	Server(int, char**);
+	Server(Environment *, int);
 
 	~Server();
 
@@ -48,6 +49,7 @@ private:
 	SSL_CTX				*ctx;
 	int					port;
 	int					action;
+	Server				*tmp;
 };
 
 #endif

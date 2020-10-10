@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:50:59 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/08 18:11:30 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/10 17:14:03 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -112,6 +112,7 @@ public:
 	int					sendq = 0;
 	size_t				Kb_sent = 0;
 	size_t				Kb_recv = 0;
+	bool				is_ssl = false;
 	
 	std::list<Channel*>	channels;
 

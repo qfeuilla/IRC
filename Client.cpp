@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:51:25 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/08 18:25:16 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/10 20:22:53 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,7 +22,7 @@ bool		custom_send(std::string ms, Client *c) {
 	c->recv_ms += 1;
 	c->Kb_recv += sizeof(ms);
 	ms += CRLF;
-	if (c->ev->servport == TLS_PORT) {
+	if (c->is_ssl) {
 		SSL_write(c->ssl, ms.c_str(), ms.length());
 	} else {
 		send(c->sock, ms.c_str(), ms.length(), 0);
@@ -219,9 +219,9 @@ void	Client::exec_registerMS() {
 	std::string server;
 	server += servername;
 	server += "[";
-	server += inet_ntoa(ev->sin.sin_addr);
+	server += *ev->serv;
 	server += "/";
-	server += std::to_string(htons(ev->sin.sin_port));
+	server += std::to_string(htons(ev->tls_port - 1));
 	server += "]";
 	ms = reply_formating(servername.c_str(), RPL_YOURHOST, std::vector<std::string>({server, *ev->version}), nick.c_str());
 	custom_send(ms, this);
@@ -1728,7 +1728,7 @@ void	Client::read_func() {
 
 	fcntl(sock, F_SETFL, O_NONBLOCK);
 	utils::memset(&buf_read, 0, BUF_SIZE + 1);
-	if (ev->servport == TLS_PORT) {
+	if (this->is_ssl) {
 		SSL_read(ssl, &buf_read, BUF_SIZE);
 	} else {
 		recv(sock, &buf_read, BUF_SIZE, 0);
