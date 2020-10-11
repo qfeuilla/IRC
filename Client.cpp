@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:51:25 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/10 23:17:58 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/11 17:14:37 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -747,7 +747,7 @@ void	Client::STATS(Command *cmd) {
 				custom_send(ms, this);
 			} else if (cmd->arguments[0] == "c") {
 				for (OtherServ *sv : ev->otherServers) {
-					ms = reply_formating(servername.c_str(), RPL_STATSCLINE, std::vector<std::string>({sv->name, sv->port}), nick.c_str());
+					ms = reply_formating(servername.c_str(), RPL_STATSCLINE, std::vector<std::string>({sv->name, std::to_string(ev->tls_port - 1)}), nick.c_str());
 					custom_send(ms, this);
 				}
 				ms = reply_formating(servername.c_str(), RPL_ENDOFSTATS, {"c"}, nick.c_str());
@@ -790,7 +790,7 @@ void	Client::STATS(Command *cmd) {
 				for (OtherServ *sv : ev->otherServers) {
 					ms = sv->name;
 					ms += ":";
-					ms += sv->port;
+					ms +=  ev->tls_port - 1;
 					ms += " ";
 					ms += std::to_string(sv->sendq);
 					ms += " ";
@@ -1419,7 +1419,7 @@ void	Client::SERVER(Command *cmd) {
 
 	if (!is_setup && pass_set && pass == *ev->password) {
 		if (cmd->arguments.size() >= 2) {
-			OtherServ *other = new OtherServ(sock, ev, cmd->arguments[3]);
+			OtherServ *other = new OtherServ(sock, ev);
 			other->name = cmd->arguments[0];
 			other->hop_count = std::atoi(cmd->arguments[1].c_str());
 			for (size_t i = 2; i < cmd->arguments.size(); i++) {

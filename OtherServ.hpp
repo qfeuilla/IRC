@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/24 21:36:23 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/10 22:57:38 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/11 17:09:26 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,7 +24,7 @@ class Client;
 
 class OtherServ: public Fd {
 public:
-	OtherServ(int, Environment *, std::string);
+	OtherServ(int, Environment *);
 	OtherServ(const OtherServ &);
 
 	~OtherServ();
@@ -70,8 +70,6 @@ public:
 	bool			change_nick(std::string, std::string);
 
 	std::string				name;
-	std::string				port;
-	int						porti;
 	int						hop_count = 1;
 	std::string				info;
 	std::vector<Client *>	clients;

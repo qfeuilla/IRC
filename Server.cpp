@@ -153,7 +153,7 @@ bool			Server::load_other_servs(std::string servinfo) {
 	}
 
 	std::cout << "Setup ...." << std::endl;
-	OtherServ *other = new OtherServ(_sock, ev, std::to_string(porti));
+	OtherServ *other = new OtherServ(_sock, ev);
 	other->name = addr;
 	other->hop_count = 1;
 	other->info = "";

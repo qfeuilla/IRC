@@ -6,21 +6,18 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/24 21:36:03 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/10 22:57:58 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/11 17:09:14 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "OtherServ.hpp"
 #include <iterator>
 
-OtherServ::OtherServ(int socket, Environment *e, std::string prt): _stream() {	
+OtherServ::OtherServ(int socket, Environment *e): _stream() {	
 	creation = time(NULL);
 	sock = socket;
 	type = FD_OTHER;
 	ev = e;
-	port = prt;
-	std::cout << "other serv port : " << port << std::endl;
-	porti = std::stoi(port);
 }
 
 OtherServ::OtherServ(const OtherServ &cpy) {
