@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/20 17:01:28 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/10 17:17:06 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/12 00:00:10 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -88,6 +88,8 @@
 # define CHAN_RPL_CC	53 // * Used between servs to forward a RPL / ERR to the user that triggered it
 # define READY_CC		54 // * used to notify  the a server that he is ready to get his config files
 
+// * Id of the RPL that are transmitted
+# define RPL_351_CC		55
 
 // * Messages necessay rights to execute
 

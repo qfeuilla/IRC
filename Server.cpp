@@ -153,7 +153,7 @@ bool			Server::load_other_servs(std::string servinfo) {
 	}
 
 	std::cout << "Setup ...." << std::endl;
-	OtherServ *other = new OtherServ(_sock, ev);
+	OtherServ *other = new OtherServ(_sock, ev, 0);
 	other->name = addr;
 	other->hop_count = 1;
 	other->info = "";
@@ -237,8 +237,9 @@ void		Server::create() {
 
 		ctx = InitServerCTX();
 		LoadCertificates(ctx, CertFile, KeyFile, true);
-	} else
+	} else {
 		tmp = new Server(ev, ev->tls_port);
+	}
 
 	struct sockaddr_in	sin;
 	struct protoent		*pe;

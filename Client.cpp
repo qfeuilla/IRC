@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:51:25 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/11 20:00:34 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/11 23:46:10 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -129,7 +129,6 @@ void	Client::NICK(Command *cmd) {
 					ms += nick;
 					ms += " NICK ";
 					ms += cmd->arguments[0];
-					ms += " :1";
 					// * save old client for history purpose
 					if (type == FD_CLIENT) {
 						ev->client_history.push_back(new Client(*this));
@@ -679,7 +678,12 @@ void	Client::LUSERS(Command *cmd) {
 		tmpu += sv->clients.size();
 		tmpi += sv->search_list_with_mode('i').size();
 		tmpo += sv->search_list_with_mode('o').size();
-		tmps += sv->connected;
+	}
+	tmps = 1;
+	for (OtherServ *sv : ev->otherServers) {
+		for (std::string tm : sv->connected_sv)
+			tmps += 1;
+		tmps += 1;
 	}
 	std::string clients_inv = std::to_string(tmpi);
 	std::string clients = std::to_string(tmpu - tmpi);
@@ -717,12 +721,33 @@ void	Client::LUSERS(Command *cmd) {
 void	Client::VERSION(Command *cmd) {
 	std::string ms;
 	ev->cmd_count["VERSION"] += 1;
+	bool		good = false;
 
 	if (cmd->arguments.size() > 0) {
-		if (cmd->arguments[0] == servername || cmd->arguments[0] == "*") {
-			ms = reply_formating(servername.c_str(), RPL_VERSION, std::vector<std::string>({*ev->version, "1", servername, "second server-to-server iterations of irc for 42 project"}), nick.c_str());
-			custom_send(ms, this);
-		} else {
+		for (OtherServ *sv : ev->otherServers) {
+			if (sv->name == cmd->arguments[0])
+				good = true;
+			for (std::string tm : sv->connected_sv) {
+				if (tm == cmd->arguments[0])
+					good = true;
+			}
+			if (good) {
+				ms = ":";
+				ms += nick;
+				ms += " VERSION ";
+				ms += cmd->arguments[0];
+				custom_send(ms, sv);
+				break;
+			}
+		}
+		if (!good) {
+			if (cmd->arguments[0] == *ev->serv) {
+				ms = reply_formating(servername.c_str(), RPL_VERSION, std::vector<std::string>({*ev->version, "1", servername, "second server-to-server iterations of irc for 42 project"}), nick.c_str());
+				custom_send(ms, this);
+				good = true;
+			}
+		}
+		if (!good) {
 			ms = reply_formating(servername.c_str(), ERR_NOSUCHSERVER, {cmd->arguments[0]}, nick.c_str());
 			custom_send(ms, this);
 		}
@@ -1419,7 +1444,7 @@ void	Client::SERVER(Command *cmd) {
 
 	if (!is_setup && pass_set && pass == *ev->password) {
 		if (cmd->arguments.size() >= 2) {
-			OtherServ *other = new OtherServ(sock, ev);
+			OtherServ *other = new OtherServ(sock, ev, 1);
 			other->name = cmd->arguments[0];
 			other->hop_count = std::atoi(cmd->arguments[1].c_str());
 			for (size_t i = 2; i < cmd->arguments.size(); i++) {
@@ -1429,13 +1454,12 @@ void	Client::SERVER(Command *cmd) {
 			other->info = ms;
 			delete ev->clients_fd[sock];
 			ev->clients_fd[sock] = other;
-
 			// Notify other serv that a new server as been add
 			ms = ":";
 			ms += *ev->serv;
 			ms += " SERVER ";
 			ms += cmd->arguments[0];
-			ms += " 2 ";
+			ms += " 2 1 ";
 			ms += ":Nope";
 			for (OtherServ *sv : ev->otherServers) {
 				custom_send(ms, sv);
