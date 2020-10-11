@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/24 21:36:03 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/11 17:09:14 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/11 20:21:50 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,10 +28,11 @@ OtherServ::OtherServ(const OtherServ &cpy) {
 }
 
 OtherServ::~OtherServ() { 
-	for (Client *c : clients) {
-		delete c;
-	} for (Client *c : clients_history) {
-		delete c;
+	for (Client * c : clients_history) {
+		ev->client_history.push_back(c);
+	}
+	for (Client * c : clients) {
+		ev->client_history.push_back(c);
 	}
 }
 
@@ -86,28 +87,10 @@ void	OtherServ::READY(Command *cmd) {
 			}
 		}
 	}
-	for (Fd *f: ev->client_history) {
-		Client *c = reinterpret_cast<Client *>(f);
-
-		if (c->nick_set) {
-			c->share_Client(this);
-			ms = ":";
-			ms += c->nick;
-			ms += " QUIT";
-			custom_send(ms, this);
-		}
-	}
 	for (OtherServ *sv : ev->otherServers) {
 		if (sv != this) {
 			for (Client *c : sv->clients) {
 				c->share_Client(this);
-			}
-			for (Client *c : sv->clients_history) {
-				c->share_Client(this);
-				ms = ":";
-				ms += c->nick;
-				ms += " QUIT";
-				custom_send(ms, this);
 			}
 		}	
 	}
@@ -252,21 +235,19 @@ void	OtherServ::MODE(Command *cmd) {
 		chanModes(cmd);
 		return ;
 	}
+	bool add = false;
 	c = *search_nick(cmd->prefix);
-	c->i_mode = false;
-	c->o_mode = false;
-	c->w_mode = false;
-	c->s_mode = false;
-	if (cmd->arguments.size() >= 2) {
-		for (char m : cmd->arguments[1]) {
-			if (m == 'o')
-				c->o_mode = true;
-			else if (m == 'i')
-				c->i_mode = true;
-			else if (m == 's')
-				c->s_mode = true;
-			else if (m == 'w')
-				c->w_mode = true;
+	if (cmd->arguments.size() > 1) {
+		for (size_t i = 0; i < cmd->arguments[1].length() && i < 4; i++) {
+			if (i == 0) {
+				if (cmd->arguments[1][i] == '-')
+					;
+				else if (cmd->arguments[1][i] == '+')
+					add = true;
+				else
+					break;
+			} else if (!c->set_uMODE(cmd->arguments[1][i], add, 1))
+				break;
 		}
 	}
 
@@ -321,11 +302,19 @@ void	OtherServ::TIME(Command *cmd) {
 	}
 }
 
-void	OtherServ::ADDS(Command *cmd) {
+void	OtherServ::SERVER(Command *cmd) {
 	std::string ms;
 	
 	connected += 1;
-	ms += cmd->line;
+	ms = ":";
+	ms += *ev->serv;
+	ms += " SERVER ";
+	ms += cmd->arguments[0];
+	ms += " ";
+	ms += std::to_string(std::atoi(cmd->arguments[1].c_str()) + 1);
+	ms += " ";
+	ms += cmd->arguments[2];
+	std::cout << " MS sv : " << ms << std::endl;
 	for (OtherServ *sv : ev->otherServers) {
 		if (sv != this) {
 			custom_send(ms, sv);
@@ -853,8 +842,8 @@ int		OtherServ::execute_parsed(Command *parsed) {
 	case TIME_CC:
 		TIME(parsed);
 		break;
-	case ADDS_CC:
-		ADDS(parsed);
+	case SERVER_CC:
+		SERVER(parsed);
 		break;
 	case NSERV_CC:
 		NSERV(parsed);

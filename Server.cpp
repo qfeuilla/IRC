@@ -260,7 +260,9 @@ void		Server::create() {
 	delete ev->clients_fd[sock];
 	ev->clients_fd[sock] = this;
 	delete ev->serv;
-	ev->serv = new std::string("127.0.0.1");
+	std::string tmp2("localhost.");
+	tmp2 += std::to_string(port - 1);
+	ev->serv = new std::string(tmp2);
 	std::cout << "IP = " << *ev->serv << "\n";
 	ev->channels->setSrvName(*(ev->serv));
 	if (port != ev->tls_port)

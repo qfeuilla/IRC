@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:51:25 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/11 17:14:37 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/11 20:00:34 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -381,13 +381,13 @@ std::string		Client::get_userMODEs_ms(bool format) {
 	return (ms);
 }
 
-bool	Client::set_uMODE(char m, bool add) {
+bool	Client::set_uMODE(char m, bool add, int force = 0) {
 	if (m == 'i') {
 		i_mode = (add ? true : false);
 	} else if (m == 's') {
 		s_mode = (add ? true : false);
 	} else if (m == 'o') {
-		o_mode = (add ? o_mode : false);
+		o_mode = (add ? (force ? true : o_mode) : false);
 	} else if (m == 'w') {
 		w_mode = (add ? true : false);
 	} else
@@ -451,7 +451,7 @@ void	Client::MODE(Command *cmd) {
 						ms += " MODE ";
 						ms += nick;
 						ms += " ";
-						ms += get_userMODEs_ms(false);
+						ms += cmd->arguments[1];
 						custom_send(ms, sv);
 					}
 				} else {
@@ -1431,7 +1431,12 @@ void	Client::SERVER(Command *cmd) {
 			ev->clients_fd[sock] = other;
 
 			// Notify other serv that a new server as been add
-			ms = "ADDS";
+			ms = ":";
+			ms += *ev->serv;
+			ms += " SERVER ";
+			ms += cmd->arguments[0];
+			ms += " 2 ";
+			ms += ":Nope";
 			for (OtherServ *sv : ev->otherServers) {
 				custom_send(ms, sv);
 			}

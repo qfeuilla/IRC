@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/24 21:36:23 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/11 17:09:26 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/11 20:13:35 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -37,7 +37,7 @@ public:
 	void			MODE(Command *);
 	void			AWAY(Command *);
 	void			TIME(Command *);
-	void			ADDS(Command *);
+	void			SERVER(Command *);
 	void			NSERV(Command *);
 	void			DELS(Command *);
 	void			KILL(Command *);

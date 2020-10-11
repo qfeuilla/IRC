@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:50:59 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/10 17:14:03 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/11 20:03:02 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -80,15 +80,15 @@ public:
 
 	void				exec_registerMS();
 	std::string			get_userMODEs_ms(bool);
-	bool				set_uMODE(char c, bool add);
+	bool				set_uMODE(char c, bool add, int);
 
 	void				share_Client(OtherServ *);
 
 	Client				*getOtherClient(const std::string &name);
 	void				updateNickInChannels(const std::string &oldNick, const std::string &newNick);
 
-	time_t				creation;
-	time_t				last;
+	time_t				creation = time(NULL);
+	time_t				last = time(NULL);
 
 	std::string			pass;
 	std::string			nick;
