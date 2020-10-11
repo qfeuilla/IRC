@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/24 21:36:23 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/12 00:15:24 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/12 01:21:10 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -54,9 +54,12 @@ public:
 	void			INVITE(Command *);
 	void			NAMES(Command *);
 	void			VERSION(Command *);
+	void			LINKS(Command *);
 
 	// * RPL transmition
 	void			RPL_351(Command *);
+	void			RPL_364(Command *);
+	void			RPL_365(Command *);
 
 	void			chanModes(Command *);
 
@@ -74,7 +77,7 @@ public:
 
 	std::string				name;
 	int						hop_count = 1;
-	std::string				info;
+	std::string				info = "No specific info";
 	std::vector<Client *>	clients;
 	std::vector<Client *>	clients_history;
 	std::vector<std::string>	connected_sv;

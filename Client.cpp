@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:51:25 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/11 23:46:10 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/12 01:26:12 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -876,12 +876,61 @@ void	Client::LINKS(Command *cmd) {
 	std::string ms;
 	ev->cmd_count["LINKS"] += 1;
 	
-	for (OtherServ *sv : ev->otherServers) {
-		ms = reply_formating(servername.c_str(), RPL_LINKS, std::vector<std::string>({"", sv->name, std::to_string(sv->hop_count), "No specific information"}), nick.c_str());
+	if (cmd->arguments.size() > 0) {
+		if (cmd->arguments.size() > 1) {
+			bool good = false;
+			for (OtherServ *sv : ev->otherServers) {
+				if (sv->name == cmd->arguments[0])
+					good = true;
+				for (std::string tm : sv->connected_sv) {
+					if (tm == cmd->arguments[0])
+						good = true;
+				}
+				if (good) {
+					ms = ":";
+					ms += nick;
+					ms += " ";
+					ms += cmd->line;
+					custom_send(ms, sv);
+					break;
+				}
+			}
+			if (!good) {
+				if (cmd->arguments[0] == *ev->serv) {
+					for (OtherServ *sv : ev->otherServers) {
+						if (utils::strMatchToLower(cmd->arguments[1], sv->name)) {
+							ms = reply_formating(servername.c_str(), RPL_LINKS, std::vector<std::string>({cmd->arguments[1], sv->name, std::to_string(sv->hop_count), sv->info}), nick.c_str());
+							custom_send(ms, this);
+						}
+					}
+					ms = reply_formating(servername.c_str(), RPL_ENDOFLINKS, {cmd->arguments[1]}, nick.c_str());
+					custom_send(ms, this);
+					good = true;
+				}
+			}
+			if (!good) {
+				ms = reply_formating(servername.c_str(), ERR_NOSUCHSERVER, {cmd->arguments[0]}, nick.c_str());
+				custom_send(ms, this);
+			}
+		} else {
+			for (OtherServ *sv : ev->otherServers) {
+				if (utils::strMatchToLower(cmd->arguments[0], sv->name)) {
+					ms = reply_formating(servername.c_str(), RPL_LINKS, std::vector<std::string>({cmd->arguments[0], sv->name, std::to_string(sv->hop_count), sv->info}), nick.c_str());
+					custom_send(ms, this);
+				}
+			}
+			ms = reply_formating(servername.c_str(), RPL_ENDOFLINKS, {cmd->arguments[0]}, nick.c_str());
+			custom_send(ms, this);
+		}
+	}
+	else {
+		for (OtherServ *sv : ev->otherServers) {
+			ms = reply_formating(servername.c_str(), RPL_LINKS, std::vector<std::string>({"*", sv->name, std::to_string(sv->hop_count), sv->info}), nick.c_str());
+			custom_send(ms, this);
+		}
+		ms = reply_formating(servername.c_str(), RPL_ENDOFLINKS, {"*"}, nick.c_str());
 		custom_send(ms, this);
 	}
-	ms = reply_formating(servername.c_str(), RPL_ENDOFLINKS, {""}, nick.c_str());
-	custom_send(ms, this);
 }
 
 void	Client::TIME(Command *cmd) {

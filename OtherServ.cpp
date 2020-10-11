@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/24 21:36:03 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/12 00:36:37 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/12 01:21:36 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -851,7 +851,65 @@ void	OtherServ::NAMES(Command *cmd)
 	}
 }
 
+void	OtherServ::LINKS(Command *cmd) {
+	std::string ms;
+
+	if (*ev->serv == cmd->arguments[0]) {
+		for (OtherServ *sv : ev->otherServers) {
+			if (utils::strMatchToLower(cmd->arguments[1], sv->name)) {
+				ms += reply_formating((*ev->serv).c_str(), RPL_LINKS, std::vector<std::string>({cmd->arguments[1], sv->name, std::to_string(sv->hop_count), sv->info}), cmd->prefix.c_str());
+				ms += CRLF;
+			}
+		}
+		ms += reply_formating((*ev->serv).c_str(), RPL_ENDOFLINKS, {cmd->arguments[1]}, cmd->prefix.c_str());
+		custom_send(ms, this);
+	} else {
+		for (OtherServ *sv : ev->otherServers) {
+			if (sv != this) {
+				ms = cmd->line;
+				custom_send(ms, sv);
+			}
+		}
+	}
+}
+
+
 void	OtherServ::RPL_351(Command *cmd) {
+	std::string ms;
+	std::vector<Fd *> tm;
+
+	ms = cmd->line;
+	if (!((tm = ev->search_list_nick(cmd->arguments[0])).empty())) {
+		Client *c = reinterpret_cast<Client *>(tm[0]);
+		custom_send(ms, c);
+	} else {
+		for (OtherServ *sv : ev->otherServers) {
+			if (sv != this) {
+				custom_send(ms, sv);
+			}
+		}
+	}
+}
+
+
+void	OtherServ::RPL_364(Command *cmd) {
+	std::string ms;
+	std::vector<Fd *> tm;
+
+	ms = cmd->line;
+	if (!((tm = ev->search_list_nick(cmd->arguments[0])).empty())) {
+		Client *c = reinterpret_cast<Client *>(tm[0]);
+		custom_send(ms, c);
+	} else {
+		for (OtherServ *sv : ev->otherServers) {
+			if (sv != this) {
+				custom_send(ms, sv);
+			}
+		}
+	}
+}
+
+void	OtherServ::RPL_365(Command *cmd) {
 	std::string ms;
 	std::vector<Fd *> tm;
 
@@ -942,8 +1000,17 @@ int		OtherServ::execute_parsed(Command *parsed) {
 	case VERSION_CC:
 		VERSION(parsed);
 		break;
+	case LINKS_CC:
+		LINKS(parsed);
+		break;
 	case RPL_351_CC:
 		RPL_351(parsed);
+		break;
+	case RPL_364_CC:
+		RPL_364(parsed);
+		break;
+	case RPL_365_CC:
+		RPL_365(parsed);
 		break;
 	default:
 		break;
