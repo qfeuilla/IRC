@@ -158,9 +158,11 @@ bool				Channel::leave(Client *client, const std::string &reason, OtherServ *svF
 		_modes.v.remove(utils::ircLowerCase(user->first));
 	_users.erase(user);
 	_modes.users--;
-	ms = ":" + client->nick + " PART " + getName();
-	ms += (reason != "") ? " :" + reason : "";
-	client->sendToAllServs(ms, svFrom);
+	if (!muted) {
+		ms = ":" + client->nick + " PART " + getName();
+		ms += (reason != "") ? " :" + reason : "";
+		client->sendToAllServs(ms, svFrom);
+	}
 	return (true);
 }
 
@@ -780,9 +782,7 @@ bool		Channel::quit(Client *client, const std::vector<std::string> &args)
 			ms += " ";
 	}
 	broadcastMsg(client, ms);
-	// ! change nullptr with the server (if req was sent by a server)
 	leave(client, "", nullptr, true);
-	// TODO updateServsChan(client);
 	return (true);
 }
 

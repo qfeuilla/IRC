@@ -503,11 +503,13 @@ void	Client::QUIT(Command *cmd) {
 	custom_send(ans, this);
 	std::list<Channel*>::iterator	current = channels.begin();
 	std::list<Channel*>::iterator	end = channels.end();
+	Channel	*chan;
 
 	while (current != end) {
-		(*current)->quit(this, cmd->arguments);
-		ev->channels->delChanIfEmpty(*current);
+		chan = *current;
 		++current;
+		chan->quit(this, cmd->arguments);
+		ev->channels->delChanIfEmpty(chan);
 	}
 	ev->clients_fd[sock] = new Fd();
 	close(sock);
