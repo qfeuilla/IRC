@@ -350,7 +350,7 @@ bool	ChannelMaster::broadcastMsg(OtherServ *svFrom, Client *client, const std::s
 	}
 	if (channel->msgErrors(client, sendErrors))
 		return (false);
-	ms = ":" + client->nick + "!" + client->username + "@" + client->servername;
+	ms = client->getFullMask();
 	ms += sendErrors ? " PRIVMSG " : " NOTICE ";
 	ms += channel->getName() + " :" + msgToSend;
 	bool	ret = channel->broadcastMsg(client, ms);
@@ -517,6 +517,8 @@ bool	ChannelMaster::chanNames(Client *client, const std::string &channelName)
 	std::string		ms;
 
 	if (!chan) {
+		ms = reply_formating(client->servername.c_str(), RPL_ENDOFNAMES, {channelName}, client->nick.c_str());
+		Channel::rplMsg(ms, client);
 		return (false);
 	}
 	return (chan->usrList(client));
@@ -550,12 +552,12 @@ void		ChannelMaster::shareAll(OtherServ *sv) const
 			ms = ":" + nick + " JOIN " + chan->getName();
 			custom_send(ms, sv);
 		}
-		std::vector<std::string>	opers = chan->getUsersVec();
+		std::vector<std::string>	opers = chan->getOpersVec();
 		for (std::string &nick : opers) {
 			ms = ":" + nick + " MODE " + chan->getName() + " +o " + nick;
 			custom_send(ms, sv);
 		}
-		std::vector<std::string>	voiced = chan->getUsersVec();
+		std::vector<std::string>	voiced = chan->getVoicedVec();
 		for (std::string &nick : voiced) {
 			ms = ":" + nick + " MODE " + chan->getName() + " +v " + nick;
 			custom_send(ms, sv);

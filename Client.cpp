@@ -1996,8 +1996,6 @@ Client	*Client::getOtherClient(const std::string &name)
 
 void	Client::updateNickInChannels(const std::string &oldNick, const std::string &newNick)
 {
-
-	std::cout << "here new nick is == " << newNick << "\n\n";
 	std::list<Channel *>::iterator	current = channels.begin();
 	std::list<Channel *>::iterator	end = channels.end();
 	while (current != end) {
@@ -2053,7 +2051,6 @@ void	Client::sendToAllServs(const std::string &ms, OtherServ *servFrom)
 {
 	for (OtherServ *serv : ev->otherServers) {
 		if (serv != servFrom) {
-			std::cout << "SENT: " << ms << "\n\n";
 			custom_send(ms, serv);
 		}
 	}
@@ -2082,5 +2079,5 @@ bool	Client::isVisible(Client *otherClient)
 
 std::string		Client::getFullMask() const
 {
-	return (":" + nick + "!" + username + "@" + servername);
+	return (":" + nick + "!" + username + "@" + hostname);
 }
