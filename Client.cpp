@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:51:25 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/12 17:22:55 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/12 18:30:07 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -1008,16 +1008,55 @@ void	Client::ADMIN(Command *cmd) {
 	(void)cmd;
 	std::string ms;
 	ev->cmd_count["ADMIN"] += 1;
+	bool good = false;
 
-	ms = reply_formating(servername.c_str(), RPL_ADMINME, {servername}, nick.c_str());
-	custom_send(ms, this);
-	ms = reply_formating(servername.c_str(), RPL_ADMINLOC1, {ev->loc1}, nick.c_str());
-	custom_send(ms, this);
-	ms = reply_formating(servername.c_str(), RPL_ADMINLOC2, {ev->loc2}, nick.c_str());
-	custom_send(ms, this);
-	for (std::string s : ev->emails) {
-		ms = reply_formating(servername.c_str(), RPL_ADMINEMAIL, {s}, nick.c_str());
+	if (cmd->arguments.size() > 0) {
+		for (OtherServ *sv : ev->otherServers) {
+			if (sv->name == cmd->arguments[0])
+				good = true;
+			for (std::string tm : sv->connected_sv) {
+				if (tm == cmd->arguments[0])
+					good = true;
+			}
+			if (good) {
+				ms = ":";
+				ms += nick;
+				ms += " ADMIN ";
+				ms += cmd->arguments[0];
+				custom_send(ms, sv);
+				break;
+			}
+		}
+		if (!good) {
+			if (cmd->arguments[0] == *ev->serv) {
+				ms = reply_formating(servername.c_str(), RPL_ADMINME, {servername}, nick.c_str());
+				custom_send(ms, this);
+				ms = reply_formating(servername.c_str(), RPL_ADMINLOC1, {ev->loc1}, nick.c_str());
+				custom_send(ms, this);
+				ms = reply_formating(servername.c_str(), RPL_ADMINLOC2, {ev->loc2}, nick.c_str());
+				custom_send(ms, this);
+				for (std::string s : ev->emails) {
+					ms = reply_formating(servername.c_str(), RPL_ADMINEMAIL, {s}, nick.c_str());
+					custom_send(ms, this);
+				}
+				good = true;
+			}
+		}
+		if (!good) {
+			ms = reply_formating(servername.c_str(), ERR_NOSUCHSERVER, {cmd->arguments[0]}, nick.c_str());
+			custom_send(ms, this);
+		}
+	} else {
+		ms = reply_formating(servername.c_str(), RPL_ADMINME, {servername}, nick.c_str());
 		custom_send(ms, this);
+		ms = reply_formating(servername.c_str(), RPL_ADMINLOC1, {ev->loc1}, nick.c_str());
+		custom_send(ms, this);
+		ms = reply_formating(servername.c_str(), RPL_ADMINLOC2, {ev->loc2}, nick.c_str());
+		custom_send(ms, this);
+		for (std::string s : ev->emails) {
+			ms = reply_formating(servername.c_str(), RPL_ADMINEMAIL, {s}, nick.c_str());
+			custom_send(ms, this);
+		}
 	}
 }
 

@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/24 21:36:03 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/12 17:18:04 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/12 18:25:25 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -831,6 +831,30 @@ void	OtherServ::TIME(Command *cmd) {
 	}
 }
 
+void	OtherServ::ADMIN(Command *cmd) {
+	std::string ms;
+
+	if (cmd->arguments[0] == *ev->serv) {
+		ms = reply_formating((*ev->serv).c_str(), RPL_ADMINME, {*ev->serv}, cmd->prefix.c_str());
+		custom_send(ms, this);
+		ms = reply_formating((*ev->serv).c_str(), RPL_ADMINLOC1, {ev->loc1}, cmd->prefix.c_str());
+		custom_send(ms, this);
+		ms = reply_formating((*ev->serv).c_str(), RPL_ADMINLOC2, {ev->loc2}, cmd->prefix.c_str());
+		custom_send(ms, this);
+		for (std::string s : ev->emails) {
+			ms = reply_formating((*ev->serv).c_str(), RPL_ADMINEMAIL, {s}, cmd->prefix.c_str());
+			custom_send(ms, this);
+		}
+	} else {
+		ms = cmd->line;
+		for (OtherServ *sv : ev->otherServers) {
+			if (sv != this) {
+				custom_send(ms, sv);
+			}
+		}
+	}
+}
+
 void	OtherServ::RPL_391(Command *cmd) {
 	std::string ms;
 	std::vector<Fd *> tm;
@@ -901,6 +925,23 @@ void	OtherServ::RPL_365(Command *cmd) {
 }
 
 void	OtherServ::RPL_NTRACE(Command *cmd) {
+	std::string ms;
+	std::vector<Fd *> tm;
+
+	ms = cmd->line;
+	if (!((tm = ev->search_list_nick(cmd->arguments[0])).empty())) {
+		Client *c = reinterpret_cast<Client *>(tm[0]);
+		custom_send(ms, c);
+	} else {
+		for (OtherServ *sv : ev->otherServers) {
+			if (sv != this) {
+				custom_send(ms, sv);
+			}
+		}
+	}
+}
+
+void	OtherServ::RPL_ADMIN(Command *cmd) {
 	std::string ms;
 	std::vector<Fd *> tm;
 
@@ -1005,6 +1046,12 @@ int		OtherServ::execute_parsed(Command *parsed) {
 		break;
 	case RPL_NTRACE_CC:
 		RPL_NTRACE(parsed);
+		break;
+	case ADMIN_CC:
+		ADMIN(parsed);
+		break;
+	case RPL_ADMIN_CC:
+		RPL_ADMIN(parsed);
 		break;
 	default:
 		break;
