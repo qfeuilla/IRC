@@ -40,7 +40,7 @@ public:
 	// * leave returns true on succes
 	bool	leave(Client *client, const std::vector<std::string> &args, OtherServ *svFrom = nullptr);
 	// * mode returns true on succes
-	bool	mode(Client *client, const std::vector<std::string> &args);
+	bool	mode(Client *client, const std::vector<std::string> &args, OtherServ *svFrom = nullptr);
 	// * kick returns true on succes
 	bool	kick(Client *client, const std::vector<std::string> &args);
 	// * topic returns true on succes

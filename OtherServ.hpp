@@ -65,8 +65,6 @@ public:
 	void			RPL_NINFO(Command *);
 
 
-	void			chanModes(Command *);
-
 	virtual void	read_func();
 	virtual void	write_func();
 

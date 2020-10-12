@@ -227,12 +227,14 @@ void	OtherServ::MODE(Command *cmd) {
 	std::string ms;
 	Client		*c;
 	char		ch = ' ';
+	c = ev->searchClientEverywhere(cmd->prefix);
 
 	if (cmd->arguments.size() >= 1)
 		ch = cmd->arguments[0].at(0);
 
 	if (ch == '#' || ch == '!' || ch == '+') {
-		chanModes(cmd);
+		if (c)
+			ev->channels->mode(c, cmd->arguments, this);
 		return ;
 	}
 	bool add = false;
@@ -531,20 +533,6 @@ void	OtherServ::KICK(Command *cmd)
 			}
 		}
 	}
-}
-
-
-void	OtherServ::chanModes(Command *cmd) {
-	std::vector<Client *>::iterator	client;
-
-	client = search_nick(cmd->prefix);
-	if (client == clients.end())
-		return ; // message forgery won't error the server
-	if (cmd->arguments.size() == 1) {
-		ev->channels->getChanModes(*client, cmd->arguments);
-		return ;
-	}
-	ev->channels->mode(*client, cmd->arguments);
 }
 
 void	OtherServ::TOPIC(Command *cmd)

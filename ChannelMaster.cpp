@@ -165,26 +165,19 @@ bool	ChannelMaster::getChanModes(Client *client, const std::vector<std::string> 
 	return (Channel::rplMsg(ms, client));
 }
 
-bool	ChannelMaster::mode(Client *client, const std::vector<std::string> &args)
+bool	ChannelMaster::mode(Client *client, const std::vector<std::string> &args, OtherServ *svFrom)
 {
 	Channel					*chan;
 	std::string				operations = args[1]; // looks like "+o" 
 	bool					append;
-	OtherServ				*serv;
 	std::string				ms;
 
 	chan = getChannel(args[0]);
 	
 	if (!chan) {
-		serv = client->getServByChannelName(args[0]);
-		if (!serv)
-			return (false);
-		ms = ":" + client->nick + " MODE ";
-		for (std::string str: args) {
-			ms += str + " ";
-		}
-		custom_send(ms, serv);
-		return (true);
+		ms = reply_formating(client->servername.c_str(), ERR_NOSUCHCHANNEL,
+		std::vector<std::string>({args[0]}), client->nick.c_str());
+		return (!Channel::rplMsg(ms, client));
 	}
 	if (operations[0] == 'O') {
 		chan->showChanCreator(client);
@@ -205,71 +198,71 @@ bool	ChannelMaster::mode(Client *client, const std::vector<std::string> &args)
 		case 'o':
 			if (args.size() < 3)
 				return (false);
-			chan->mode_o(append, client, args[2]);
+			chan->mode_o(svFrom, append, client, args[2]);
 			break;
 		case 'O':
 			if (args.size() < 3)
 				chan->showChanCreator(client);
 			else
-				chan->mode_O(append, client, args[2]);
+				chan->mode_O(svFrom, append, client, args[2]);
 			break;
 		case 'e':
 			if (args.size() < 3)
 				chan->showExceptionlist(client);
 			else
-				chan->mode_e(append, client, args[2]);
+				chan->mode_e(svFrom, append, client, args[2]);
 			break;
 		case 'v':
 			if (args.size() < 3)
 				return (false);
-			chan->mode_v(append, client, args[2]);
+			chan->mode_v(svFrom, append, client, args[2]);
 			break;
 		case 'b':
 			if (args.size() < 3)
 				chan->showBanlist(client);
 			else
-				chan->mode_b(append, client, args[2]);
+				chan->mode_b(svFrom, append, client, args[2]);
 			break;
 		case 'I':
 			if (args.size() < 3)
 				chan->showInvitelist(client);
 			else
-				chan->mode_I(append, client, args[2]);
+				chan->mode_I(svFrom, append, client, args[2]);
 			break;
 		case 'p':
-			chan->mode_p(append, client);
+			chan->mode_p(svFrom, append, client);
 			break;
 		case 's':
-			chan->mode_s(append, client);
+			chan->mode_s(svFrom, append, client);
 			break;
 		case 'i':
-			chan->mode_i(append, client);
+			chan->mode_i(svFrom, append, client);
 			break;
 		case 't':
-			chan->mode_t(append, client);
+			chan->mode_t(svFrom, append, client);
 			break;
 		case 'm':
-			chan->mode_m(append, client);
+			chan->mode_m(svFrom, append, client);
 			break;
 		case 'n':
-			chan->mode_n(append, client);
+			chan->mode_n(svFrom, append, client);
 			break;
 		case 'q':
-			chan->mode_q(append, client);
+			chan->mode_q(svFrom, append, client);
 			break;
 		case 'l':
 			if (args.size() == 2) {
 				if (!append)
-					chan->mode_l(append, client, -1);
+					chan->mode_l(svFrom, append, client, -1);
 			} else
-				chan->mode_l(append, client, std::stoi(args[2]));
+				chan->mode_l(svFrom, append, client, std::stoi(args[2]));
 			break;
 		case 'k':
 			if (args.size() == 2) {
 				if (!append) 
-					chan->mode_k(append, client, "");
+					chan->mode_k(svFrom, append, client, "");
 			} else
-				chan->mode_k(append, client, args[2]);
+				chan->mode_k(svFrom, append, client, args[2]);
 			break;
 		default:
 			break;

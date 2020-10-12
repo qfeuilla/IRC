@@ -105,23 +105,23 @@ public:
 	bool				quit(Client *client, const std::vector<std::string> &args);
 
 	// MODES METHODS
-	bool	mode_O(bool append, Client *client, const std::string &target);
+	bool	mode_O(OtherServ *svFrom, bool append, Client *client, const std::string &target);
 
-	bool	mode_o(bool append, Client *client, const std::string &target);
-	bool	mode_v(bool append, Client *client, const std::string &target);
-	bool	mode_b(bool append, Client *client, const std::string &mask);
-	bool	mode_e(bool append, Client *client, const std::string &mask);
-	bool	mode_I(bool append, Client *client, const std::string &mask);
+	bool	mode_o(OtherServ *svFrom, bool append, Client *client, const std::string &target);
+	bool	mode_v(OtherServ *svFrom, bool append, Client *client, const std::string &target);
+	bool	mode_b(OtherServ *svFrom, bool append, Client *client, const std::string &mask);
+	bool	mode_e(OtherServ *svFrom, bool append, Client *client, const std::string &mask);
+	bool	mode_I(OtherServ *svFrom, bool append, Client *client, const std::string &mask);
 
-	bool	mode_p(bool append, Client *client);
-	bool	mode_s(bool append, Client *client);
-	bool	mode_i(bool append, Client *client);
-	bool	mode_t(bool append, Client *client);
-	bool	mode_m(bool append, Client *client);
-	bool	mode_n(bool append, Client *client);
-	bool	mode_q(bool append, Client *client);
-	bool	mode_l(bool append, Client *client, int limit);
-	bool	mode_k(bool append, Client *client, const std::string &passwd);
+	bool	mode_p(OtherServ *svFrom, bool append, Client *client);
+	bool	mode_s(OtherServ *svFrom, bool append, Client *client);
+	bool	mode_i(OtherServ *svFrom, bool append, Client *client);
+	bool	mode_t(OtherServ *svFrom, bool append, Client *client);
+	bool	mode_m(OtherServ *svFrom, bool append, Client *client);
+	bool	mode_n(OtherServ *svFrom, bool append, Client *client);
+	bool	mode_q(OtherServ *svFrom, bool append, Client *client);
+	bool	mode_l(OtherServ *svFrom, bool append, Client *client, int limit);
+	bool	mode_k(OtherServ *svFrom, bool append, Client *client, const std::string &passwd);
 
 	bool	getModeN() const;
 
