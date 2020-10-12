@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/24 21:36:03 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/12 15:29:51 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/12 17:18:04 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -419,106 +419,37 @@ void	OtherServ::KILL(Command *cmd) {
 void	OtherServ::TRACE(Command *cmd) {
 	std::string ms;
 	std::vector<Fd *> tmp;
+	time_t now = time(NULL);
+	OtherServ *tmp2;
 
-	if (!(tmp = ev->search_list_nick(cmd->arguments[0])).empty() || *ev->serv == cmd->arguments[0]) {
-		if (!tmp.empty()) {
-			Client *c = reinterpret_cast<Client *>(tmp[0]);
-			std::string cl = c->o_mode ? "operator" : "user";
-			ms = ":";
-			ms += cmd->prefix;
-			ms += " TRACEUP ";
-			ms += cl;
-			ms += " ";
-			ms += c->nick;
-			ms += " ";
-			ms += c->username;
-			ms += " ";
-			ms += c->servername;
-			ms += " ";
-			ms += c->hostname;
-			ms += " 1";
-			time_t now;
-			time(&now);
-			int diff = difftime(now, c->creation);
-			ms += " ";
-			ms += std::to_string(diff);
-			custom_send(ms, this);
-		} else {
-			for (Fd * f : ev->search_list_with_mode("", "", 'o')) {
-				Client *c = reinterpret_cast<Client *>(f);
-				std::string cl = c->o_mode ? "operator" : "user";
-				ms = ":";
-				ms += cmd->prefix;
-				ms += " TRACEUP ";
-				ms += cl;
-				ms += " ";
-				ms += c->nick;
-				ms += " ";
-				ms += c->username;
-				ms += " ";
-				ms += c->servername;
-				ms += " ";
-				ms += c->hostname;
-				ms += " 1";
-				time_t now;
-				time(&now);
-				int diff = difftime(now, c->creation);
-				ms += " ";
-				ms += std::to_string(diff);
-				custom_send(ms, this);
-			}
-		}
+	if (cmd->arguments[0] == *ev->serv) {
+		ms = reply_formating((*ev->serv).c_str(), RPL_TRACESERVER, std::vector<std::string>({"1", "0" /* // !! attention ajoute le nombre de channel ici ! //*/, *ev->serv}), cmd->prefix.c_str());
+		custom_send(ms, this);
+		ms = reply_formating((*ev->serv).c_str(), RPL_TRACEEND, std::vector<std::string>({*ev->serv, "0.4.2"}), cmd->prefix.c_str());
+		custom_send(ms, this);
 	} else {
-		ms = cmd->line;
-		for (OtherServ * sv : ev->otherServers) {
+		for (OtherServ *sv : ev->otherServers) {
 			if (sv != this) {
-				custom_send(ms, sv); 
+				for (std::string tm : sv->connected_sv) {
+					if (tm == cmd->arguments[0]) {
+						tmp2 = sv;
+						break;
+					}
+				}
+				if (sv->name == cmd->arguments[0]) {
+					tmp2 = sv;
+					break;
+				}
+				if (sv->search_nick(cmd->arguments[0]) != sv->clients.end()) {
+					tmp2 = sv;
+					break;
+				}
 			}
 		}
-	}
-}
-
-void	OtherServ::TRACEUP(Command *cmd) {
-	std::string ms;
-	std::vector<Fd *> tmp;
-	std::vector<OtherServ *> tmpo;
-
-	if (!(tmp = ev->search_list_nick(cmd->prefix)).empty()) {
-		Client *c = reinterpret_cast<Client *>(tmp[0]);
-		
-		ms = cmd->arguments[1];
-		ms += "[";
-		ms += cmd->arguments[2];
-		ms += "@";
-		ms += cmd->arguments[3];
-		ms += "] (";
-		ms += cmd->arguments[4];
-		ms += ") ";
-		ms += cmd->arguments[5];
-		ms += " :";
-		ms += cmd->arguments[6];
-		ms = reply_formating(c->servername.c_str(), RPL_TRACEUSER, std::vector<std::string>({cmd->arguments[0], ms}), c->nick.c_str());
-		custom_send(ms, c);
-	} else {
-		if (!(tmpo = ev->search_othersrv_nick(cmd->prefix)).empty()) {
-			ms = ":";
-			ms += cmd->prefix;
-			ms += " TRACEUP ";
-			ms += cmd->arguments[0];
-			ms += " ";
-			ms += cmd->arguments[1];
-			ms += " ";
-			ms += cmd->arguments[2];
-			ms += " ";
-			ms += cmd->arguments[3];
-			ms += " ";
-			ms += cmd->arguments[4];
-			ms += " ";
-			ms += std::to_string(std::atoi(cmd->arguments[5].c_str()) + 1);
-			ms += " ";
-			ms += cmd->arguments[6];
-			custom_send(ms, tmpo[0]);
-		}
+		ms = reply_formating((*ev->serv).c_str(), RPL_TRACELINK, std::vector<std::string>({"0.4.2", cmd->arguments[0], tmp2->name, "F", std::to_string(now - creation)}), cmd->prefix.c_str());
+		custom_send(ms, this);
+		ms = cmd->line;
+		custom_send(ms, tmp2);
 	}
 }
 
@@ -969,6 +900,23 @@ void	OtherServ::RPL_365(Command *cmd) {
 	}
 }
 
+void	OtherServ::RPL_NTRACE(Command *cmd) {
+	std::string ms;
+	std::vector<Fd *> tm;
+
+	ms = cmd->line;
+	if (!((tm = ev->search_list_nick(cmd->arguments[0])).empty())) {
+		Client *c = reinterpret_cast<Client *>(tm[0]);
+		custom_send(ms, c);
+	} else {
+		for (OtherServ *sv : ev->otherServers) {
+			if (sv != this) {
+				custom_send(ms, sv);
+			}
+		}
+	}
+}
+
 int		OtherServ::execute_parsed(Command *parsed) {
 	switch (parsed->cmd_code()) {
 	case NICK_CC:
@@ -1006,9 +954,6 @@ int		OtherServ::execute_parsed(Command *parsed) {
 		break;
 	case TRACE_CC:
 		TRACE(parsed);
-		break;
-	case TRACEUP_CC:
-		TRACEUP(parsed);
 		break;
 	case SQUIT_CC:
 		SQUIT(parsed);
@@ -1057,6 +1002,9 @@ int		OtherServ::execute_parsed(Command *parsed) {
 		break;
 	case RPL_391_CC:
 		RPL_391(parsed);
+		break;
+	case RPL_NTRACE_CC:
+		RPL_NTRACE(parsed);
 		break;
 	default:
 		break;

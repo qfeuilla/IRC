@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:51:25 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/12 15:29:19 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/12 17:22:55 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -1580,55 +1580,49 @@ void	Client::SERVER(Command *cmd) {
 void	Client::TRACE(Command *cmd) {
 	std::string ms;
 	ev->cmd_count["TRACE"] += 1;
-	std::vector<Fd *> tmp;
+	std::vector<Client *> tmp;
+	time_t now = time(NULL);
+	OtherServ *tmp2;
 	
-	if (!(tmp = ev->search_list_nick(cmd->arguments[0])).empty() || servername == cmd->arguments[0]) {
-		if (!tmp.empty()) {
-			Client *c = reinterpret_cast<Client *>(tmp[0]);
-			std::string cl = c->o_mode ? "operator" : "user";
-			ms = c->nick;
-			ms += "[";
-			ms += c->username;
-			ms += "@";
-			ms += c->servername;
-			ms += "] (";
-			ms += c->hostname;
-			ms += ") 0";
-			time_t now;
-			time(&now);
-			int diff = difftime(now, c->creation);
-			ms += " :";
-			ms += std::to_string(diff);
-			ms = reply_formating(servername.c_str(), RPL_TRACEUSER, std::vector<std::string>({cl, ms}), nick.c_str());
-			custom_send(ms, this);
-		} else {
-			for (Fd * f : ev->search_list_with_mode("", "", 'o')) {
-				Client *c = static_cast<Client *>(f);
-				std::string cl = c->o_mode ? "operator" : "user";
-				ms = c->nick;
-				ms += "[";
-				ms += c->username;
-				ms += "@";
-				ms += c->servername;
-				ms += "] (";
-				ms += c->hostname;
-				ms += ") 0";
-				time_t now;
-				time(&now);
-				int diff = difftime(now, c->creation);
-				ms += " :";
-				ms += std::to_string(diff);
-				ms = reply_formating(servername.c_str(), RPL_TRACEUSER, std::vector<std::string>({cl, ms}), nick.c_str());
+	if (cmd->arguments.size() == 0 || cmd->arguments[0] == *ev->serv || !ev->search_list_nick(cmd->arguments[0]).empty()) {
+		ms = reply_formating((*ev->serv).c_str(), RPL_TRACESERVER, std::vector<std::string>({"1", "0" /* // !! attention ajoute le nombre de channel ici ! //*/, *ev->serv}), nick.c_str());
+		custom_send(ms, this);
+		ms = reply_formating((*ev->serv).c_str(), RPL_TRACEEND, std::vector<std::string>({*ev->serv, "0.4.2"}), nick.c_str());
+		custom_send(ms, this);
+	} else {
+		if (cmd->arguments.size() >= 1) {
+			bool good = false;
+			for (OtherServ *sv : ev->otherServers) {
+				for (std::string tm : sv->connected_sv) {
+					if (tm == cmd->arguments[0]) {
+						tmp2 = sv;
+						good = true;
+						break;
+					}
+				}
+				if (sv->name == cmd->arguments[0]) {
+					tmp2 = sv;
+					good = true;
+					break;
+				}
+				if (sv->search_nick(cmd->arguments[0]) != sv->clients.end()) {
+					tmp2 = sv;
+					good = true;
+					break;
+				}
+			}
+			if (good) {
+				ms = reply_formating((*ev->serv).c_str(), RPL_TRACELINK, std::vector<std::string>({"0.4.2", cmd->arguments[0], tmp2->name, "F", std::to_string(now - creation)}), nick.c_str());
+				custom_send(ms, this);
+				ms = ":";
+				ms += nick;
+				ms += " TRACE ";
+				ms += cmd->arguments[0];
+				custom_send(ms, tmp2);
+			} else {
+				ms = reply_formating((*ev->serv).c_str(), ERR_NOSUCHSERVER, {cmd->arguments[0]}, nick.c_str());
 				custom_send(ms, this);
 			}
-		}
-	} else {
-		for (OtherServ * sv : ev->otherServers) {
-			ms = ":";
-			ms += nick;
-			ms += " TRACE ";
-			ms += cmd->arguments[0];
-			custom_send(ms, sv);
 		}
 	}
 }

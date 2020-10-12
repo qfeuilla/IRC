@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/24 21:36:23 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/12 15:13:55 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/12 16:06:44 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -41,7 +41,6 @@ public:
 	void			DELS(Command *);
 	void			KILL(Command *);
 	void			TRACE(Command *);
-	void			TRACEUP(Command *);
 	void			SQUIT(Command *);
 	void			READY(Command *);
 
@@ -61,6 +60,7 @@ public:
 	void			RPL_364(Command *);
 	void			RPL_365(Command *);
 	void			RPL_391(Command *);
+	void			RPL_NTRACE(Command *);
 
 	void			chanModes(Command *);
 

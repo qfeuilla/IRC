@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/20 17:01:28 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/12 15:06:33 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/12 17:12:28 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -93,7 +93,7 @@
 # define RPL_364_CC		56
 # define RPL_365_CC		57
 # define RPL_391_CC		58
-
+# define RPL_NTRACE_CC	59
 
 // * Messages necessay rights to execute
 
@@ -211,8 +211,8 @@
 # define RPL_NOUSERS           {"395", ":Nobody logged in", 0}
 // "Link <version & debug level> <destination> 
 // <next server> V<protocol version> <link uptime in seconds>
-// <backstream sendq> <upstream sendq>" // * -> one arg
-# define RPL_TRACELINK         {"200", "{}", 1}
+// <backstream sendq> <upstream sendq>"
+# define RPL_TRACELINK         {"200", "Link {} {} {} V{} {} 0 0", 5}
 // "Try. <class> <server>"
 # define RPL_TRACECONNECTING   {"201", "Try. {} {}", 2}
 // "H.S. <class> <server>"
@@ -225,8 +225,8 @@
 // <info> : nick[username@servername] (hostname) hop :since_creation
 # define RPL_TRACEUSER         {"205", "User {} {}", 2}
 // "Serv <class> <int>S <int>C <server>
-// <nick!user|*!*>@<host|server> V<protocol version>" // * -> one arg
-# define RPL_TRACESERVER       {"206", "{}", 1}
+// <nick!user|*!*>@<host|server> V<protocol version>"
+# define RPL_TRACESERVER       {"206", "Serv {} 0S {}C {}[*!*@localhost] VF", 3}
 // "Service <class> <name> <type> <active type>"
 # define RPL_TRACESERVICE      {"207", "Service {} {} {} {}", 4}
 // "<newtype> 0 <client name>"
