@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/24 21:36:03 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/12 18:25:25 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/12 21:16:21 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -1127,8 +1127,7 @@ void	OtherServ::read_func() {
 				custom_send(ms, sv);
 			}
 		}
-		
-		delete ev->clients_fd[sock];
+		ev->trash.push_back(this);
 		ev->clients_fd[sock] = new Fd();
 		std::cerr << "Other serv quit" << std::endl;
 	} else {

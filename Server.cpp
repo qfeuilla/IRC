@@ -28,6 +28,7 @@ Server::Server() {
 	type = FD_SERVER;
 	ev = new Environment();
 	ev->password = new std::string("");
+	ev->serv = new std::string("");
 	time(&ev->start);
 	ev->accept_operators = true;
 	ev->version = new std::string("ft_irc_0.4.2b");
@@ -171,10 +172,6 @@ bool			Server::load_other_servs(std::string servinfo) {
 	ms += *ev->serv;
 	ms += " ";
 	ms += ":irc server for 42";
-	/*ms += " : ";
-	ms += "42";
-	ms += " ";
-	ms += std::to_string(port);*/
 	ms += CRLF;
 	std::cout << ms << std::endl;
 	send(_sock, ms.c_str(), ms.length(), 0);

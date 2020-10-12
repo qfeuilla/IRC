@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:51:25 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/12 18:30:07 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/12 21:10:37 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -77,7 +77,6 @@ Client::Client(std::string nc, OtherServ *srv) {
 }
 
 Client::~Client() {
-	
 	std::cout << "client destructed" << std::endl;
 }
 
@@ -200,17 +199,6 @@ void	Client::exec_registerMS() {
 	std::string tmp;
 	std::string ms;
 	Command		*tm;
-
-	time(&creation);
-	ms = ":";
-	ms += nick;
-	ms += " TIME ";
-	ms += std::to_string(creation);
-	ms += " ";
-	ms += std::to_string(last);
-	for (OtherServ *sv: ev->otherServers) {
-		custom_send(ms, sv);
-	}
 
 	// * 001
 	ms = reply_formating(servername.c_str(), RPL_WELCOME, std::vector<std::string>({nick, username, servername}), nick.c_str());
@@ -1575,14 +1563,13 @@ void	Client::SERVER(Command *cmd) {
 		if (cmd->arguments.size() >= 2) {
 			OtherServ *other = new OtherServ(sock, ev, 1);
 			other->name = cmd->arguments[0];
-			other->info = ":irc server for 42 ";
 			other->hop_count = 1;
 			for (size_t i = 2; i < cmd->arguments.size(); i++) {
 				ms += cmd->arguments[i];
 				ms += " ";
 			}
 			other->info = ms;
-			delete ev->clients_fd[sock];
+			ev->trash.push_back(this);
 			ev->clients_fd[sock] = other;
 			// Notify other serv that a new server as been add
 			ms = ":";
@@ -1594,7 +1581,6 @@ void	Client::SERVER(Command *cmd) {
 			for (OtherServ *sv : ev->otherServers) {
 				custom_send(ms, sv);
 			}
-			SSL_free(ssl);         /* release SSL state */
 			std::cerr << "Fd adding Ok" << std::endl;
 			ev->otherServers.push_back(other);
 			std::cerr << "OtherServ adding Ok" << std::endl;
