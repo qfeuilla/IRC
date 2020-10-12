@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/24 21:36:03 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/12 05:42:25 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/12 15:29:51 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -304,22 +304,6 @@ void	OtherServ::AWAY(Command *cmd) {
 		c->is_away = false;
 		std::cout << "Not Away" << std::endl;
 	}
-
-	ms = cmd->line;
-	for (OtherServ *sv : ev->otherServers) {
-		if (sv != this) {
-			custom_send(ms, sv);
-		}
-	}
-}
-
-void	OtherServ::TIME(Command *cmd) {
-	std::string ms;
-	Client		*c;
-	
-	c = *search_nick(cmd->prefix);
-	c->creation = std::strtoll(cmd->arguments[0].c_str(), NULL, 10);
-	c->last = std::strtoll(cmd->arguments[1].c_str(), NULL, 10);
 
 	ms = cmd->line;
 	for (OtherServ *sv : ev->otherServers) {
@@ -881,6 +865,10 @@ void	OtherServ::LINKS(Command *cmd) {
 				custom_send(ms, this);
 			}
 		}
+		if (utils::strMatchToLower(cmd->arguments[1], *ev->serv)) {
+			ms = reply_formating((*ev->serv).c_str(), RPL_LINKS, std::vector<std::string>({*ev->serv, *ev->serv, "0", "irc server for 42"}), cmd->prefix.c_str());
+			custom_send(ms, this);
+		}
 		ms = reply_formating((*ev->serv).c_str(), RPL_ENDOFLINKS, {cmd->arguments[1]}, cmd->prefix.c_str());
 		custom_send(ms, this);
 	} else {
@@ -893,6 +881,41 @@ void	OtherServ::LINKS(Command *cmd) {
 	}
 }
 
+void	OtherServ::TIME(Command *cmd) {
+	std::string	ms;
+	time_t		now = time(NULL);
+
+	if (cmd->arguments[0] == *ev->serv) {
+		ms = asctime(localtime(&now));
+		ms = std::string(&ms[0], &ms[ms.size() - 1]);
+		ms = reply_formating((*ev->serv).c_str(), RPL_TIME, std::vector<std::string>({*ev->serv, ms}), cmd->prefix.c_str());
+		custom_send(ms, this);
+	} else {
+		ms = cmd->line;
+		for (OtherServ *sv : ev->otherServers) {
+			if (sv != this) {
+				custom_send(ms, sv);
+			}
+		}
+	}
+}
+
+void	OtherServ::RPL_391(Command *cmd) {
+	std::string ms;
+	std::vector<Fd *> tm;
+
+	ms = cmd->line;
+	if (!((tm = ev->search_list_nick(cmd->arguments[0])).empty())) {
+		Client *c = reinterpret_cast<Client *>(tm[0]);
+		custom_send(ms, c);
+	} else {
+		for (OtherServ *sv : ev->otherServers) {
+			if (sv != this) {
+				custom_send(ms, sv);
+			}
+		}
+	}
+}
 
 void	OtherServ::RPL_351(Command *cmd) {
 	std::string ms;
@@ -1031,6 +1054,9 @@ int		OtherServ::execute_parsed(Command *parsed) {
 		break;
 	case RPL_365_CC:
 		RPL_365(parsed);
+		break;
+	case RPL_391_CC:
+		RPL_391(parsed);
 		break;
 	default:
 		break;

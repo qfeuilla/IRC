@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:51:25 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/12 05:45:44 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/12 15:29:19 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -909,6 +909,10 @@ void	Client::LINKS(Command *cmd) {
 							custom_send(ms, this);
 						}
 					}
+					if (utils::strMatchToLower(cmd->arguments[1], *ev->serv)) {
+						ms = reply_formating(servername.c_str(), RPL_LINKS, std::vector<std::string>({*ev->serv, *ev->serv, "0", "irc server for 42"}), nick.c_str());
+						custom_send(ms, this);
+					}
 					ms = reply_formating(servername.c_str(), RPL_ENDOFLINKS, {cmd->arguments[1]}, nick.c_str());
 					custom_send(ms, this);
 					good = true;
@@ -922,14 +926,18 @@ void	Client::LINKS(Command *cmd) {
 			for (OtherServ *sv : ev->otherServers) {
 				for (std::string tm : sv->connected_sv) {
 					if (utils::strMatchToLower(cmd->arguments[0], tm)) {
-						ms = reply_formating(servername.c_str(), RPL_LINKS, std::vector<std::string>({cmd->arguments[0], tm, std::to_string(sv->connected_hop[tm]), sv->connected_info[tm]}), nick.c_str());
+						ms = reply_formating(servername.c_str(), RPL_LINKS, std::vector<std::string>({tm, sv->name, std::to_string(sv->connected_hop[tm]), sv->connected_info[tm]}), nick.c_str());
 						custom_send(ms, this);
 					}
 				}
 				if (utils::strMatchToLower(cmd->arguments[0], sv->name)) {
-					ms = reply_formating(servername.c_str(), RPL_LINKS, std::vector<std::string>({cmd->arguments[0], sv->name, std::to_string(sv->hop_count), sv->info}), nick.c_str());
+					ms = reply_formating(servername.c_str(), RPL_LINKS, std::vector<std::string>({sv->name, *ev->serv, std::to_string(sv->hop_count), sv->info}), nick.c_str());
 					custom_send(ms, this);
 				}
+			}
+			if (utils::strMatchToLower(cmd->arguments[0], *ev->serv)) {
+				ms = reply_formating(servername.c_str(), RPL_LINKS, std::vector<std::string>({*ev->serv, *ev->serv, "0", "irc server for 42"}), nick.c_str());
+				custom_send(ms, this);
 			}
 			ms = reply_formating(servername.c_str(), RPL_ENDOFLINKS, {cmd->arguments[0]}, nick.c_str());
 			custom_send(ms, this);
@@ -938,12 +946,14 @@ void	Client::LINKS(Command *cmd) {
 	else {
 		for (OtherServ *sv : ev->otherServers) {
 			for (std::string tm : sv->connected_sv) {
-				ms = reply_formating(servername.c_str(), RPL_LINKS, std::vector<std::string>({cmd->arguments[0], tm, std::to_string(sv->connected_hop[tm]), sv->connected_info[tm]}), nick.c_str());
+				ms = reply_formating(servername.c_str(), RPL_LINKS, std::vector<std::string>({tm, *ev->serv, std::to_string(sv->connected_hop[tm]), sv->connected_info[tm]}), nick.c_str());
 				custom_send(ms, this);
 			}
-			ms = reply_formating(servername.c_str(), RPL_LINKS, std::vector<std::string>({"*", sv->name, std::to_string(sv->hop_count), sv->info}), nick.c_str());
+			ms = reply_formating(servername.c_str(), RPL_LINKS, std::vector<std::string>({sv->name, *ev->serv, std::to_string(sv->hop_count), sv->info}), nick.c_str());
 			custom_send(ms, this);
 		}
+		ms = reply_formating(servername.c_str(), RPL_LINKS, std::vector<std::string>({*ev->serv, *ev->serv, "0", "irc server for 42"}), nick.c_str());
+		custom_send(ms, this);
 		ms = reply_formating(servername.c_str(), RPL_ENDOFLINKS, {"*"}, nick.c_str());
 		custom_send(ms, this);
 	}
@@ -956,25 +966,40 @@ void	Client::TIME(Command *cmd) {
 	ev->cmd_count["TIME"] += 1;
 	time_t		now = time(NULL);
 	
-	if (cmd->arguments.size() >= 1) {
-		if (servername == cmd->arguments[0])
-			good = true;
-		else {
-			for (OtherServ *sv : ev->otherServers) {
-				if (cmd->arguments[0] == sv->name) 
+	if (cmd->arguments.size() > 0) {
+		for (OtherServ *sv : ev->otherServers) {
+			if (sv->name == cmd->arguments[0])
+				good = true;
+			for (std::string tm : sv->connected_sv) {
+				if (tm == cmd->arguments[0])
 					good = true;
 			}
+			if (good) {
+				ms = ":";
+				ms += nick;
+				ms += " TIME ";
+				ms += cmd->arguments[0];
+				custom_send(ms, sv);
+				break;
+			}
+		}
+		if (!good) {
+			if (cmd->arguments[0] == *ev->serv) {
+				ms = asctime(localtime(&now));
+				ms = std::string(&ms[0], &ms[ms.size() - 1]);
+				ms = reply_formating(servername.c_str(), RPL_TIME, std::vector<std::string>({*ev->serv, ms}), nick.c_str());
+				custom_send(ms, this);
+				good = true;
+			}
+		}
+		if (!good) {
+			ms = reply_formating(servername.c_str(), ERR_NOSUCHSERVER, {cmd->arguments[0]}, nick.c_str());
+			custom_send(ms, this);
 		}
 	} else {
-		good = true;
-	}
-	if (good) {
 		ms = asctime(localtime(&now));
 		ms = std::string(&ms[0], &ms[ms.size() - 1]);
-		ms = reply_formating(servername.c_str(), RPL_TIME, std::vector<std::string>({cmd->arguments[0], ms}), nick.c_str());
-		custom_send(ms, this);
-	} else {
-		ms = reply_formating(servername.c_str(), ERR_NOSUCHSERVER, {cmd->arguments[0]}, nick.c_str());
+		ms = reply_formating(servername.c_str(), RPL_TIME, std::vector<std::string>({*ev->serv, ms}), nick.c_str());
 		custom_send(ms, this);
 	}
 }
@@ -1944,14 +1969,6 @@ void	Client::share_Client(OtherServ *sv) {
 		ms += nick;
 		ms += " AWAY";
 	}
-	custom_send(ms, sv);
-
-	ms = ":";
-	ms += nick;
-	ms += " TIME ";
-	ms += std::to_string(creation);
-	ms += " ";
-	ms += std::to_string(last);
 	custom_send(ms, sv);
 }
 

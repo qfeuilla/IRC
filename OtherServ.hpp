@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/24 21:36:23 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/12 02:25:16 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/12 15:13:55 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -60,6 +60,7 @@ public:
 	void			RPL_351(Command *);
 	void			RPL_364(Command *);
 	void			RPL_365(Command *);
+	void			RPL_391(Command *);
 
 	void			chanModes(Command *);
 
