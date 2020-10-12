@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/20 17:01:28 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/12 21:44:06 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/12 22:20:21 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -347,7 +347,7 @@
 // 
 # define ERR_NOPERMFORHOST     {"463", ":Your host isn't among the privileged", 0}
 // 
-# define ERR_PASSWDMISMATCH    {"464", ":Password incorrect", 0}
+# define ERR_PASSWDMISMATCH    {"464", ":Credentials incorrect", 0}
 // 
 # define ERR_YOUREBANNEDCREEP  {"465", ":You are banned from this server", 0}
 // 

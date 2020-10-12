@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:51:25 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/12 22:02:35 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/12 22:23:06 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -1708,7 +1708,10 @@ void	Client::SQUIT(Command *cmd) {
 				ev->active = false;
 			} else {
 				for (OtherServ *sv : ev->otherServers) {
-					ms = cmd->line;
+					ms = ":";
+					ms += nick;
+					ms += " ";
+					ms += cmd->line;
 					custom_send(ms, sv);
 				}
 			}
