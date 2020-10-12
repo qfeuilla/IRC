@@ -100,7 +100,7 @@ public:
 	// *	kick returns true on succes
 	bool				kick(Client *client, const std::string &guyToKick, const std::string &reason, OtherServ *svFrom);
 	// *	invite returns true on succes 
-	bool				invite(Client *client, const std::string &guyToInvite);
+	bool				invite(Client *client, const std::string &guyToInvite, OtherServ *svFrom);
 	// *	quit returns true on succes, should always return true in practice
 	bool				quit(Client *client, const std::vector<std::string> &args);
 

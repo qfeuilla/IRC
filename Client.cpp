@@ -1998,6 +1998,8 @@ Client	*Client::getOtherClient(const std::string &name)
 
 void	Client::updateNickInChannels(const std::string &oldNick, const std::string &newNick)
 {
+
+	std::cout << "here new nick is == " << newNick << "\n\n";
 	std::list<Channel *>::iterator	current = channels.begin();
 	std::list<Channel *>::iterator	end = channels.end();
 	while (current != end) {

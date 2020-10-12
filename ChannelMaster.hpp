@@ -46,7 +46,7 @@ public:
 	// * topic returns true on succes
 	bool	topic(Client *client, const std::vector<std::string> &args, OtherServ *svFrom = nullptr);
 	// * invite returns true on succes
-	bool	invite(Client *client, const std::vector<std::string> &args);
+	bool	invite(Client *client, const std::vector<std::string> &args, OtherServ *svFrom = nullptr);
 	// * list always return true
 	bool	list(Client *client, const std::vector<std::string> &args);
 

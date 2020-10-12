@@ -404,28 +404,17 @@ bool	ChannelMaster::topic(Client *client, const std::vector<std::string> &args, 
 	return (channel->setTopic(client, newTopic, svFrom));
 }
 
-bool	ChannelMaster::invite(Client *client, const std::vector<std::string> &args)
+bool	ChannelMaster::invite(Client *client, const std::vector<std::string> &args, OtherServ *svFrom)
 {
 	std::string	ms;
 	std::string	userName = args[0];
 	Channel		*channel = getChannel(args[1]);
-	OtherServ	*serv;
-
-	if (!channel) {
-		// if there is chan with this name in another serv, we forward the invite message to this serv
-		serv = client->getServByChannelName(args[1]);
-		if (serv) {
-			ms = ":" + client->nick + " INVITE " + args[0] + " " + args[1];
-			custom_send(ms, serv);
-			return (true);
-		}
-	}
 
 	if (!channel) {
 		ms = reply_formating(client->servername.c_str(), ERR_NOSUCHCHANNEL, std::vector<std::string>({args[1]}), client->nick.c_str());
 		return (!Channel::rplMsg(ms, client));
 	}
-	return (channel->invite(client, userName));
+	return (channel->invite(client, userName, svFrom));
 }
 
 void	ChannelMaster::setSrvName(const std::string &srvName)

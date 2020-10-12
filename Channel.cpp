@@ -658,27 +658,29 @@ bool	Channel::kick(Client *client, const std::string &guyToKick, const std::stri
 	return (!rplMsg(ms, client));
 }
 
-bool	Channel::invite(Client *client, const std::string &guyToInvite)
+bool	Channel::invite(Client *client, const std::string &guyToInvite, OtherServ *svFrom)
 {
 	std::string	ms;
 	_users_map::iterator	userToInvite = _users.find(utils::ircLowerCase(guyToInvite));
 	Client		*clientToInvite = client->getOtherClient(guyToInvite);
 
-	if (!clientToInvite) {
-		ms = reply_formating(client->servername.c_str(), ERR_NOSUCHNICK, {guyToInvite}, client->nick.c_str());
-		return (!rplMsg(ms, client));
-	}
-	if (!isInChan(client->nick)) {
-		ms = reply_formating(client->servername.c_str(), ERR_NOTONCHANNEL, {getName()}, client->nick.c_str());
-		return (!rplMsg(ms, client));
-	}
-	if (!_hasRights(client->nick)) {
-		ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
-		return (!rplMsg(ms, client));
-	}
-	if (userToInvite != _users.end()) { // user is already in channel (no need to invite)
-		ms = reply_formating(client->servername.c_str(), ERR_USERONCHANNEL, std::vector<std::string>({guyToInvite, getName()}), client->nick.c_str());
-		return (!rplMsg(ms, client));
+	if (!svFrom) {
+		if (!clientToInvite) {
+			ms = reply_formating(client->servername.c_str(), ERR_NOSUCHNICK, {guyToInvite}, client->nick.c_str());
+			return (!rplMsg(ms, client));
+		}
+		if (!isInChan(client->nick)) {
+			ms = reply_formating(client->servername.c_str(), ERR_NOTONCHANNEL, {getName()}, client->nick.c_str());
+			return (!rplMsg(ms, client));
+		}
+		if (!_hasRights(client->nick)) {
+			ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
+			return (!rplMsg(ms, client));
+		}
+		if (userToInvite != _users.end()) { // user is already in channel (no need to invite)
+			ms = reply_formating(client->servername.c_str(), ERR_USERONCHANNEL, std::vector<std::string>({guyToInvite, getName()}), client->nick.c_str());
+			return (!rplMsg(ms, client));
+		}
 	}
 	if (!_isInList(guyToInvite, _modes.invitation_list))
 		_modes.invitation_list.push_back(utils::ircLowerCase(guyToInvite));
@@ -687,7 +689,11 @@ bool	Channel::invite(Client *client, const std::string &guyToInvite)
 	rplMsg(ms, clientToInvite);
 	ms = reply_formating(client->servername.c_str(), RPL_INVITING,
 	std::vector<std::string>({utils::ircLowerCase(guyToInvite), getName()}), client->nick.c_str());
-	return (rplMsg(ms, client));
+	rplMsg(ms, client);
+
+	ms = ":" + client->nick + " INVITE " + utils::ircLowerCase(guyToInvite) + " :" + getName();
+	client->sendToAllServs(ms, svFrom);
+	return (true);
 }
 
 bool				Channel::isEmpty() const
@@ -756,9 +762,10 @@ void		Channel::changeNick(const std::string &oldNick, const std::string &newNick
 	// :paprika!~pokemon@ip-46.net-80-236-89.joinville.rev.numericable.fr NICK :patrick-2
 	ms = ":" + oldNick + "!" + client->username + "@" + client->servername;
 	ms += " NICK :" + newNick;
+	std::cout << "miaw new nick is == " << newNick << "\n\n";
 	if (!_modes.q)
 		broadcastMsg(client, ms);
-	// TODO updateServsChan(client);
+	rplMsg(ms, client);
 }
 
 bool		Channel::quit(Client *client, const std::vector<std::string> &args)
