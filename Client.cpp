@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:51:25 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/12 21:49:05 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/12 22:02:35 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -1337,8 +1337,10 @@ void	Client::KILL(Command *cmd) {
 				delete tm;
 			} else if (!(tmpo = ev->search_othersrv_nick(cmd->arguments[0])).empty()) {
 				ms = ":";
-				ms += cmd->arguments[0];
+				ms += nick;
 				ms += " KILL ";
+				ms += cmd->arguments[0];
+				ms += " ";
 				for (size_t i = 1; i < cmd->arguments.size(); i++) {
 					ms += cmd->arguments[i];
 					ms += " ";
@@ -1737,6 +1739,14 @@ void	Client::NAMES(Command *cmd) {
 	ev->channels->names(this, cmd->arguments);
 }
 
+void	Client::SERVLIST(Command *cmd) {
+	(void)cmd;
+	std::string ms;
+
+	ms = reply_formating(servername.c_str(), RPL_SERVLISTEND, std::vector<std::string>({"0", "*"}), nick.c_str());
+	custom_send(ms, this);
+}
+
 bool	Client::_cmdNeedAuth(int cmdCode) const
 {
 	if (cmdCode == PASS_CC || cmdCode == NICK_CC
@@ -1873,6 +1883,9 @@ int		Client::execute_parsed(Command *parsed) {
 		break;
 	case NAMES_CC:
 		NAMES(parsed);
+		break;
+	case SERVLIST_CC:
+		SERVLIST(parsed);
 		break;
 	default:
 		break;

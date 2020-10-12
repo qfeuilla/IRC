@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/24 21:36:03 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/12 21:46:29 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/12 22:02:19 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -378,20 +378,20 @@ void	OtherServ::KILL(Command *cmd) {
 	std::vector<Client *>::iterator c;
 	std::vector<Fd *> tmp;
 
-	c = search_nick(cmd->prefix);
+	c = search_nick(cmd->arguments[0]);
 	if (c != clients.end()) {
 		(*c)->last = time(NULL);
 		clients_history.push_back(*c);
 		clients.erase(c);
 	}
-	if (!(tmp = ev->search_list_nick(cmd->prefix)).empty()) {
+	if (!(tmp = ev->search_list_nick(cmd->arguments[0])).empty()) {
 		Client *c = reinterpret_cast<Client *>(tmp[0]);
 
 		std::string ans;
 		ev->cmd_count["QUIT"] += 1;
 
 		if (cmd->arguments.size()) {
-			for (size_t i = 0; i < cmd->arguments.size(); i++) {
+			for (size_t i = 1; i < cmd->arguments.size(); i++) {
 				ms += cmd->arguments[i];
 				ms += " ";
 			}

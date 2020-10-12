@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:50:59 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/12 20:59:26 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/12 21:54:34 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -75,6 +75,7 @@ public:
 	void				SQUIT(Command *);
 	void				CONNECT(Command *);
 	void				NAMES(Command *);
+	void				SERVLIST(Command *);
 
 	int					execute_parsed(Command *);
 
