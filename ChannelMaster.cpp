@@ -285,7 +285,7 @@ Channel		*ChannelMaster::getChannel(const std::string &channelName)
 	return (nullptr);
 }
 
-bool	ChannelMaster::kick(Client *client, const std::vector<std::string> &args)
+bool	ChannelMaster::kick(Client *client, const std::vector<std::string> &args, OtherServ *svFrom)
 {
 	std::map<std::string, std::string>	name_pass_map;
 	std::map<std::string, std::string>::iterator	current;
@@ -302,7 +302,7 @@ bool	ChannelMaster::kick(Client *client, const std::vector<std::string> &args)
 
 	if (chanNames.size() == 1) {
 		for (std::string nickname : guysToKick) {
-			ret &= kickFromChan(client, chanNames[0], nickname, reason);
+			ret &= kickFromChan(client, chanNames[0], nickname, reason, svFrom);
 		}
 		return (ret);
 	}
@@ -315,36 +315,24 @@ bool	ChannelMaster::kick(Client *client, const std::vector<std::string> &args)
 	current = name_pass_map.begin();
 	end = name_pass_map.end();
 	while (current != end) {
-		ret &= kickFromChan(client, (*current).first, (*current).second, reason);
+		ret &= kickFromChan(client, (*current).first, (*current).second, reason, svFrom);
 		++current;
 	}
 	return (ret);
 }
 
 bool	ChannelMaster::kickFromChan(Client *client, const std::string &chanName,
-const std::string &guyToKick, const std::string &reason)
+const std::string &guyToKick, const std::string &reason, OtherServ *svFrom)
 {
 	std::string	ms;
 	Channel		*channel = getChannel(chanName);
-	
-	OtherServ			*serv;
-
-	if (!channel) {
-		// if there is chan with this name in another serv, we forward the kick message to this serv
-		serv = client->getServByChannelName(chanName);
-		if (serv) {
-			ms = ":" + client->nick + " KICK " + chanName + " " + guyToKick + " :" + reason;
-			custom_send(ms, serv);
-			return (true);
-		}
-	}
 
 	if (!channel) {
 		ms = reply_formating(client->servername.c_str(), ERR_NOSUCHCHANNEL,
 		std::vector<std::string>({chanName}), client->nick.c_str());
 		return (!Channel::rplMsg(ms, client));
 	}
-	if (channel->kick(client, guyToKick, reason)) {
+	if (channel->kick(client, guyToKick, reason, svFrom)) {
 		(*_user_channels)[client->nick]->remove(channel);
 		return (true);
 	}
@@ -389,29 +377,16 @@ bool	ChannelMaster::broadcastMsg(Client *client, const std::string &chanName, co
 	return (channel->broadcastMsg(client, ms));
 }
 
-bool	ChannelMaster::topic(Client *client, const std::vector<std::string> &args)
+bool	ChannelMaster::topic(Client *client, const std::vector<std::string> &args, OtherServ *svFrom)
 {
 	std::string	ms;
 	std::string	newTopic = "";
 	std::string	topicIs;
-	OtherServ	*serv;
 
 	Channel		*channel = getChannel(args[0]);
 
 	if (args.size() > 1)
 		newTopic = Channel::parseArg(1, args);
-
-	if (!channel) {
-		// if there is chan with this name in another serv, we forward the topic message to this serv
-		serv = client->getServByChannelName(args[0]);
-		if (serv) {
-			ms = ":" + client->nick + " TOPIC " + args[0];
-			if (newTopic != "")
-				ms += " :" + newTopic;
-			custom_send(ms, serv);
-			return (true);
-		}
-	}
 
 	if (!channel) {
 		ms = reply_formating(client->servername.c_str(), ERR_NOSUCHCHANNEL, std::vector<std::string>({args[0]}), client->nick.c_str());
@@ -426,7 +401,7 @@ bool	ChannelMaster::topic(Client *client, const std::vector<std::string> &args)
 		ms = reply_formating(client->servername.c_str(), RPL_TOPIC, std::vector<std::string>({channel->getName(), topicIs}), client->nick.c_str());
 		return (Channel::rplMsg(ms, client));
 	}
-	return (channel->setTopic(client, newTopic));
+	return (channel->setTopic(client, newTopic, svFrom));
 }
 
 bool	ChannelMaster::invite(Client *client, const std::vector<std::string> &args)

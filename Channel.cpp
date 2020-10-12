@@ -37,14 +37,14 @@ const std::string	&Channel::getTopic() const
 	return (_topic);
 }
 
-bool				Channel::setTopic(Client *client, const std::string &newTopic)
+bool				Channel::setTopic(Client *client, const std::string &newTopic, OtherServ *svFrom)
 {
 	std::string	ms;
 	if (!isInChan(client->nick)) {
 		ms = reply_formating(client->servername.c_str(), ERR_NOTONCHANNEL, std::vector<std::string>({getName()}), client->nick.c_str());
 		return (!rplMsg(ms, client));
 	}
-	if (_modes.t && !_hasRights(client->nick)) {
+	if (_modes.t && (!svFrom && !_hasRights(client->nick))) {
 		ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
 		return (!rplMsg(ms, client));
 	}
@@ -53,7 +53,8 @@ bool				Channel::setTopic(Client *client, const std::string &newTopic)
 	ms += " TOPIC " + getName() + " :" +_topic;
 	rplMsg(ms, client);
 	broadcastMsg(client, ms);
-	// TODO updateServsChan(client); // update servers chan
+	ms = ":" + client->nick + " TOPIC " + getName() + " :" + _topic;
+	client->sendToAllServs(ms, svFrom);
 	return (true);
 }
 
@@ -625,12 +626,12 @@ bool	Channel::getModeN() const
 	return (_modes.n);
 }
 
-bool	Channel::kick(Client *client, const std::string &guyToKick, const std::string &reason)
+bool	Channel::kick(Client *client, const std::string &guyToKick, const std::string &reason, OtherServ *svFrom)
 {
 	std::string	ms;
 	_users_map::iterator	userToKick = _users.find(utils::ircLowerCase(guyToKick));
 
-	if (_hasRights(client->nick)) {
+	if (svFrom || _hasRights(client->nick)) {
 		if (userToKick == _users.end()) {
 			ms = reply_formating(client->servername.c_str(), ERR_USERNOTINCHANNEL, std::vector<std::string>({guyToKick, getName()}), client->nick.c_str());
 			return (!rplMsg(ms, client));
@@ -647,8 +648,10 @@ bool	Channel::kick(Client *client, const std::string &guyToKick, const std::stri
 			_modes.v.remove(utils::ircLowerCase(userToKick->first));
 		_users.erase(userToKick);
 		_modes.users--;
-		// TODO updateServsChan(client); // update servers chan
-
+		
+		ms = ":" + client->nick + " KICK " + getName() + " " + guyToKick;
+		ms += (reason != "") ? " :" + reason : " :" + client->nick;
+		client->sendToAllServs(ms, svFrom);
 		return (true);
 	}
 	ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());

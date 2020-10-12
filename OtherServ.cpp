@@ -495,83 +495,29 @@ void	OtherServ::PART(Command *cmd)
 
 void	OtherServ::KICK(Command *cmd)
 {
-	std::string	ms;
-	std::string	chanName;
-	std::string	guyToKick;
-	std::string	reason = "";
-	std::vector<Client *>::iterator	client;
-
-	if (cmd->prefix.empty())
+	Client	*client;
+	client = ev->searchClientEverywhere(cmd->prefix);
+	if (!client)
 		return ;
+	std::string ms;
+	ev->cmd_count["KICK"] += 1;
+
 	if (cmd->arguments.size() >= 2) {
-		chanName = cmd->arguments[0];
-		guyToKick = cmd->arguments[1];
-		if (cmd->arguments.size() >= 3)
-			reason = Channel::parseArg(2, cmd->arguments);
-		// check if we have the channel
-		if (ev->channels->getChannel(chanName)) {
-			// if we have channel, we use ChannelMaster.kick() method
-			client = search_nick(cmd->prefix);
-			if (client == clients.end())
-				return ; // message forgery won't error the server
-			ev->channels->kickFromChan(*client, chanName, guyToKick, reason);
-			return ;
-		}
-		// if we do not have the channel, we forward the msg to the right serv
-		for (OtherServ *sv : ev->otherServers) {
-			if (sv != this) {
-				for (Chan &chan : sv->chans) {
-					if (utils::strCmp(chan.name, chanName)) {
-						// forward the request to this serv
-						ms = ":";
-						ms += cmd->prefix; // the user who wants to kick someone
-						ms += " KICK " + chanName + " " + guyToKick + " :" + reason;
-						custom_send(ms, sv);
-						return ;
-					}
-				}
-			}
-		}
+			ev->channels->kick(client, cmd->arguments, this);
 	}
 }
 
 void	OtherServ::TOPIC(Command *cmd)
 {
-	std::string	ms;
-	std::string	chanName;
-	std::string	newTopic = "";
-	std::vector<Client *>::iterator	client;
-
-	if (cmd->prefix.empty())
+	Client	*client;
+	client = ev->searchClientEverywhere(cmd->prefix);
+	if (!client)
 		return ;
+	std::string ms;
+	ev->cmd_count["TOPIC"] += 1;
+
 	if (cmd->arguments.size() >= 1) {
-		chanName = cmd->arguments[0];
-		if (cmd->arguments.size() >= 2)
-			newTopic = Channel::parseArg(1, cmd->arguments);
-		// check if we have the channel
-		if (ev->channels->getChannel(chanName)) {
-			// if we have channel, we use ChannelMaster.topic() method
-			client = search_nick(cmd->prefix);
-			if (client == clients.end())
-				return ; // message forgery won't error the server
-			ev->channels->topic(*client, cmd->arguments);
-			return ;
-		}
-		// if we do not have the channel, we forward the msg to the right serv
-		for (OtherServ *sv : ev->otherServers) {
-			if (sv != this) {
-				for (Chan &chan : sv->chans) {
-					if (utils::strCmp(chan.name, chanName)) {
-						// forward the request to this serv
-						ms = ":" + cmd->prefix + " TOPIC " + chanName;
-						if (newTopic != "")
-							ms += " :" + newTopic;
-						custom_send(ms, sv);
-						return ;
-					}
-				}
-			}
-		}
+		ev->channels->topic(client, cmd->arguments, this);
 	}
 }
 

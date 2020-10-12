@@ -42,9 +42,9 @@ public:
 	// * mode returns true on succes
 	bool	mode(Client *client, const std::vector<std::string> &args, OtherServ *svFrom = nullptr);
 	// * kick returns true on succes
-	bool	kick(Client *client, const std::vector<std::string> &args);
+	bool	kick(Client *client, const std::vector<std::string> &args, OtherServ *svFrom = nullptr);
 	// * topic returns true on succes
-	bool	topic(Client *client, const std::vector<std::string> &args);
+	bool	topic(Client *client, const std::vector<std::string> &args, OtherServ *svFrom = nullptr);
 	// * invite returns true on succes
 	bool	invite(Client *client, const std::vector<std::string> &args);
 	// * list always return true
@@ -65,7 +65,7 @@ public:
 	bool		joinChannel(Client *client, const std::string &channelName, const std::string &passwd, OtherServ *svFrom);
 	bool		leaveChannel(Client *client, const std::string &channelName, const std::string &reason, OtherServ *svFrom);
 	bool	kickFromChan(Client *client, const std::string &chanName,
-	const std::string &guyToKick, const std::string &reason);
+	const std::string &guyToKick, const std::string &reason, OtherServ *svFrom);
 
 	void		doQuit(Client *client, const std::vector<std::string> &args);
 	bool		localChanWHO(Client *client, const std::vector<std::string> &args);

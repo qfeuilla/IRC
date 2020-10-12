@@ -85,7 +85,7 @@ public:
 	std::vector<std::string>	getUsersVec() const;
 	const std::string	&getCreator() const;
 	const std::string	&getTopic() const;
-	bool				setTopic(Client *client, const std::string &newTopic);
+	bool				setTopic(Client *client, const std::string &newTopic, OtherServ *svFrom);
 	bool				isEmpty() const;
 
 	static std::string	parseArg(size_t fromIndex, const std::vector<std::string> &args);
@@ -98,7 +98,7 @@ public:
 	// *	leave returns true on succes
 	bool				leave(Client *client, const std::string &reason, OtherServ *svFrom, bool muted = false);
 	// *	kick returns true on succes
-	bool				kick(Client *client, const std::string &guyToKick, const std::string &reason);
+	bool				kick(Client *client, const std::string &guyToKick, const std::string &reason, OtherServ *svFrom);
 	// *	invite returns true on succes 
 	bool				invite(Client *client, const std::string &guyToInvite);
 	// *	quit returns true on succes, should always return true in practice
