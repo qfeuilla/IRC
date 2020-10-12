@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/24 21:36:03 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/12 02:41:52 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/12 05:42:25 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -866,17 +866,22 @@ void	OtherServ::NAMES(Command *cmd)
 }
 
 void	OtherServ::LINKS(Command *cmd) {
-	std::string ms;
+	std::string ms = " ";
 
 	if (*ev->serv == cmd->arguments[0]) {
 		for (OtherServ *sv : ev->otherServers) {
-			
+			for (std::string tm : sv->connected_sv) {
+				if (utils::strMatchToLower(cmd->arguments[1], tm)) {
+					ms = reply_formating((*ev->serv).c_str(), RPL_LINKS, std::vector<std::string>({tm, sv->name, std::to_string(sv->connected_hop[tm]), sv->connected_info[tm]}), cmd->prefix.c_str());
+					custom_send(ms, this);
+				}
+			}
 			if (utils::strMatchToLower(cmd->arguments[1], sv->name)) {
-				ms += reply_formating((*ev->serv).c_str(), RPL_LINKS, std::vector<std::string>({cmd->arguments[1], sv->name, std::to_string(sv->hop_count), sv->info}), cmd->prefix.c_str());
-				ms += CRLF;
+				ms = reply_formating((*ev->serv).c_str(), RPL_LINKS, std::vector<std::string>({sv->name, *(ev->serv), std::to_string(sv->hop_count), sv->info}), cmd->prefix.c_str());
+				custom_send(ms, this);
 			}
 		}
-		ms += reply_formating((*ev->serv).c_str(), RPL_ENDOFLINKS, {cmd->arguments[1]}, cmd->prefix.c_str());
+		ms = reply_formating((*ev->serv).c_str(), RPL_ENDOFLINKS, {cmd->arguments[1]}, cmd->prefix.c_str());
 		custom_send(ms, this);
 	} else {
 		for (OtherServ *sv : ev->otherServers) {
