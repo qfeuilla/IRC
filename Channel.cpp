@@ -1,15 +1,14 @@
 #include "Channel.hpp"
 #include "defines.hpp"
 
-Channel::Channel(): _name(), _users(), _modes(), _topic(), _srv_name(), _creator() {}
-Channel::Channel(const std::string &name, Client *client, const std::string &srvName)
-: _name(name), _users(), _modes(), _topic(), _srv_name(srvName), _creator(client->nick) {
+Channel::Channel(): _name(), _users(), _modes(), _topic(), _creator() {}
+Channel::Channel(const std::string &name, Client *client, OtherServ *srv)
+: _name(name), _users(), _modes(), _topic(), _creator(client->nick) {
 	if (_name.at(0) != '+') {
 		_modes.o.push_back(utils::ircLowerCase(client->nick));
-		_modes.n = true;
 	}
 	std::cout << "Creating channel: " << _name << "\n\n";
-	join(client, "");
+	join(client, "", srv);
 }
 Channel::~Channel() {
 	std::cout << "channel erased: " << _name << "\n\n";
@@ -25,9 +24,9 @@ const std::string	&Channel::getName() const
 {
 	return (_name);
 }
-std::string			Channel::getUsersNum() const
+int			Channel::getUsersNum() const
 {
-	return (std::to_string(_modes.users));
+	return (_modes.users);
 }
 const std::string	&Channel::getCreator() const
 {
@@ -54,7 +53,7 @@ bool				Channel::setTopic(Client *client, const std::string &newTopic)
 	ms += " TOPIC " + getName() + " :" +_topic;
 	rplMsg(ms, client);
 	broadcastMsg(client, ms);
-	updateServsChan(client); // update servers chan
+	// TODO updateServsChan(client); // update servers chan
 	return (true);
 }
 
@@ -73,31 +72,33 @@ bool				Channel::broadcastMsg(Client *sender, const std::string &msg) const
 	return (true);
 }
 
-bool				Channel::join(Client *client, const std::string &passwd)
+bool				Channel::join(Client *client, const std::string &passwd, OtherServ *svFrom)
 {
 	std::string	ms;
 
 	if (!isInChan(client->nick)) {
-		if (_modes.k != "" && _modes.k != passwd) {
-			ms = reply_formating(client->servername.c_str(), ERR_BADCHANNELKEY, std::vector<std::string>({getName()}), client->nick.c_str());
-			return (!rplMsg(ms, client));
-		}
-		if (_modes.l != -1 && _modes.users >= _modes.l) {
-			ms = reply_formating(client->servername.c_str(), ERR_CHANNELISFULL, std::vector<std::string>({getName()}), client->nick.c_str());
-			return (!rplMsg(ms, client));
-		}
-		if (_modes.i && !_isInvited(client)) {
-			ms = reply_formating(client->servername.c_str(), ERR_INVITEONLYCHAN, std::vector<std::string>({getName()}), client->nick.c_str());
-			return (!rplMsg(ms, client));
-		}
-		if (_modes.p) {
-			ms = reply_formating(client->servername.c_str(), ERR_NOSUCHCHANNEL, std::vector<std::string>({getName()}), client->nick.c_str());
-			return (!rplMsg(ms, client));
-		}
-		if (_isBanned(client)) {
-			if (!_isInvited(client)) {
-				ms = reply_formating(client->servername.c_str(), ERR_BANNEDFROMCHAN, std::vector<std::string>({getName()}), client->nick.c_str());
+		if (!svFrom) { // if it comes from a server, we must not test
+			if (_modes.k != "" && _modes.k != passwd) {
+				ms = reply_formating(client->servername.c_str(), ERR_BADCHANNELKEY, std::vector<std::string>({getName()}), client->nick.c_str());
 				return (!rplMsg(ms, client));
+			}
+			if (_modes.l != -1 && _modes.users >= _modes.l) {
+				ms = reply_formating(client->servername.c_str(), ERR_CHANNELISFULL, std::vector<std::string>({getName()}), client->nick.c_str());
+				return (!rplMsg(ms, client));
+			}
+			if (_modes.i && !_isInvited(client)) {
+				ms = reply_formating(client->servername.c_str(), ERR_INVITEONLYCHAN, std::vector<std::string>({getName()}), client->nick.c_str());
+				return (!rplMsg(ms, client));
+			}
+			if (_modes.p) {
+				ms = reply_formating(client->servername.c_str(), ERR_NOSUCHCHANNEL, std::vector<std::string>({getName()}), client->nick.c_str());
+				return (!rplMsg(ms, client));
+			}
+			if (_isBanned(client)) {
+				if (!_isInvited(client)) {
+					ms = reply_formating(client->servername.c_str(), ERR_BANNEDFROMCHAN, std::vector<std::string>({getName()}), client->nick.c_str());
+					return (!rplMsg(ms, client));
+				}
 			}
 		}
 		// on ajoute le client dans le channel, et on le retire de la liste d'invitations
@@ -106,7 +107,7 @@ bool				Channel::join(Client *client, const std::string &passwd)
 		_modes.users++;
 		
 		std::string	join_msg = ":" + client->nick;
-		join_msg += "!" + client->username + "@" + _srv_name;
+		join_msg += "!" + client->username + "@" + client->servername;
 		join_msg += " JOIN :" + getName();
 
 		rplMsg(join_msg, client);
@@ -118,14 +119,20 @@ bool				Channel::join(Client *client, const std::string &passwd)
 		}
 
 		usrList(client);
+
+		ms = ":" + client->nick + " JOIN " + getName();
+		client->sendToAllServs(ms, svFrom);
+		if (_modes.users == 1) { // channel was just created
+			ms = ":" + client->nick + " MODE " + getName() + " +o " + client->nick;
+			client->sendToAllServs(ms, svFrom);
+		}
 		
-		updateServsChan(client); // update servers chan
 		return (true);
 	}
 	return (false);
 }
 
-bool				Channel::leave(Client *client, const std::string &reason, bool muted)
+bool				Channel::leave(Client *client, const std::string &reason, OtherServ *svFrom, bool muted)
 {
 	std::string		ms;
 
@@ -150,7 +157,9 @@ bool				Channel::leave(Client *client, const std::string &reason, bool muted)
 		_modes.v.remove(utils::ircLowerCase(user->first));
 	_users.erase(user);
 	_modes.users--;
-	updateServsChan(client); // update servers chan
+	ms = ":" + client->nick + " PART " + getName();
+	ms += (reason != "") ? " :" + reason : "";
+	client->sendToAllServs(ms, svFrom);
 	return (true);
 }
 
@@ -551,7 +560,7 @@ bool	Channel::kick(Client *client, const std::string &guyToKick, const std::stri
 			_modes.v.remove(utils::ircLowerCase(userToKick->first));
 		_users.erase(userToKick);
 		_modes.users--;
-		updateServsChan(client); // update servers chan
+		// TODO updateServsChan(client); // update servers chan
 
 		return (true);
 	}
@@ -659,7 +668,7 @@ void		Channel::changeNick(const std::string &oldNick, const std::string &newNick
 	ms += " NICK :" + newNick;
 	if (!_modes.q)
 		broadcastMsg(client, ms);
-	updateServsChan(client);
+	// TODO updateServsChan(client);
 }
 
 bool		Channel::quit(Client *client, const std::vector<std::string> &args)
@@ -674,21 +683,16 @@ bool		Channel::quit(Client *client, const std::vector<std::string> &args)
 			ms += " ";
 	}
 	broadcastMsg(client, ms);
-	leave(client, "", true);
-	updateServsChan(client);
+	// ! change nullptr with the server (if req was sent by a server)
+	leave(client, "", nullptr, true);
+	// TODO updateServsChan(client);
 	return (true);
 }
 
 // * this function always returns true
 bool		Channel::rplMsg(std::string ms, Client *c)
 {
-	std::string	msg = ":" + c->nick + " CHAN_RPL ";
-	if (c->sock == -1) { // we need to send msg to the server on which the client is connected
-		msg += ms;
-		OtherServ *srv = c->serv;
-		if (!srv)
-			return (true);
-		custom_send(msg, srv);
+	if (c->sock == -1) {
 		return (true);
 	}
 	custom_send(ms, c);
@@ -716,19 +720,6 @@ std::vector<std::string>	Channel::getUsersVec() const
 		users.push_back(std::string(pair.first));
 	}
 	return (users);
-}
-
-void			Channel::updateServsChan(Client *c) const
-{
-	std::string	ms;
-
-	if (getName().at(0) == '&')
-		return ; // channel is local to this serv
-	ms = "CHAN_CHG ";
-	ms += getName() + "," + getUsersNum() + "," + getModes() + " ";
-	ms += getUsersStr();
-	ms += (getTopic() != "") ? ":" + getTopic() : ":!";
-	c->sendToAllServs(ms);
 }
 
 // returns true if user is banned

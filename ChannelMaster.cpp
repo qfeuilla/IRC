@@ -58,7 +58,8 @@ std::vector<std::string>	splitComma(std::string const &str, bool asLowerCase = f
 }
 
 
-bool	ChannelMaster::join(Client *client, const std::vector<std::string> &args, std::list<Channel*> *usrChans)
+bool	ChannelMaster::join(Client *client, const std::vector<std::string> &args,
+std::list<Channel*> *usrChans, OtherServ *svFrom)
 {
 	std::map<std::string, std::string>	name_pass_map;
 	std::map<std::string, std::string>::iterator	current;
@@ -80,65 +81,45 @@ bool	ChannelMaster::join(Client *client, const std::vector<std::string> &args, s
 	current = name_pass_map.begin();
 	end = name_pass_map.end();
 	while (current != end) {
-		ret &= joinChannel(client, (*current).first, (*current).second);
+		ret &= joinChannel(client, (*current).first, (*current).second, svFrom);
 		++current;
 	}
 	return (ret);
 }
 
-bool	ChannelMaster::joinChannel(Client *client, const std::string &channelName, const std::string &passwd)
+bool	ChannelMaster::joinChannel(Client *client, const std::string &channelName,
+const std::string &passwd, OtherServ *svFrom)
 {
 	Channel	*chan = getChannel(channelName);
-	OtherServ			*serv;
 	std::string			ms;
 
 	if (!chan) {
-		// if there is chan with this name in another serv, we forward the join message to this serv
-		serv = client->getServByChannelName(channelName);
-		if (serv) {
-			ms = ":" + client->nick + " JOIN " + channelName + " " + passwd;
-			custom_send(ms, serv);
-			return (true); // stop the function here to prevent creating a local channel
-		}
-	}
-	if (!chan) {
 		if (_testChannelName(client, channelName))
 			return (false);
-		Channel	*nchan = new Channel(channelName, client, _srv_name);
+		Channel	*nchan = new Channel(channelName, client, svFrom);
 		_channels->push_back(nchan);
 		(*_user_channels)[client->nick]->push_back(nchan);
 		return (true);
 	}
-	if (chan->join(client, passwd)) {
-		if (client->sock != -1)
-			(*_user_channels)[client->nick]->push_back(chan);
+	if (chan->join(client, passwd, svFrom)) {
+		(*_user_channels)[client->nick]->push_back(chan);
 		return (true);
 	}
 	return (false);
 }
 
-bool	ChannelMaster::leaveChannel(Client *client, const std::string &channelName, const std::string &reason)
+bool	ChannelMaster::leaveChannel(Client *client, const std::string &channelName,
+const std::string &reason, OtherServ *svFrom)
 {
 	Channel	*chan = getChannel(channelName);
 	std::string		ms;
-	OtherServ		*serv;
 
-	if (!chan) {
-		// if there is chan with this name in another serv, we forward the part message to this serv
-		serv = client->getServByChannelName(channelName);
-		if (serv) {
-			ms = ":" + client->nick + " PART " + channelName  + " :" + reason;
-			custom_send(ms, serv);
-			return (true);
-		}
-	}
 	if (!chan) {
 		ms = reply_formating(client->servername.c_str(), ERR_NOSUCHCHANNEL, std::vector<std::string>({channelName}), client->nick.c_str());
 		return (!Channel::rplMsg(ms, client));
 	}
-	if (chan->leave(client, reason)) {
-		if (client->sock != -1)
-			(*_user_channels)[client->nick]->remove(chan); // remove this chan from this user channels list 
+	if (chan->leave(client, reason, svFrom)) {
+		(*_user_channels)[client->nick]->remove(chan); // remove this chan from this user channels list 
 		if (!chan->isEmpty())
 			return (true);
 		_channels->remove(chan); // channel is empty -> we delete it
@@ -148,13 +129,13 @@ bool	ChannelMaster::leaveChannel(Client *client, const std::string &channelName,
 	return (false);
 }
 
-bool	ChannelMaster::leave(Client *client, const std::vector<std::string> &args)
+bool	ChannelMaster::leave(Client *client, const std::vector<std::string> &args, OtherServ *svFrom)
 {
 	bool	ret = true;
 	std::vector<std::string>	names = splitComma(args[0]);
 	std::string		reason = args.size() > 1 ? Channel::parseArg(1, args) : std::string();
 	for (size_t i = 0; i < names.size(); ++i) {
-		ret &= leaveChannel(client, names[i], reason);
+		ret &= leaveChannel(client, names[i], reason, svFrom);
 	}
 	return (ret);
 }
@@ -294,7 +275,7 @@ bool	ChannelMaster::mode(Client *client, const std::vector<std::string> &args)
 			break;
 		}
 	}
-	chan->updateServsChan(client);
+	// TODO chan->updateServsChan(client);
 	return (true);
 }
 
@@ -371,8 +352,7 @@ const std::string &guyToKick, const std::string &reason)
 		return (!Channel::rplMsg(ms, client));
 	}
 	if (channel->kick(client, guyToKick, reason)) {
-		if (client->sock != -1)
-			(*_user_channels)[client->nick]->remove(channel);
+		(*_user_channels)[client->nick]->remove(channel);
 		return (true);
 	}
 	return (false);
@@ -579,7 +559,7 @@ std::vector<Chan>	ChannelMaster::getChans() const
 			continue ;
 		vec.push_back(Chan(
 			std::string(nextChannel->getName()),
-			std::string(nextChannel->getUsersNum()),
+			nextChannel->getUsersNum(),
 			std::string(nextChannel->getModes()),
 			std::string(nextChannel->getTopic()),
 			std::vector<std::string>(nextChannel->getUsersVec())

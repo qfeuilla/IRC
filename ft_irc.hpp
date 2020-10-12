@@ -49,12 +49,31 @@ std::vector<std::string>	parse_comma(std::string cmd);
 struct Chan
 {
 	std::string	name;
-	std::string	usersNum;
+	int			usersNum;
 	std::string	modes;
 	std::string	topic;
 	std::vector<std::string>	nicknames;
-	Chan(const std::string &nm, const std::string &usrNm, const std::string &md, const std::string &tpc,
+	Chan(const std::string &nm, int	usrNm, const std::string &md, const std::string &tpc,
 	std::vector<std::string> nicks): name(nm), usersNum(usrNm), modes(md), topic(tpc), nicknames(nicks) {}
+	Chan(): name(), usersNum(), modes(), topic(), nicknames() {}
+	Chan(const Chan &o): name(o.name), usersNum(o.usersNum),
+	modes(o.modes), topic(o.topic), nicknames(o.nicknames) {}
+	Chan	&operator=(const Chan& o) {
+		name = o.name;
+		usersNum = o.usersNum;
+		modes = o.modes;
+		topic = o.topic;
+		nicknames = o.nicknames;
+		return (*this);
+	}
+	void	print() const
+	{
+		std::cout << "CHAN: " << name << ", " << usersNum << " users, nicknames are: ";
+		for (std::string nick : nicknames) {
+			std::cout << nick << " ";
+		}
+		std::cout << "| Modes are: " << modes << ", topic is: " << topic << "\n\n";
+	}
 };
 
 #endif

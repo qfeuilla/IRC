@@ -146,6 +146,27 @@ Client		*Environment::getOtherServClientByNick(const std::string &nick)
 	return (nullptr);
 }
 
+Client	*Environment::searchClientEverywhere(const std::string &nick)
+{
+	Client *client = getClient(nick);
+	if (client)
+		return (client);
+	return (getOtherServClientByNick(nick));
+}
+
+Client	*Environment::getClient(const std::string &nick)
+{	
+	for (Fd *f : clients_fd) {
+		if (f->type == FD_CLIENT) {
+			Client *c = reinterpret_cast<Client *>(f);
+			if (utils::strCmp(nick, c->nick)) 
+				return (c);
+		}
+	}
+	return (nullptr);
+}
+
+
 std::vector<OtherServ *>	Environment::search_othersrv_history_nick(std::string nk) {
 	std::vector<OtherServ *> buff;
 

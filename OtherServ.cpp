@@ -77,33 +77,6 @@ void	OtherServ::READY(Command *cmd) {
 	}
 
 
-	// * **CHANNELS
-	std::vector<Chan>	thisServChans = ev->channels->getChans();
-	for (Chan &chan : thisServChans) {
-		std::string	usersStr = utils::strJoin(chan.nicknames, ',');
-		if (usersStr.size() == 0)
-			usersStr = "nobody";
-		ms = "CHAN_CHG ";
-		ms += chan.name + "," + chan.usersNum + "," + chan.modes + " ";
-		ms += usersStr + " ";
-		ms += (chan.topic != "") ? ":" + chan.topic : ":!";
-		custom_send(ms, this);
-	}
-	for (OtherServ *sv : ev->otherServers) {
-		if (sv != this) {
-			for (Chan &chan : sv->chans) {
-				std::string	usersStr = utils::strJoin(chan.nicknames, ',');
-				if (usersStr.size() == 0)
-					usersStr = "nobody";
-				ms = "CHAN_CHG ";
-				ms += chan.name + "," + chan.usersNum + "," + chan.modes + " ";
-				ms += usersStr + " ";
-				ms += (chan.topic != "") ? ":" + chan.topic : ":!";
-				custom_send(ms, this);
-			}
-		}
-	}
-
 	// * **NICKS
 	for (Fd *f: ev->clients_fd) {
 		if (f->type == FD_CLIENT) {
@@ -470,145 +443,51 @@ void	OtherServ::SQUIT(Command *cmd) {
 			}
 		}
 	}
-} 
-
-void	OtherServ::CHAN_CHG(Command *cmd)
-{
-	std::string	ms;
-	std::string	topic;
-	if (cmd->arguments.size() >= 3) {
-		std::vector<std::string>	split = parse_comma(cmd->arguments[0]);
-		std::vector<std::string>	users = parse_comma(cmd->arguments[1]);
-		if (split.size() != 3)
-			return ;
-		topic = Channel::parseArg(2, cmd->arguments);
-
-		std::vector<Chan>::iterator	ite = getChan(split[0]);
-		if (ite == chans.end()) { // this chan does not exist yet: insert new channel data
-			if (split[1] != "0") { // if there is 0 users in the channel, ignore it
-				chans.push_back(Chan(
-					std::string(split[0]),
-					std::string(split[1]),
-					std::string(split[2]),
-					std::string(topic),
-					std::vector<std::string>(users)
-				));
-			}
-		} else { // channel exists, just update it
-			(*ite).name = std::string(split[0]);
-			(*ite).usersNum = std::string(split[1]);
-			(*ite).modes = std::string(split[2]);
-			(*ite).topic = std::string(topic);
-			(*ite).nicknames = std::vector<std::string>(users);
-			if ((*ite).usersNum == "0") {
-				std::cout << "chan erased: " << ite->name << "\n\n";
-				chans.erase(ite);
-			}
-		}
-		for (OtherServ *sv : ev->otherServers) {
-			if (sv != this) {
-				ms = cmd->line;
-				custom_send(ms, sv);
-			}
-		}
-	}
 }
 
-void	OtherServ::CHAN_RPL(Command *cmd) {
-	std::vector<OtherServ *>	tmpo;
-	std::vector<Fd *>	tmpc;
-	Client				*c = nullptr;
-	std::string			ms;
-	std::string			nickName = cmd->prefix;
-
-	if (nickName.empty())
-		return ;
-	if (!(tmpc = ev->search_list_nick(nickName)).empty()) {
-		c = reinterpret_cast<Client *>(tmpc[0]);
-		// delete the part ":prefix CHAN_RPL " of the message
-		ms = utils::delFirstWord(utils::delFirstWord(cmd->line));
-		custom_send(ms, c);
-	} else if (!(tmpo = ev->search_othersrv_nick(nickName)).empty()) {
-		ms = cmd->line;
-		custom_send(ms, tmpo[0]);
+void	OtherServ::propagateChanMsg(const std::string &ms) {
+	for (OtherServ *sv : ev->otherServers) { // propagate the join message
+		if (sv != this)
+			custom_send(ms, sv);
 	}
 }
 
 void	OtherServ::JOIN(Command *cmd) {
-	std::string	ms;
-	std::string	chanName;
-	std::string	passwd = "";
-	std::vector<Client *>::iterator	client;
-
-	if (cmd->prefix.empty())
+	
+	Client	*client;
+	client = ev->searchClientEverywhere(cmd->prefix);
+	if (!client)
 		return ;
+	std::string ms;
+	ev->cmd_count["JOIN"] += 1;
+
 	if (cmd->arguments.size() >= 1) {
-		chanName = cmd->arguments[0];
-		if (cmd->arguments.size() >= 2)
-			passwd = cmd->arguments[1];
-		// check if we have the channel
-		if (ev->channels->getChannel(chanName)) {
-			// if we have channel, we use ChannelMaster.join() method
-			client = search_nick(cmd->prefix);
-			if (client == clients.end())
-				return ; // message forgery won't error the server
-			ev->channels->joinChannel(*client, chanName, passwd);
-			return ;
-		}
-		for (OtherServ *sv : ev->otherServers) {
-			if (sv != this) {
-				for (Chan &chan : sv->chans) {
-					if (utils::strCmp(chan.name, chanName)) {
-						// forward the request to this serv
-						ms = ":";
-						ms += cmd->prefix; // the user who wants to join the channel
-						ms += " JOIN " + chanName + " " + passwd;
-						custom_send(ms, sv);
-						return ;
-					}
-				}
+		if (cmd->arguments[0] == "0") {
+			std::list<Channel *>::iterator	current = client->channels.begin();
+			while (current != client->channels.end()) {
+				Channel	*ch = *current;
+				if (ev->channels->leaveChannel(client, ch->getName(), "Leaving all channels", this))
+					current = client->channels.begin();
+				else
+					++current;
 			}
+		} else {
+			ev->channels->join(client, cmd->arguments, &(client->channels), this);
 		}
 	}
 }
 
 void	OtherServ::PART(Command *cmd)
 {
-	std::string	ms;
-	std::string	chanName;
-	std::string	reason = "";
-	std::vector<Client *>::iterator	client;
-
-	if (cmd->prefix.empty())
+	Client	*client;
+	client = ev->searchClientEverywhere(cmd->prefix);
+	if (!client)
 		return ;
+	std::string ms;
+	ev->cmd_count["PART"] += 1;
+
 	if (cmd->arguments.size() >= 1) {
-		chanName = cmd->arguments[0];
-		if (cmd->arguments.size() >= 2)
-			reason = Channel::parseArg(1, cmd->arguments);
-		// check if we have the channel
-		if (ev->channels->getChannel(chanName)) {
-			// if we have channel, we use ChannelMaster.leave() method
-			client = search_nick(cmd->prefix);
-			if (client == clients.end())
-				return ; // message forgery won't error the server
-			ev->channels->leaveChannel(*client, chanName, reason);
-			return ;
-		}
-		// if we do not have the channel, we forward the msg to the right serv
-		for (OtherServ *sv : ev->otherServers) {
-			if (sv != this) {
-				for (Chan &chan : sv->chans) {
-					if (utils::strCmp(chan.name, chanName)) {
-						// forward the request to this serv
-						ms = ":";
-						ms += cmd->prefix; // the user who wants to join the channel
-						ms += " PART " + chanName + " :" + reason;
-						custom_send(ms, sv);
-						return ;
-					}
-				}
-			}
-		}
+		ev->channels->leave(client, cmd->arguments, this);
 	}
 }
 
@@ -1071,12 +950,6 @@ int		OtherServ::execute_parsed(Command *parsed) {
 	case SQUIT_CC:
 		SQUIT(parsed);
 		break;
-	case CHAN_CHG_CC:
-		CHAN_CHG(parsed);
-		break;
-	case CHAN_RPL_CC:
-		CHAN_RPL(parsed);
-		break;
 	case JOIN_CC:
 		JOIN(parsed);
 		break;
@@ -1175,15 +1048,9 @@ void	OtherServ::read_func() {
 			for (std::string nickName : chan.nicknames) {
 				sendPartMessage(chan, nickName);
 			}
-			for (OtherServ *sv : ev->otherServers) {
-				if (sv != this) {
-					ms = "CHAN_CHG ";
-					ms += chan.name + ",0," + chan.modes + " ";
-					ms += "nobody ";
-					ms += (chan.topic != "") ? ":" + chan.topic : ":!";
-					custom_send(ms, sv);
-				}
-			}
+
+			// ! CHAN_CHG IS OBSOLETE, send all history of the channel's commands instead
+
 		}
 
 		// * tell other serve that the server is disconnect and all the depending serv
@@ -1359,7 +1226,6 @@ void		OtherServ::sendPartMessage(Chan &chan, const std::string &nickName)
 	std::vector<OtherServ *>	tmpo;
 	Client	*c;
 	std::string	ms;
-	std::string	WITHDRAW_THIS_LATER;
 
 	if (!(tmpc = ev->search_list_nick(nickName)).empty()) {
 		c = reinterpret_cast<Client *>(tmpc[0]);
@@ -1370,8 +1236,7 @@ void		OtherServ::sendPartMessage(Chan &chan, const std::string &nickName)
 	} else if (!(tmpo = ev->search_othersrv_nick(nickName)).empty()) {
 		if (tmpo[0] != this && ((client = tmpo[0]->search_nick(nickName)) != tmpo[0]->clients.end())) {
 			c = *client;
-			WITHDRAW_THIS_LATER = ":" + c->nick + " CHAN_RPL ";
-			ms = WITHDRAW_THIS_LATER + ":" + c->nick + "!" + c->username + "@";
+			ms = ":" + c->nick + "!" + c->username + "@";
 			ms += c->servername + " PART " + chan.name;
 			ms += " :this channel's host server quitted";
 			custom_send(ms, tmpo[0]);

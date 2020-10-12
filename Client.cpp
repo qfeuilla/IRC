@@ -67,7 +67,7 @@ Client::Client(Environment *e, int s, struct sockaddr_in addr) : channels(), ev(
 	serv = nullptr;
 }
 
-Client::Client(std::string nc, OtherServ *srv) {
+Client::Client(std::string nc, OtherServ *srv): channels() {
 	type = FD_OCLIENT;
 	is_setup = false;
 	sock = -1;
@@ -1534,24 +1534,17 @@ void	Client::JOIN(Command *cmd) {
 
 	if (cmd->arguments.size() >= 1) {
 		if (cmd->arguments[0] == "0") {
-			for (OtherServ *serv : ev->otherServers) {
-				for (Chan chan : serv->chans) {
-					if (std::find(chan.nicknames.begin(), chan.nicknames.end(), utils::ircLowerCase(nick)) != chan.nicknames.end()) {
-						ev->channels->leaveChannel(this, chan.name, "Leaving all channels");
-					} 
-				}
-			}
 			std::list<Channel *>::iterator	current = channels.begin();
 			while (current != channels.end()) {
 				Channel	*ch = *current;
-				if (ev->channels->leaveChannel(this, ch->getName(), "Leaving all channels"))
+				if (ev->channels->leaveChannel(this, ch->getName(), "Leaving all channels", nullptr))
 					current = channels.begin();
 				else
 					++current;
 			}
-			return ;
+		} else {
+			ev->channels->join(this, cmd->arguments, &channels);
 		}
-		ev->channels->join(this, cmd->arguments, &channels);
 	} else {
 		ms = reply_formating(servername.c_str(), ERR_NEEDMOREPARAMS, {cmd->line}, nick.c_str());
 		custom_send(ms, this);
@@ -2076,10 +2069,13 @@ std::vector<Chan>	Client::getServsChans()
 	return (ret);
 }
 
-void	Client::sendToAllServs(const std::string &ms)
+void	Client::sendToAllServs(const std::string &ms, OtherServ *servFrom)
 {
 	for (OtherServ *serv : ev->otherServers) {
-		custom_send(ms, serv);
+		if (serv != servFrom) {
+			std::cout << "SENT: " << ms << "\n\n";
+			custom_send(ms, serv);
+		}
 	}
 }
 
@@ -2111,4 +2107,9 @@ bool	Client::isVisible(Client *otherClient)
 			return (true);
 	}
 	return (false);
+}
+
+std::string		Client::getFullMask() const
+{
+	return (":" + nick + "!" + username + "@" + servername);
 }

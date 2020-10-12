@@ -36,9 +36,9 @@ public:
 	void	setSrvName(const std::string &srvName);
 
 	// * join returns true on succes
-	bool	join(Client *client, const std::vector<std::string> &args, std::list<Channel*> *usrChans);
+	bool	join(Client *client, const std::vector<std::string> &args, std::list<Channel*> *usrChans, OtherServ *svFrom = nullptr);
 	// * leave returns true on succes
-	bool	leave(Client *client, const std::vector<std::string> &args);
+	bool	leave(Client *client, const std::vector<std::string> &args, OtherServ *svFrom = nullptr);
 	// * mode returns true on succes
 	bool	mode(Client *client, const std::vector<std::string> &args);
 	// * kick returns true on succes
@@ -62,8 +62,8 @@ public:
 
 	std::vector<Chan>	getChans() const;
 	Channel				*getChannel(const std::string &channelName);
-	bool		joinChannel(Client *client, const std::string &channelName, const std::string &passwd);
-	bool		leaveChannel(Client *client, const std::string &channelName, const std::string &reason);
+	bool		joinChannel(Client *client, const std::string &channelName, const std::string &passwd, OtherServ *svFrom);
+	bool		leaveChannel(Client *client, const std::string &channelName, const std::string &reason, OtherServ *svFrom);
 	bool	kickFromChan(Client *client, const std::string &chanName,
 	const std::string &guyToKick, const std::string &reason);
 

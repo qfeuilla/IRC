@@ -130,7 +130,9 @@ public:
 
 	std::vector<Chan>	getServsChans();
 
-	void		sendToAllServs(const std::string &ms);
+	std::string		getFullMask() const;
+
+	void		sendToAllServs(const std::string &ms, OtherServ *servFrom = nullptr);
 	void		setEnv(Environment *env);
 	Environment			*ev;
 

@@ -44,8 +44,6 @@ public:
 	void			SQUIT(Command *);
 	void			READY(Command *);
 
-	void			CHAN_CHG(Command *);
-	void			CHAN_RPL(Command *);
 	void			JOIN(Command *);
 	void			PART(Command *);
 	void			KICK(Command *);
@@ -104,6 +102,7 @@ public:
 	std::vector<Chan>::iterator	getChan(const std::string &name);
 	bool	chanWHO(Client *client, const std::vector<std::string> &args);
 	void	sendPartMessage(Chan &chan, const std::string &nickName);
+	void	propagateChanMsg(const std::string &ms);
 private :
 	Environment		*ev;
 

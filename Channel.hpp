@@ -48,7 +48,7 @@ private:
 		int			l; // User limit
 		std::string	k; // Channel password
 		int			users;
-		_Chan_modes(): invitation_list(), o(), v(), b(), e(), I(), p(false), s(false), i(false), t(true), m(false), n(false), q(false), l(-1), k(), users(0) {}
+		_Chan_modes(): invitation_list(), o(), v(), b(), e(), I(), p(false), s(false), i(false), t(false), m(false), n(false), q(false), l(-1), k(), users(0) {}
 	};
 	
 	
@@ -57,7 +57,6 @@ private:
 	_Chan_modes		_modes;
 	std::string		_topic;
 
-	std::string		_srv_name;
 	std::string		_creator;
 
 	bool		_hasRights(const std::string &userName) const
@@ -76,12 +75,12 @@ private:
 	bool		_isInExceptionList(Client *client) const;
 public:
 	Channel();
-	Channel(const std::string &name, Client *client, const std::string &srvName);
+	Channel(const std::string &name, Client *client, OtherServ *srv);
 	~Channel();
 	Channel	&operator=(const Channel& other);
 
 	const std::string	&getName() const;
-	std::string			getUsersNum() const;
+	int					getUsersNum() const;
 	std::string			getUsersStr() const;
 	std::vector<std::string>	getUsersVec() const;
 	const std::string	&getCreator() const;
@@ -95,9 +94,9 @@ public:
 	bool				broadcastMsg(Client *sender, const std::string &msg) const;
 
 	// *	join returns true on succes (false if socket was already in the channel before the call)
-	bool				join(Client *client, const std::string &passwd);
+	bool				join(Client *client, const std::string &passwd, OtherServ *svFrom);
 	// *	leave returns true on succes
-	bool				leave(Client *client, const std::string &reason, bool muted = false);
+	bool				leave(Client *client, const std::string &reason, OtherServ *svFrom, bool muted = false);
 	// *	kick returns true on succes
 	bool				kick(Client *client, const std::string &guyToKick, const std::string &reason);
 	// *	invite returns true on succes 
@@ -135,8 +134,6 @@ public:
 	void	changeNick(const std::string &oldNick, const std::string &newNick);
 
 	static bool		rplMsg(std::string ms, Client *c);
-
-	void			updateServsChan(Client *c) const;
 
 	void			showBanlist(Client *client) const;
 	void			showInvitelist(Client *client) const;
