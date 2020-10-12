@@ -76,7 +76,6 @@ void	OtherServ::READY(Command *cmd) {
 		}
 	}
 
-
 	// * **NICKS
 	for (Fd *f: ev->clients_fd) {
 		if (f->type == FD_CLIENT) {
@@ -94,6 +93,9 @@ void	OtherServ::READY(Command *cmd) {
 			}
 		}	
 	}
+
+	// * **CHANNELS
+	ev->channels->shareAll(this);
 }
 
 void	OtherServ::NICK(Command *cmd) {

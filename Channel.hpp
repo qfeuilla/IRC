@@ -83,6 +83,8 @@ public:
 	int					getUsersNum() const;
 	std::string			getUsersStr() const;
 	std::vector<std::string>	getUsersVec() const;
+	std::vector<std::string>	getOpersVec() const;
+	std::vector<std::string>	getVoicedVec() const;
 	const std::string	&getCreator() const;
 	const std::string	&getTopic() const;
 	bool				setTopic(Client *client, const std::string &newTopic, OtherServ *svFrom);

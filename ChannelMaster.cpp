@@ -585,3 +585,35 @@ void		ChannelMaster::changeNick(const std::string &oldNick, const std::string &n
 			chan->changeNick(oldNick, newNick);
 	}
 }
+
+void		ChannelMaster::shareAll(OtherServ *sv) const
+{
+	std::string	ms;
+
+	for (Channel *chan : *_channels) {
+		std::vector<std::string>	users = chan->getUsersVec();
+		for (std::string &nick : users) {
+			ms = ":" + nick + " JOIN " + chan->getName();
+			custom_send(ms, sv);
+		}
+		std::vector<std::string>	opers = chan->getUsersVec();
+		for (std::string &nick : opers) {
+			ms = ":" + nick + " MODE " + chan->getName() + " +o " + nick;
+			custom_send(ms, sv);
+		}
+		std::vector<std::string>	voiced = chan->getUsersVec();
+		for (std::string &nick : voiced) {
+			ms = ":" + nick + " MODE " + chan->getName() + " +v " + nick;
+			custom_send(ms, sv);
+		}
+		if (chan->getTopic() != "") {
+			ms = ":" + users[0] + " TOPIC "  + chan->getName() + " :" + chan->getTopic();
+			custom_send(ms, sv);
+		}
+		std::string	modes = chan->getModes().substr(1);
+		for (char c : modes) {
+			ms = ":" + users[0] + " MODE " + chan->getName() + " +" + c;
+			custom_send(ms, sv);
+		}
+	}
+}

@@ -819,6 +819,24 @@ std::vector<std::string>	Channel::getUsersVec() const
 	return (users);
 }
 
+std::vector<std::string>	Channel::getOpersVec() const
+{
+	std::vector<std::string>	users;
+	for (std::string nick: _modes.o) {
+		users.push_back(std::string(nick));
+	}
+	return (users);
+}
+
+std::vector<std::string>	Channel::getVoicedVec() const
+{
+	std::vector<std::string>	users;
+	for (std::string nick: _modes.v) {
+		users.push_back(std::string(nick));
+	}
+	return (users);
+}
+
 // returns true if user is banned
 bool		Channel::_isBanned(Client *client) const
 {

@@ -73,6 +73,8 @@ public:
 	bool		delChanIfEmpty(Channel *chan);
 
 	void		changeNick(const std::string &oldNick, const std::string &newNick);
+
+	void		shareAll(OtherServ *sv) const;
 };
 
 #endif
