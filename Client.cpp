@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:51:25 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/12 22:23:06 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/12 22:56:37 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -1512,6 +1512,12 @@ void	Client::ISON(Command *cmd) {
 				Client *c = reinterpret_cast<Client *>(tmp[0]);
 				ms += " ";
 				ms += c->nick;
+			}
+			for (OtherServ *sv : ev->otherServers) {
+				if (sv->search_nick(targ) != sv->clients.end()) {
+					ms += " ";
+					ms += targ;
+				}
 			}
 		}
 		ms = reply_formating(servername.c_str(), RPL_ISON, {ms}, nick.c_str());
