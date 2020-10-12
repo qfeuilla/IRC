@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/20 17:01:28 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/12 18:17:15 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/12 21:44:06 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -94,6 +94,7 @@
 # define RPL_391_CC		58
 # define RPL_NTRACE_CC	59
 # define RPL_ADMIN_CC	60
+# define RPL_NINFO_CC	61
 
 // * Messages necessay rights to execute
 

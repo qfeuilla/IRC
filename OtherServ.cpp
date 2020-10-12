@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/24 21:36:03 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/12 21:16:21 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/12 21:46:29 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -855,6 +855,61 @@ void	OtherServ::ADMIN(Command *cmd) {
 	}
 }
 
+void	OtherServ::INFO(Command *cmd) {
+	std::list<std::string>	inf;
+	std::list<std::string>::iterator	current;
+	std::list<std::string>::iterator	end;
+	std::string buf;
+	std::string ms;
+
+	if (cmd->arguments[0] == *ev->serv) {
+		inf.push_back(" IRC --");
+		inf.push_back(" Based on RFCs given on 42 subject page : ");
+		inf.push_back(" https://github.com/qfeuilla/ft_irc/blob/master/en.subject.pdf ");
+		inf.push_back(" ");
+		inf.push_back(" This program is free software; you can redistribute it and/or");
+		inf.push_back(" modify it under the terms of the GNU General Public License as");
+		inf.push_back(" published by the Free Software Foundation; either version 2, or");
+		inf.push_back(" (at your option) any later version.");
+		inf.push_back(" ");
+		inf.push_back(" ft_irc has been developed to meet the policy needs of the");
+		inf.push_back(" RFCs IRC network. ");
+		inf.push_back("  ");
+		inf.push_back(" ft_irc development is currently ongoin with developpers :");
+		inf.push_back(" Quentin FEUILLADE--MONTIXI and Mayeul Le Monies De Sagazan");
+		inf.push_back(" see our Github : ");
+		inf.push_back(" 	- https://github.com/qfeuilla ");
+		inf.push_back(" 	- https://github.com/mle-moni ");
+		inf.push_back(" ");
+		inf.push_back(" ");
+		inf.push_back(" On-line since:");
+		buf = std::asctime(gmtime(&(ev->start)));
+		inf.push_back(std::string(&buf[0], &buf[buf.size() - 1]));
+		inf.push_back(" UTC \n");
+		
+		std::string line;
+		current = inf.begin();
+		end = inf.end();
+
+		while (current != end) {
+			line = *current;
+			line = reply_formating((*ev->serv).c_str(), RPL_INFO, {line}, cmd->prefix.c_str());
+			custom_send(line, this);
+			++current;
+		}
+
+		line = reply_formating((*ev->serv).c_str(), RPL_ENDOFINFO, {}, cmd->prefix.c_str());
+		custom_send(line, this);
+	} else {
+		ms = cmd->line;
+		for (OtherServ *sv : ev->otherServers) {
+			if (sv != this) {
+				custom_send(ms, sv);
+			}
+		}
+	}
+} 
+
 void	OtherServ::RPL_391(Command *cmd) {
 	std::string ms;
 	std::vector<Fd *> tm;
@@ -942,6 +997,23 @@ void	OtherServ::RPL_NTRACE(Command *cmd) {
 }
 
 void	OtherServ::RPL_ADMIN(Command *cmd) {
+	std::string ms;
+	std::vector<Fd *> tm;
+
+	ms = cmd->line;
+	if (!((tm = ev->search_list_nick(cmd->arguments[0])).empty())) {
+		Client *c = reinterpret_cast<Client *>(tm[0]);
+		custom_send(ms, c);
+	} else {
+		for (OtherServ *sv : ev->otherServers) {
+			if (sv != this) {
+				custom_send(ms, sv);
+			}
+		}
+	}
+}
+
+void	OtherServ::RPL_NINFO(Command *cmd) {
 	std::string ms;
 	std::vector<Fd *> tm;
 
@@ -1053,6 +1125,12 @@ int		OtherServ::execute_parsed(Command *parsed) {
 	case RPL_ADMIN_CC:
 		RPL_ADMIN(parsed);
 		break;
+	case INFO_CC:
+		INFO(parsed);
+		break;
+	case RPL_NINFO_CC:
+		RPL_NINFO(parsed);
+		break;
 	default:
 		break;
 	}
@@ -1127,7 +1205,7 @@ void	OtherServ::read_func() {
 				custom_send(ms, sv);
 			}
 		}
-		ev->trash.push_back(this);
+		ev->trash.push_back(this); // !! split trashes
 		ev->clients_fd[sock] = new Fd();
 		std::cerr << "Other serv quit" << std::endl;
 	} else {

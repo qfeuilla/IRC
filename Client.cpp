@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:51:25 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/12 21:10:37 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/12 21:49:05 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -1050,11 +1050,13 @@ void	Client::ADMIN(Command *cmd) {
 
 void	Client::INFO(Command *cmd) {
 	(void)cmd;
+	std::string ms;
 	std::list<std::string>	inf;
 	std::list<std::string>::iterator	current;
 	std::list<std::string>::iterator	end;
 	std::string buf;
 	ev->cmd_count["INFO"] += 1;
+	bool good = false;
 
 	inf.push_back(" IRC --");
 	inf.push_back(" Based on RFCs given on 42 subject page : ");
@@ -1079,20 +1081,61 @@ void	Client::INFO(Command *cmd) {
 	buf = std::asctime(gmtime(&(ev->start)));
 	inf.push_back(std::string(&buf[0], &buf[buf.size() - 1]));
 	inf.push_back(" UTC \n");
-	
-	std::string line;
-	current = inf.begin();
-	end = inf.end();
 
-	while (current != end) {
-		line = *current;
-		line = reply_formating(servername.c_str(), RPL_INFO, {line}, nick.c_str());
+	if (cmd->arguments.size() > 0) {
+		for (OtherServ *sv : ev->otherServers) {
+			if (sv->name == cmd->arguments[0])
+				good = true;
+			for (std::string tm : sv->connected_sv) {
+				if (tm == cmd->arguments[0])
+					good = true;
+			}
+			if (good) {
+				ms = ":";
+				ms += nick;
+				ms += " INFO ";
+				ms += cmd->arguments[0];
+				custom_send(ms, sv);
+				break;
+			}
+		}
+		if (!good) {
+			if (cmd->arguments[0] == *ev->serv) {			
+				std::string line;
+				current = inf.begin();
+				end = inf.end();
+
+				while (current != end) {
+					line = *current;
+					line = reply_formating(servername.c_str(), RPL_INFO, {line}, nick.c_str());
+					custom_send(line, this);
+					++current;
+				}
+
+				line = reply_formating(servername.c_str(), RPL_ENDOFINFO, {}, nick.c_str());
+				custom_send(line, this);
+				good = true;
+			}
+		}
+		if (!good) {
+			ms = reply_formating(servername.c_str(), ERR_NOSUCHSERVER, {cmd->arguments[0]}, nick.c_str());
+			custom_send(ms, this);
+		}
+	} else {
+		std::string line;
+		current = inf.begin();
+		end = inf.end();
+
+		while (current != end) {
+			line = *current;
+			line = reply_formating(servername.c_str(), RPL_INFO, {line}, nick.c_str());
+			custom_send(line, this);
+			++current;
+		}
+
+		line = reply_formating(servername.c_str(), RPL_ENDOFINFO, {}, nick.c_str());
 		custom_send(line, this);
-		++current;
-    }
-
-	line = reply_formating(servername.c_str(), RPL_ENDOFINFO, {}, nick.c_str());
-	custom_send(line, this);
+	}
 }
 
 void	Client::WHO(Command *cmd) {

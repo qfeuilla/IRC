@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/24 21:36:23 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/12 18:16:04 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/12 21:44:15 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -55,6 +55,7 @@ public:
 	void			VERSION(Command *);
 	void			LINKS(Command *);
 	void			ADMIN(Command *);
+	void			INFO(Command *);
 
 	// * RPL transmition
 	void			RPL_351(Command *);
@@ -63,6 +64,8 @@ public:
 	void			RPL_391(Command *);
 	void			RPL_NTRACE(Command *);
 	void			RPL_ADMIN(Command *);
+	void			RPL_NINFO(Command *);
+
 
 	void			chanModes(Command *);
 
