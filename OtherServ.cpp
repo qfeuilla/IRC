@@ -98,13 +98,16 @@ void	OtherServ::READY(Command *cmd) {
 
 void	OtherServ::NICK(Command *cmd) {
 	std::string ms = cmd->line;
+	std::string	newNick = cmd->arguments[0];
+	if (!newNick.empty() && newNick.at(0) == ':')
+		newNick = newNick.substr(1);
 
 	if (cmd->prefix.empty()) {
-		clients.push_back(new Client(cmd->arguments[0], this));
+		clients.push_back(new Client(newNick, this));
 	} else {
-		if (change_nick(cmd->prefix, cmd->arguments[0])) {
+		if (change_nick(cmd->prefix, newNick)) {
 		} else {
-			clients.push_back(new Client(cmd->arguments[0], this));
+			clients.push_back(new Client(newNick, this));
 		}
 	}
 	for (OtherServ *sv : ev->otherServers) {
