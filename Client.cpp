@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:51:25 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/12 01:26:12 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/12 02:43:35 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -1495,6 +1495,7 @@ void	Client::SERVER(Command *cmd) {
 		if (cmd->arguments.size() >= 2) {
 			OtherServ *other = new OtherServ(sock, ev, 1);
 			other->name = cmd->arguments[0];
+			other->info = ":irc server for 42 ";
 			other->hop_count = std::atoi(cmd->arguments[1].c_str());
 			for (size_t i = 2; i < cmd->arguments.size(); i++) {
 				ms += cmd->arguments[i];
@@ -1509,7 +1510,7 @@ void	Client::SERVER(Command *cmd) {
 			ms += " SERVER ";
 			ms += cmd->arguments[0];
 			ms += " 2 1 ";
-			ms += ":Nope";
+			ms += ":irc server for 42 ";
 			for (OtherServ *sv : ev->otherServers) {
 				custom_send(ms, sv);
 			}

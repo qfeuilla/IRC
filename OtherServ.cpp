@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/24 21:36:03 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/12 01:21:36 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/12 02:41:52 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -49,7 +49,8 @@ void	OtherServ::READY(Command *cmd) {
 	ms += *ev->serv;
 	ms += " SERVER ";
 	ms += *ev->serv;
-	ms += " 1";
+	ms += " 1 ";
+	ms += ":irc server for 42 ";
 	custom_send(ms, this);
 
 	for (OtherServ *sv : ev->otherServers) {
@@ -59,14 +60,18 @@ void	OtherServ::READY(Command *cmd) {
 				ms += *ev->serv;
 				ms += " SERVER ";
 				ms += tm;
-				ms += " 1";
+				ms += " ";
+				ms += std::to_string(sv->connected_hop[tm] + 1);
+				ms += " ";
+				ms += sv->connected_info[tm];
 				custom_send(ms, this);
 			}
 			ms = ":";
 			ms += *ev->serv;
 			ms += " SERVER ";
 			ms += sv->name;
-			ms += " 1";
+			ms += " 2 ";
+			ms += sv->info;
 			custom_send(ms, this);
 		}
 	}
@@ -342,20 +347,29 @@ void	OtherServ::VERSION(Command *cmd) {
 
 void	OtherServ::SERVER(Command *cmd) {
 	std::string ms;
-	
+	std::string tminfo;
+
 	ms = ":";
 	ms += *ev->serv;
 	ms += " SERVER ";
 	ms += cmd->arguments[0];
 	ms += " ";
 	ms += std::to_string(std::atoi(cmd->arguments[1].c_str()) + 1);
-	ms += " 1 ";
-	ms += cmd->arguments[2];
+	ms += " ";
+	for (size_t i = 2; i < cmd->arguments.size(); i++) {
+		ms += cmd->arguments[i];
+		ms += " ";
+		tminfo += cmd->arguments[i];
+		tminfo += " ";
+	}
 	if (!already_setup_name) {
 		name = cmd->arguments[0];
+		info = tminfo;
 		already_setup_name = true;
 	} else {
 		connected_sv.push_back(cmd->arguments[0]);
+		connected_hop.emplace(std::pair<std::string, int>(cmd->arguments[0], std::atoi(cmd->arguments[1].c_str())));
+		connected_info.emplace(std::pair<std::string, std::string>(cmd->arguments[0], tminfo));
 	}
 	for (OtherServ *sv : ev->otherServers) {
 		if (sv != this) {
@@ -856,6 +870,7 @@ void	OtherServ::LINKS(Command *cmd) {
 
 	if (*ev->serv == cmd->arguments[0]) {
 		for (OtherServ *sv : ev->otherServers) {
+			
 			if (utils::strMatchToLower(cmd->arguments[1], sv->name)) {
 				ms += reply_formating((*ev->serv).c_str(), RPL_LINKS, std::vector<std::string>({cmd->arguments[1], sv->name, std::to_string(sv->hop_count), sv->info}), cmd->prefix.c_str());
 				ms += CRLF;
@@ -1109,7 +1124,7 @@ void	OtherServ::read_func() {
 			}
 			std::cout << "Servers Connected to the other serv: " << connected_sv.size() << std::endl;
 			for (std::string tmp3 : connected_sv) {
-				std::cout << "- " << tmp3 << std::endl;
+				std::cout << "- " << tmp3 << " at " << connected_hop[tmp3] << " hops with info " << connected_info[tmp3] << std::endl;
 			}
 			std::cout << "This connection is with : " << name << std::endl;
 			delete parsed;

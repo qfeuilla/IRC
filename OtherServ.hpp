@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/24 21:36:23 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/12 01:21:10 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/12 02:25:16 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -82,6 +82,9 @@ public:
 	std::vector<Client *>	clients_history;
 	std::vector<std::string>	connected_sv;
 	
+	std::map<std::string, int>	connected_hop;
+	std::map<std::string, std::string> connected_info;
+
 	int						recv_ms = 0;
 	int						send_ms = 0;
 	int						sendq = 0;

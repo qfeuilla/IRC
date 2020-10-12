@@ -170,7 +170,7 @@ bool			Server::load_other_servs(std::string servinfo) {
 	ms = "SERVER ";
 	ms += *ev->serv;
 	ms += " ";
-	ms += "1";
+	ms += ":irc server for 42";
 	/*ms += " : ";
 	ms += "42";
 	ms += " ";
