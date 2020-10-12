@@ -58,9 +58,8 @@ public:
 	size_t	size() const;
 
 	// * send msg to everyone in the channel but the sender 
-	bool	broadcastMsg(Client *client, const std::string &chanName, const std::vector<std::string> &args, bool sendErrors = true);
+	bool	broadcastMsg(OtherServ *svFrom, Client *client, const std::string &chanName, const std::vector<std::string> &args, bool sendErrors = true);
 
-	std::vector<Chan>	getChans() const;
 	Channel				*getChannel(const std::string &channelName);
 	bool		joinChannel(Client *client, const std::string &channelName, const std::string &passwd, OtherServ *svFrom);
 	bool		leaveChannel(Client *client, const std::string &channelName, const std::string &reason, OtherServ *svFrom);

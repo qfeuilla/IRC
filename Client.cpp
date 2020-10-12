@@ -531,7 +531,7 @@ void	Client::PRIVMSG(Command *cmd) {
 		for (std::string targ : parse_comma(cmd->arguments[0])) {
 			if (targ[0] == '#' || targ[0] == '&' || targ[0] == '+' || targ[0] == '!') {
 				good += 1;
-				ev->channels->broadcastMsg(this, targ, cmd->arguments);
+				ev->channels->broadcastMsg(nullptr, this, targ, cmd->arguments);
 			} else {
 				ms = ":";
 				ms += nick;
@@ -583,7 +583,7 @@ void	Client::NOTICE(Command *cmd) {
 	if (cmd->arguments.size() >= 2) {
 		for (std::string targ : parse_comma(cmd->arguments[0])) {
 			if (targ[0] == '#' || targ[0] == '&' || targ[0] == '+' || targ[0] == '!') {
-				ev->channels->broadcastMsg(this, targ, cmd->arguments, false);
+				ev->channels->broadcastMsg(nullptr, this, targ, cmd->arguments, false);
 			} else {
 				ms += ":";
 				ms += nick + "!" + username + "@" + servername;
@@ -1150,10 +1150,6 @@ void	Client::WHO(Command *cmd) {
 
 		if (ev->channels->localChanWHO(this, cmd->arguments))
 			return ;
-		for (OtherServ *serv : ev->otherServers) {
-			if (serv->chanWHO(this, cmd->arguments))
-				return ;
-		}
 		for (Fd *f: ev->clients_fd) {
 			if (f->type == FD_CLIENT) {
 				Client *c = reinterpret_cast<Client *>(f);
@@ -2053,26 +2049,6 @@ void	Client::share_Client(OtherServ *sv) {
 	custom_send(ms, sv);
 }
 
-OtherServ	*Client::getServByChannelName(const std::string &chanName) {
-	for (OtherServ *serv : ev->otherServers) {
-		if (serv->getChan(chanName) != serv->chans.end())
-			return (serv);
-	}
-	return (nullptr);
-}
-
-std::vector<Chan>	Client::getServsChans()
-{
-	std::vector<Chan>	ret;
-
-	for (OtherServ *serv : ev->otherServers) {
-		for (Chan &chan : serv->chans) {
-			ret.push_back(chan);
-		}
-	}
-	return (ret);
-}
-
 void	Client::sendToAllServs(const std::string &ms, OtherServ *servFrom)
 {
 	for (OtherServ *serv : ev->otherServers) {
@@ -2097,15 +2073,6 @@ bool	Client::isVisible(Client *otherClient)
 	if (!otherClient->i_mode)
 		return (true);
 
-	for (OtherServ *serv : ev->otherServers) {
-		for (Chan chan : serv->chans) {
-			end = chan.nicknames.end();
-			if (std::find(chan.nicknames.begin(), end, myNick) != end) {
-				if (std::find(chan.nicknames.begin(), end, hisNick) != end)
-					return (true);
-			}
-		}
-	}
 	for (Channel *ch : channels) {
 		if (ch->isInChan(hisNick))
 			return (true);

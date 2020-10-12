@@ -148,13 +148,12 @@ void	OtherServ::PRIVMSG(Command *cmd) {
 	std::vector<OtherServ *>	tmpo;
 	std::string					targ;
 
-	std::vector<Client *>::iterator cit = search_nick(cmd->prefix);
-
 	targ = cmd->arguments[0];
 	if (targ[0] == '#' || targ[0] == '+' || targ[0] == '!') {
-		if (cit == clients.end())
+		Client	*client = ev->searchClientEverywhere(cmd->prefix);
+		if (!client)
 			return ;
-		ev->channels->broadcastMsg(*cit, targ, cmd->arguments);
+		ev->channels->broadcastMsg(this, client, targ, cmd->arguments);
 	} else {
 		ms = ":";
 		ms += cmd->prefix;
@@ -180,13 +179,12 @@ void	OtherServ::NOTICE(Command *cmd) {
 	std::vector<OtherServ *>	tmpo;
 	std::string					targ;
 
-	std::vector<Client *>::iterator cit = search_nick(cmd->prefix);
-
 	targ = cmd->arguments[0];
 	if (targ[0] == '#' || targ[0] == '+' || targ[0] == '!') {
-		if (cit == clients.end())
+		Client	*client = ev->searchClientEverywhere(cmd->prefix);
+		if (!client)
 			return ;
-		ev->channels->broadcastMsg(*cit, targ, cmd->arguments, false);
+		ev->channels->broadcastMsg(this, client, targ, cmd->arguments, false);
 	} else {
 		ms = ":";
 		ms += cmd->prefix;
@@ -552,25 +550,12 @@ void	OtherServ::NAMES(Command *cmd)
 		chanName = cmd->arguments[0];
 		// check if we have the channel
 		if (ev->channels->getChannel(chanName)) {
-			// if we have channel, we use ChannelMaster.invite() method
+			// if we have channel, we use ChannelMaster.chanNames() method
 			client = search_nick(cmd->prefix);
 			if (client == clients.end())
 				return ; // message forgery won't error the server
 			ev->channels->chanNames(*client, chanName);
 			return ;
-		}
-		// if we do not have the channel, we forward the msg to the right serv
-		for (OtherServ *sv : ev->otherServers) {
-			if (sv != this) {
-				for (Chan &chan : sv->chans) {
-					if (utils::strCmp(chan.name, chanName)) {
-						// forward the request to this serv
-						ms = ":" + cmd->prefix + " INVITE " + chanName;
-						custom_send(ms, sv);
-						return ;
-					}
-				}
-			}
 		}
 	}
 }
@@ -959,16 +944,6 @@ void	OtherServ::read_func() {
 			ev->channels->doQuit(c, std::vector<std::string>({"Server quitted"}));
 		}
 
-		// * oups
-		for (Chan chan : chans) {
-			for (std::string nickName : chan.nicknames) {
-				sendPartMessage(chan, nickName);
-			}
-
-			// ! CHAN_CHG IS OBSOLETE, send all history of the channel's commands instead
-
-		}
-
 		// * tell other serve that the server is disconnect and all the depending serv
 		for (std::string tm : connected_sv) {
 			ms = "SQUIT ";
@@ -1083,79 +1058,4 @@ std::vector<std::string>::iterator OtherServ::search_namecon(std::string sv) {
 		std::next(it);
 	}
 	return it;
-}
-
-std::vector<Chan>::iterator	OtherServ::getChan(const std::string &name)
-{
-	std::vector<Chan>::iterator	current = chans.begin();
-	std::vector<Chan>::iterator	end = chans.end();
-
-	while (current != end) {
-		if (utils::strCmp((*current).name, name))
-			return (current);
-		++current;
-	}
-	return (chans.end());
-}
-
-bool		OtherServ::chanWHO(Client *client, const std::vector<std::string> &args)
-{
-	std::string	ms;
-	Client		*c;
-	std::vector<Chan>::iterator	chan = getChan(args[0]);
-	std::vector<std::string>::iterator	end;
-
-	if (chan == chans.end())
-		return (false);
-	end = chan->nicknames.end();
-	if (std::find(chan->nicknames.begin(), end, utils::ircLowerCase(client->nick)) == end) {
-		ms = ":" + client->servername + " 315 " + client->nick + " " + args[0] + " :End of /WHO list";
-		custom_send(ms, client);
-		return (true);
-	}
-	for (std::string clientNick : chan->nicknames) {
-		if (utils::strCmp(clientNick, client->nick)) {
-			ms = ":" + client->servername + " 352 " + client->nick + " " + args[0] + " ";
-			ms += client->username + " " + client->hostname + " " + client->servername + " " + client->nick;
-			ms += " H :" + std::to_string(client->hop_count) + " " + client->realname;
-			custom_send(ms, client);
-		}
-		c = ev->getOtherServClientByNick(clientNick);
-		if (!c)
-			continue ;
-
-		ms = ":" + client->servername + " 352 " + client->nick + " " + args[0] + " ";
-		ms += c->username + " " + c->hostname + " " + c->servername + " " + c->nick;
-		ms += " H :" + std::to_string(c->hop_count) + " " + c->realname;
-		custom_send(ms, client);
-	}
-
-	ms = ":" + client->servername + " 315 " + client->nick + " " + args[0] + " :End of /WHO list";
-	custom_send(ms, client);
-	return (true);
-}
-
-void		OtherServ::sendPartMessage(Chan &chan, const std::string &nickName)
-{
-	std::vector<Fd *>			tmpc;
-	std::vector<Client *>::iterator	client;
-	std::vector<OtherServ *>	tmpo;
-	Client	*c;
-	std::string	ms;
-
-	if (!(tmpc = ev->search_list_nick(nickName)).empty()) {
-		c = reinterpret_cast<Client *>(tmpc[0]);
-		ms = ":" + c->nick + "!" + c->username + "@";
-		ms += c->servername + " PART " + chan.name;
-		ms += " :this channel's host server quitted";
-		custom_send(ms, c);
-	} else if (!(tmpo = ev->search_othersrv_nick(nickName)).empty()) {
-		if (tmpo[0] != this && ((client = tmpo[0]->search_nick(nickName)) != tmpo[0]->clients.end())) {
-			c = *client;
-			ms = ":" + c->nick + "!" + c->username + "@";
-			ms += c->servername + " PART " + chan.name;
-			ms += " :this channel's host server quitted";
-			custom_send(ms, tmpo[0]);
-		}
-	}
 }

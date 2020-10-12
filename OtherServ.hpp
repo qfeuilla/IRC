@@ -96,10 +96,6 @@ public:
 	time_t					creation;
 	bool					already_setup_name;
 	
-	std::vector<Chan>		chans;
-	std::vector<Chan>::iterator	getChan(const std::string &name);
-	bool	chanWHO(Client *client, const std::vector<std::string> &args);
-	void	sendPartMessage(Chan &chan, const std::string &nickName);
 	void	propagateChanMsg(const std::string &ms);
 private :
 	Environment		*ev;

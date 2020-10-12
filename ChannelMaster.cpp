@@ -145,18 +145,8 @@ bool	ChannelMaster::getChanModes(Client *client, const std::vector<std::string> 
 	Channel		*chan;
 	std::string	ms;
 	std::string	modes;
-	OtherServ	*serv;
 
 	chan = getChannel(args[0]);
-	if (!chan) {
-		// if there is chan with this name in another serv, we forward the join message to this serv
-		serv = client->getServByChannelName(args[0]);
-		if (serv) {
-			ms = ":" + client->nick + " MODE " + args[0];
-			custom_send(ms, serv);
-			return (true); // stop the function here to prevent creating a local channel
-		}
-	}
 	if (!chan)
 		return (false);
 	modes = chan->getModes();
@@ -340,22 +330,11 @@ const std::string &guyToKick, const std::string &reason, OtherServ *svFrom)
 }
 
 
-bool	ChannelMaster::broadcastMsg(Client *client, const std::string &chanName, const std::vector<std::string> &args, bool sendErrors)
+bool	ChannelMaster::broadcastMsg(OtherServ *svFrom, Client *client, const std::string &chanName, const std::vector<std::string> &args, bool sendErrors)
 {
 	std::string	ms;
 	Channel		*channel = getChannel(chanName);
 	std::string	msgToSend = Channel::parseArg(1, args);
-	OtherServ	*serv;
-
-	if (!channel) {
-		// if there is chan with this name in another serv, we forward the topic message to this serv
-		serv = client->getServByChannelName(chanName);
-		if (serv) {
-			ms = ":" + client->nick + (sendErrors ? " PRIVMSG " : " NOTICE ") + chanName + " :" + msgToSend;
-			custom_send(ms, serv);
-			return (true);
-		}
-	}
 
 	if (!channel) {
 		ms = reply_formating(client->servername.c_str(), ERR_NOSUCHCHANNEL, {chanName}, client->nick.c_str());
@@ -374,7 +353,14 @@ bool	ChannelMaster::broadcastMsg(Client *client, const std::string &chanName, co
 	ms = ":" + client->nick + "!" + client->username + "@" + client->servername;
 	ms += sendErrors ? " PRIVMSG " : " NOTICE ";
 	ms += channel->getName() + " :" + msgToSend;
-	return (channel->broadcastMsg(client, ms));
+	bool	ret = channel->broadcastMsg(client, ms);
+	if (ret) {
+		ms = ":" + client->nick;
+		ms += sendErrors ? " PRIVMSG " : " NOTICE ";
+		ms += channel->getName() + " :" + msgToSend;
+		client->sendToAllServs(ms, svFrom);
+	}
+	return (ret);
 }
 
 bool	ChannelMaster::topic(Client *client, const std::vector<std::string> &args, OtherServ *svFrom)
@@ -430,7 +416,6 @@ bool	ChannelMaster::list(Client *client, const std::vector<std::string> &args)
 	std::string	topic;
 	std::string	chanModes;
 	std::vector<std::string>	names;
-	std::vector<Chan>	serverChans = client->getServsChans();
 	
 	if (args.size() >= 1)
 		names = splitComma(args[0], true);
@@ -484,24 +469,6 @@ size_t	ChannelMaster::size() const
 	return (size);
 }
 
-std::vector<Chan>	ChannelMaster::getChans() const
-{
-	std::vector<Chan>	vec;
-
-	for (Channel *nextChannel : *_channels) {
-		if (nextChannel->getName()[0] == '&')
-			continue ;
-		vec.push_back(Chan(
-			std::string(nextChannel->getName()),
-			nextChannel->getUsersNum(),
-			std::string(nextChannel->getModes()),
-			std::string(nextChannel->getTopic()),
-			std::vector<std::string>(nextChannel->getUsersVec())
-		));
-	}
-	return (vec);
-}
-
 void		ChannelMaster::doQuit(Client *client, const std::vector<std::string> &args)
 {
 	_channel_list::iterator	current = _channels->begin();
@@ -532,9 +499,6 @@ bool		ChannelMaster::names(Client *client, const std::vector<std::string> &args)
 {
 	bool	ret = true;
 	if (args.size() == 0) {
-		for (Chan ch : client->getServsChans()) {
-			chanNames(client, ch.name); // names message for remote channels
-		}
 		for (Channel *chan : *_channels) {
 			chan->usrList(client); // names message for local channels
 		}
@@ -551,17 +515,7 @@ bool	ChannelMaster::chanNames(Client *client, const std::string &channelName)
 {
 	Channel	*chan = getChannel(channelName);
 	std::string		ms;
-	OtherServ		*serv;
 
-	if (!chan) {
-		// if there is chan with this name in another serv, we forward the names message to this serv
-		serv = client->getServByChannelName(channelName);
-		if (serv) {
-			ms = ":" + client->nick + " NAMES " + channelName;
-			custom_send(ms, serv);
-			return (true);
-		}
-	}
 	if (!chan) {
 		return (false);
 	}

@@ -126,10 +126,6 @@ public:
 
 	static bool	thereIsAFullCmd(size_t &pos, size_t& charsToJump, const std::string &str);
 
-	OtherServ	*getServByChannelName(const std::string &nickname);
-
-	std::vector<Chan>	getServsChans();
-
 	std::string		getFullMask() const;
 
 	void		sendToAllServs(const std::string &ms, OtherServ *servFrom = nullptr);
