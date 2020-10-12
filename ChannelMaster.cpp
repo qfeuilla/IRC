@@ -440,7 +440,7 @@ bool	ChannelMaster::list(Client *client, const std::vector<std::string> &args)
 	ms = ":" + client->servername + " 321 " + client->nick + " Channel :Users Name";
 	custom_send(ms, client);
 
-	// * local chans
+	// * list chans
 	// :chatjunkies.org 322 adwonno #linuxdojo 10 :[+nt]
 	// :chatjunkies.org 322 adwonno #trax 7 :[+nt] #trax museum : bring back the only demo art
 	for (Channel *chan : *_channels) {
@@ -450,33 +450,10 @@ bool	ChannelMaster::list(Client *client, const std::vector<std::string> &args)
 		if (chanModes.find("p") != std::string::npos)
 			continue ; // this chan is private: skip it
 		chanName = chan->getName();
-		numUsersVisible = chan->getUsersNum();
+		numUsersVisible = std::to_string(chan->getUsersNum());
 		topic = "[" + chanModes + "]";
 		if (chan->getTopic() != "") {
 			topic += " " + chan->getTopic();
-		}
-		std::vector<std::string> params({chanName, numUsersVisible, topic});
-		ms = reply_formating(client->servername.c_str(), RPL_LIST, params, client->nick.c_str());
-		if (args.size() < 1)
-			custom_send(ms, client);
-		else {
-			if (std::find(names.begin(), names.end(), utils::ircLowerCase(chanName)) != names.end())
-				custom_send(ms, client);
-		}
-	}
-
-	// * others servers chans
-	for (Chan &chan : serverChans) {
-		chanModes = chan.modes;
-		if (chanModes.find("s") != std::string::npos)
-			continue ; // this chan is secret: skip it
-		if (chanModes.find("p") != std::string::npos)
-			continue ; // this chan is private: skip it
-		chanName = chan.name;
-		numUsersVisible = chan.usersNum;
-		topic = "[" + chanModes + "]";
-		if (chan.topic != "" && chan.topic != "!") {
-			topic += " " + chan.topic;
 		}
 		std::vector<std::string> params({chanName, numUsersVisible, topic});
 		ms = reply_formating(client->servername.c_str(), RPL_LIST, params, client->nick.c_str());
