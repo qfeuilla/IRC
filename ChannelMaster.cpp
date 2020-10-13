@@ -573,3 +573,8 @@ void		ChannelMaster::shareAll(OtherServ *sv) const
 		}
 	}
 }
+
+void		ChannelMaster::changeChanListNick(std::list<Channel*> *usrChans, const std::string &newNick)
+{
+	(*_user_channels)[newNick] = usrChans;
+}

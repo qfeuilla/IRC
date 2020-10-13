@@ -163,6 +163,7 @@ void	Client::NICK(Command *cmd) {
 					if (type == FD_CLIENT) {
 						// we need to update the nick in all of client's channels
 						updateNickInChannels(oldNick, cmd->arguments[0]);
+						ev->channels->changeChanListNick(&channels, cmd->arguments[0]);
 					}
 					nick = cmd->arguments[0];
 					custom_send(ms, this);

@@ -1002,6 +1002,7 @@ bool	OtherServ::change_nick(std::string old, std::string nw) {
 			std::string	oldNick = c->nick;
 			c->nick = nw;
 			ev->channels->changeNick(oldNick, c->nick);
+			ev->channels->changeChanListNick(&(c->channels), nw);
 			return (true);
 		}
 	}

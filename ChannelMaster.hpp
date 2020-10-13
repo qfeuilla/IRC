@@ -74,6 +74,8 @@ public:
 	void		changeNick(const std::string &oldNick, const std::string &newNick);
 
 	void		shareAll(OtherServ *sv) const;
+
+	void		changeChanListNick(std::list<Channel*> *usrChans, const std::string &newNick);
 };
 
 #endif
