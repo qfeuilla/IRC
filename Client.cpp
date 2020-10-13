@@ -160,11 +160,11 @@ void	Client::NICK(Command *cmd) {
 					}
 
 					std::string	oldNick = nick;
-					nick = cmd->arguments[0];
 					if (type == FD_CLIENT) {
 						// we need to update the nick in all of client's channels
-						updateNickInChannels(oldNick, nick);
+						updateNickInChannels(oldNick, cmd->arguments[0]);
 					}
+					nick = cmd->arguments[0];
 					custom_send(ms, this);
 					if (!nick_set) {
 						nick_set = true;

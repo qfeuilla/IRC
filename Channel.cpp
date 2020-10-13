@@ -764,7 +764,6 @@ void		Channel::changeNick(const std::string &oldNick, const std::string &newNick
 	// :paprika!~pokemon@ip-46.net-80-236-89.joinville.rev.numericable.fr NICK :patrick-2
 	ms = client->getFullMask();
 	ms += " NICK :" + newNick;
-	std::cout << "miaw new nick is == " << newNick << "\n\n";
 	if (!_modes.q)
 		broadcastMsg(client, ms);
 	rplMsg(ms, client);
