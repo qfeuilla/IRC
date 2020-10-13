@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:51:25 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/13 15:24:48 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/13 15:26:10 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -1751,7 +1751,8 @@ bool	Client::_cmdNeedAuth(int cmdCode) const
 {
 	if (cmdCode == PASS_CC || cmdCode == NICK_CC
 	|| cmdCode == USER_CC || cmdCode == SERVER_CC
-	|| cmdCode == PING_CC || cmdCode == PONG_CC) {
+	|| cmdCode == PING_CC || cmdCode == PONG_CC
+	|| cmdCode == QUIT_CC) {
 		return (false);
 	}
 	return (true);
