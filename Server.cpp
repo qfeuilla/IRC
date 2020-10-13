@@ -265,7 +265,7 @@ void		Server::create() {
 	if (port != ev->tls_port)
 		tmp->create();
 	else
-		std::cout << "IP = " << *ev->serv << "\n";
+		std::cout << "SERVER NAME = " << *ev->serv << "\n";
 }
 
 
