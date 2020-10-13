@@ -1000,9 +1000,9 @@ bool	OtherServ::change_nick(std::string old, std::string nw) {
 			c->last = time(NULL);
 			clients_history.push_back(new Client(*c));
 			std::string	oldNick = c->nick;
-			c->nick = nw;
-			ev->channels->changeNick(oldNick, c->nick);
+			ev->channels->changeNick(oldNick, nw);
 			ev->channels->changeChanListNick(&(c->channels), nw);
+			c->nick = nw;
 			return (true);
 		}
 	}
