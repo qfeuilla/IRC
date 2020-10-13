@@ -1704,7 +1704,7 @@ void	Client::SQUIT(Command *cmd) {
 
 	if (cmd->arguments.size() >= 1) {
 		if (o_mode) {
-			if (servername == cmd->arguments[0]) {
+			if (*ev->serv == cmd->arguments[0]) {
 				ev->active = false;
 			} else {
 				for (OtherServ *sv : ev->otherServers) {
