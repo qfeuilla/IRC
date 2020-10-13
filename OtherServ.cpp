@@ -401,7 +401,7 @@ void	OtherServ::TRACE(Command *cmd) {
 	OtherServ *tmp2;
 
 	if (cmd->arguments[0] == *ev->serv) {
-		ms = reply_formating((*ev->serv).c_str(), RPL_TRACESERVER, std::vector<std::string>({"1", "0" /* // !! attention ajoute le nombre de channel ici ! //*/, *ev->serv}), cmd->prefix.c_str());
+		ms = reply_formating((*ev->serv).c_str(), RPL_TRACESERVER, std::vector<std::string>({"1", std::to_string(ev->channels->size()), *ev->serv}), cmd->prefix.c_str());
 		custom_send(ms, this);
 		ms = reply_formating((*ev->serv).c_str(), RPL_TRACEEND, std::vector<std::string>({*ev->serv, "0.4.2"}), cmd->prefix.c_str());
 		custom_send(ms, this);

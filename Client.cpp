@@ -1652,7 +1652,7 @@ void	Client::TRACE(Command *cmd) {
 	OtherServ *tmp2;
 	
 	if (cmd->arguments.size() == 0 || cmd->arguments[0] == *ev->serv || !ev->search_list_nick(cmd->arguments[0]).empty()) {
-		ms = reply_formating((*ev->serv).c_str(), RPL_TRACESERVER, std::vector<std::string>({"1", "0" /* // !! attention ajoute le nombre de channel ici ! //*/, *ev->serv}), nick.c_str());
+		ms = reply_formating((*ev->serv).c_str(), RPL_TRACESERVER, std::vector<std::string>({"1", std::to_string(ev->channels->size()), *ev->serv}), nick.c_str());
 		custom_send(ms, this);
 		ms = reply_formating((*ev->serv).c_str(), RPL_TRACEEND, std::vector<std::string>({*ev->serv, "0.4.2"}), nick.c_str());
 		custom_send(ms, this);
