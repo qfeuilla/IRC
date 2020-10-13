@@ -261,10 +261,11 @@ void		Server::create() {
 	std::string tmp2("localhost.");
 	tmp2 += std::to_string(port - 1);
 	ev->serv = new std::string(tmp2);
-	std::cout << "IP = " << *ev->serv << "\n";
 	ev->channels->setSrvName(*(ev->serv));
 	if (port != ev->tls_port)
 		tmp->create();
+	else
+		std::cout << "IP = " << *ev->serv << "\n";
 }
 
 
