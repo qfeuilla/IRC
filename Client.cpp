@@ -202,7 +202,7 @@ void	Client::exec_registerMS() {
 	Command		*tm;
 
 	// * 001
-	ms = reply_formating(servername.c_str(), RPL_WELCOME, std::vector<std::string>({nick, username, servername}), nick.c_str());
+	ms = reply_formating(servername.c_str(), RPL_WELCOME, std::vector<std::string>({nick, username, *ev->serv}), nick.c_str());
 	custom_send(ms, this);
 
 	// * 002
@@ -236,7 +236,7 @@ void	Client::exec_registerMS() {
 	custom_send(ms, this);
 	
 	// * 004
-	ms = reply_formating(servername.c_str(), RPL_MYINFO, std::vector<std::string>({servername, *ev->version, "wois", "ovptismlkqah"}), nick.c_str());
+	ms = reply_formating(servername.c_str(), RPL_MYINFO, std::vector<std::string>({*ev->serv, *ev->version, "wois", "ovptismlkqah"}), nick.c_str());
 	custom_send(ms, this);
 	
 	type = FD_CLIENT; // * register for other user
@@ -635,7 +635,7 @@ void	Client::MOTD(Command *cmd) {
 
 	std::string line;
 
-	line = reply_formating(servername.c_str(), RPL_MOTDSTART, {servername.c_str()}, nick.c_str());
+	line = reply_formating(servername.c_str(), RPL_MOTDSTART, {*ev->serv}, nick.c_str());
 	custom_send(line, this);
 
 	current = motd.begin();
@@ -733,7 +733,7 @@ void	Client::VERSION(Command *cmd) {
 		}
 		if (!good) {
 			if (cmd->arguments[0] == *ev->serv) {
-				ms = reply_formating(servername.c_str(), RPL_VERSION, std::vector<std::string>({*ev->version, "1", servername, "second server-to-server iterations of irc for 42 project"}), nick.c_str());
+				ms = reply_formating(servername.c_str(), RPL_VERSION, std::vector<std::string>({*ev->version, "1", *ev->serv, "second server-to-server iterations of irc for 42 project"}), nick.c_str());
 				custom_send(ms, this);
 				good = true;
 			}
@@ -743,7 +743,7 @@ void	Client::VERSION(Command *cmd) {
 			custom_send(ms, this);
 		}
 	} else {
-		ms = reply_formating(servername.c_str(), RPL_VERSION, std::vector<std::string>({*ev->version, "1", servername, "second server-to-server iterations of irc for 42 project"}), nick.c_str());
+		ms = reply_formating(servername.c_str(), RPL_VERSION, std::vector<std::string>({*ev->version, "1", *ev->serv, "second server-to-server iterations of irc for 42 project"}), nick.c_str());
 		custom_send(ms, this);
 	}
 }
@@ -1022,7 +1022,7 @@ void	Client::ADMIN(Command *cmd) {
 		}
 		if (!good) {
 			if (cmd->arguments[0] == *ev->serv) {
-				ms = reply_formating(servername.c_str(), RPL_ADMINME, {servername}, nick.c_str());
+				ms = reply_formating(servername.c_str(), RPL_ADMINME, {*ev->serv}, nick.c_str());
 				custom_send(ms, this);
 				ms = reply_formating(servername.c_str(), RPL_ADMINLOC1, {ev->loc1}, nick.c_str());
 				custom_send(ms, this);
@@ -1040,7 +1040,7 @@ void	Client::ADMIN(Command *cmd) {
 			custom_send(ms, this);
 		}
 	} else {
-		ms = reply_formating(servername.c_str(), RPL_ADMINME, {servername}, nick.c_str());
+		ms = reply_formating(servername.c_str(), RPL_ADMINME, {*ev->serv}, nick.c_str());
 		custom_send(ms, this);
 		ms = reply_formating(servername.c_str(), RPL_ADMINLOC1, {ev->loc1}, nick.c_str());
 		custom_send(ms, this);
