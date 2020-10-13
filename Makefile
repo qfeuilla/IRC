@@ -1,23 +1,23 @@
-SRCS = 	main.cpp \
-		Client.cpp \
-		Environment.cpp \
-		error_handling.cpp \
-		Fd.cpp \
-		Server.cpp \
-		parser.cpp \
-		Command.cpp \
-		replies.cpp \
-		checking.cpp \
-		Channel.cpp \
-		ChannelMaster.cpp \
-		utils.cpp \
-		OtherServ.cpp
+SRCS = 	srcs/main.cpp \
+		srcs/Client.cpp \
+		srcs/Environment.cpp \
+		srcs/error_handling.cpp \
+		srcs/Fd.cpp \
+		srcs/Server.cpp \
+		srcs/parser.cpp \
+		srcs/Command.cpp \
+		srcs/replies.cpp \
+		srcs/checking.cpp \
+		srcs/Channel.cpp \
+		srcs/ChannelMaster.cpp \
+		srcs/utils.cpp \
+		srcs/OtherServ.cpp
 
 OBJS := $(patsubst %.cpp,%.o,$(SRCS))
 DEPENDS := $(patsubst %.cpp,%.d,$(SRCS))
 
 # c++ flags
-FLAGS = -Wall -Wextra -Werror -g3
+FLAGS = -Wall -Wextra -Werror
 
 # Compiler
 CC = g++
