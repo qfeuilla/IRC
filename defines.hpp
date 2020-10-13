@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/20 17:01:28 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/12 22:20:21 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/13 17:45:07 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -245,6 +245,8 @@
 # define RPL_STATSCOMMANDS     {"212", "{} {}", 2}
 // "C <name> <port>"
 #define RPL_STATSCLINE		   {"213", "C {}:{}", 2}
+// 
+#define RPL_STATSILINE		   {"215", "I *", 0}
 // "<stats letter> :End of STATS report"
 # define RPL_ENDOFSTATS        {"219", "{} :End of STATS report", 1}
 // ":Server Up <days> days <hours>:<minutes>:<seconds>"

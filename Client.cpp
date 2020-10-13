@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:51:25 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/13 15:26:10 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/13 17:47:55 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -211,7 +211,7 @@ void	Client::exec_registerMS() {
 	server += "[";
 	server += *ev->serv;
 	server += "/";
-	server += std::to_string(htons(ev->tls_port - 1));
+	server += std::to_string(ev->tls_port - 1);
 	server += "]";
 	ms = reply_formating(servername.c_str(), RPL_YOURHOST, std::vector<std::string>({server, *ev->version}), nick.c_str());
 	custom_send(ms, this);
@@ -772,6 +772,8 @@ void	Client::STATS(Command *cmd) {
 				ms = reply_formating(servername.c_str(), RPL_ENDOFSTATS, {"h"}, nick.c_str());
 				custom_send(ms, this);
 			} else if (cmd->arguments[0] == "i") {
+				ms = reply_formating(servername.c_str(), RPL_STATSILINE, { }, nick.c_str());
+				custom_send(ms, this);
 				ms = reply_formating(servername.c_str(), RPL_ENDOFSTATS, {"i"}, nick.c_str());
 				custom_send(ms, this);
 			} else if (cmd->arguments[0] == "k") {
@@ -806,7 +808,7 @@ void	Client::STATS(Command *cmd) {
 				for (OtherServ *sv : ev->otherServers) {
 					ms = sv->name;
 					ms += ":";
-					ms +=  ev->tls_port - 1;
+					ms +=  std::to_string(ev->tls_port - 1);
 					ms += " ";
 					ms += std::to_string(sv->sendq);
 					ms += " ";
