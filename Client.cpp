@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 19:51:25 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/12 22:56:37 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/13 15:24:48 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -1908,27 +1908,7 @@ void	Client::read_func() {
 	std::string line;
 	size_t		pos;
 	size_t		charsToJump;
-
-	int error = 0;
-	socklen_t len = sizeof (error);
-	getsockopt(sock, SOL_SOCKET, SO_ERROR, &error, &len);
-	if (error) { // socket has an error
-		std::list<Channel*>::iterator	current = channels.begin();
-		std::list<Channel*>::iterator	end = channels.end();
-
-		while (current != end) {
-			(*current)->quit(this, std::vector<std::string>({":Leaving"}));
-			ev->channels->delChanIfEmpty(*current);
-			++current;
-		}
-		if (type == FD_CLIENT)
-			ev->client_history.push_back(this);
-		delete ev->clients_fd[sock];
-		ev->clients_fd[sock] = new Fd();
-		close(sock);
-		return ;
-	}
-
+	
 	fcntl(sock, F_SETFL, O_NONBLOCK);
 	utils::memset(&buf_read, 0, BUF_SIZE + 1);
 	if (this->is_ssl) {
