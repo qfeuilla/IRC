@@ -252,7 +252,7 @@
 // ":Server Up <days> days <hours>:<minutes>:<seconds>"
 # define RPL_STATSUPTIME       {"242", ":Server Up {} days {}:{}:{}", 4}
 // "O <hostmask> * <name>"
-# define RPL_STATSOLINE        {"243", "O {} * {}", 2}
+# define RPL_STATSOLINE        {"243", "O {} {}", 2}
 // "<user mode string>"
 # define RPL_UMODEIS           {"221", "{}", 1}
 // "<name> <server> <mask> <type> <hopcount> <info>"

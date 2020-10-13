@@ -831,7 +831,7 @@ void	Client::STATS(Command *cmd) {
 				ms = reply_formating(servername.c_str(), RPL_ENDOFSTATS, {"l"}, nick.c_str());
 				custom_send(ms, this);
 			}  else if (cmd->arguments[0] == "o") {
-				ms = reply_formating(servername.c_str(), RPL_STATSOLINE, std::vector<std::string>({"", servername}), nick.c_str());
+				ms = reply_formating(servername.c_str(), RPL_STATSOLINE, std::vector<std::string>({"*", *ev->serv}), nick.c_str());
 				custom_send(ms, this);
 				ms = reply_formating(servername.c_str(), RPL_ENDOFSTATS, {"o"}, nick.c_str());
 				custom_send(ms, this);
