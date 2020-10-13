@@ -28,6 +28,7 @@ Server::Server() {
 	type = FD_SERVER;
 	ev = new Environment();
 	ev->password = new std::string("");
+	ev->serv = new std::string("");
 	time(&ev->start);
 	ev->accept_operators = true;
 	ev->version = new std::string("ft_irc_0.4.2b");
@@ -152,30 +153,28 @@ bool			Server::load_other_servs(std::string servinfo) {
 		return (false);
 	}
 
-	ms += "SERVER ";
-	ms += *ev->serv;
-	ms += " ";
-	ms += "1";
-	ms += " ";
-	ms += "42";
-	ms += " ";
-	ms += std::to_string(port);
-	ms += " ";
-	ms += pass;
-	ms += CRLF;
-	send(_sock, ms.c_str(), ms.length(), 0);
-
 	std::cout << "Setup ...." << std::endl;
-	OtherServ *other = new OtherServ(_sock, ev, std::to_string(porti));
+	OtherServ *other = new OtherServ(_sock, ev, 0);
 	other->name = addr;
 	other->hop_count = 1;
-	other->token = 42;
 	other->info = "";
 	delete ev->clients_fd[_sock];
 	ev->clients_fd[_sock] = other;
 	std::cerr << "Fd adding Ok" << std::endl;
 	ev->otherServers.push_back(other);
 	std::cerr << "OtherServ adding Ok" << std::endl;
+	ms = "PASS ";
+	ms += pass;
+	ms += CRLF;
+	std::cout << ms << std::endl;
+	send(_sock, ms.c_str(), ms.length(), 0);
+	ms = "SERVER ";
+	ms += *ev->serv;
+	ms += " ";
+	ms += ":irc server for 42";
+	ms += CRLF;
+	std::cout << ms << std::endl;
+	send(_sock, ms.c_str(), ms.length(), 0);
 	int i = 0;
 	while (i < 10000000) i++;
 	ms = "READY";
@@ -235,8 +234,9 @@ void		Server::create() {
 
 		ctx = InitServerCTX();
 		LoadCertificates(ctx, CertFile, KeyFile, true);
-	} else
+	} else {
 		tmp = new Server(ev, ev->tls_port);
+	}
 
 	struct sockaddr_in	sin;
 	struct protoent		*pe;
@@ -258,7 +258,9 @@ void		Server::create() {
 	delete ev->clients_fd[sock];
 	ev->clients_fd[sock] = this;
 	delete ev->serv;
-	ev->serv = new std::string(getIP());
+	std::string tmp2("localhost.");
+	tmp2 += std::to_string(port - 1);
+	ev->serv = new std::string(tmp2);
 	std::cout << "IP = " << *ev->serv << "\n";
 	ev->channels->setSrvName(*(ev->serv));
 	if (port != ev->tls_port)

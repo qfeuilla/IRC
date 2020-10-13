@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/20 17:01:28 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/10 17:17:06 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/12 22:20:21 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -83,11 +83,18 @@
 # define ADDS_CC		48 // * Command used to notify adding of a new server
 # define NSERV_CC		49 // * Command to notify entrying server of num of SERVERS
 # define DELS_CC		50 // * Command used to notify deleting of a new server
-# define TRACEUP_CC		51 // * Used for trace
 # define CHAN_CHG_CC	52 // * Used between servs to notify the changes of a channel in the network
 # define CHAN_RPL_CC	53 // * Used between servs to forward a RPL / ERR to the user that triggered it
 # define READY_CC		54 // * used to notify  the a server that he is ready to get his config files
 
+// * Id of the RPL that are transmitted
+# define RPL_351_CC		55
+# define RPL_364_CC		56
+# define RPL_365_CC		57
+# define RPL_391_CC		58
+# define RPL_NTRACE_CC	59
+# define RPL_ADMIN_CC	60
+# define RPL_NINFO_CC	61
 
 // * Messages necessay rights to execute
 
@@ -205,8 +212,8 @@
 # define RPL_NOUSERS           {"395", ":Nobody logged in", 0}
 // "Link <version & debug level> <destination> 
 // <next server> V<protocol version> <link uptime in seconds>
-// <backstream sendq> <upstream sendq>" // * -> one arg
-# define RPL_TRACELINK         {"200", "{}", 1}
+// <backstream sendq> <upstream sendq>"
+# define RPL_TRACELINK         {"200", "Link {} {} {} V{} {} 0 0", 5}
 // "Try. <class> <server>"
 # define RPL_TRACECONNECTING   {"201", "Try. {} {}", 2}
 // "H.S. <class> <server>"
@@ -219,8 +226,8 @@
 // <info> : nick[username@servername] (hostname) hop :since_creation
 # define RPL_TRACEUSER         {"205", "User {} {}", 2}
 // "Serv <class> <int>S <int>C <server>
-// <nick!user|*!*>@<host|server> V<protocol version>" // * -> one arg
-# define RPL_TRACESERVER       {"206", "{}", 1}
+// <nick!user|*!*>@<host|server> V<protocol version>"
+# define RPL_TRACESERVER       {"206", "Serv {} 0S {}C {}[*!*@localhost] VF", 3}
 // "Service <class> <name> <type> <active type>"
 # define RPL_TRACESERVICE      {"207", "Service {} {} {} {}", 4}
 // "<newtype> 0 <client name>"
@@ -340,7 +347,7 @@
 // 
 # define ERR_NOPERMFORHOST     {"463", ":Your host isn't among the privileged", 0}
 // 
-# define ERR_PASSWDMISMATCH    {"464", ":Password incorrect", 0}
+# define ERR_PASSWDMISMATCH    {"464", ":Credentials incorrect", 0}
 // 
 # define ERR_YOUREBANNEDCREEP  {"465", ":You are banned from this server", 0}
 // 

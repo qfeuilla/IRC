@@ -6,36 +6,38 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/24 21:36:03 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/08 18:25:54 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/12 22:02:19 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "OtherServ.hpp"
 #include <iterator>
 
-OtherServ::OtherServ(int socket, Environment *e, std::string prt): _stream() {	
+OtherServ::OtherServ(int socket, Environment *e, int mode): _stream() {	
 	creation = time(NULL);
 	sock = socket;
 	type = FD_OTHER;
 	ev = e;
-	port = prt;
-	std::cout << "other serv port : " << port << std::endl;
-	porti = std::stoi(port);
+	if (mode == 1) {
+		already_setup_name = true;
+	} else {
+		already_setup_name = false;
+	}
 }
 
 OtherServ::OtherServ(const OtherServ &cpy) {
 	sock = cpy.sock;
 	name = cpy.name;
 	hop_count = cpy.hop_count;
-	token = cpy.token;
 	info = cpy.info;
 }
 
 OtherServ::~OtherServ() { 
-	for (Client *c : clients) {
-		delete c;
-	} for (Client *c : clients_history) {
-		delete c;
+	for (Client * c : clients_history) {
+		ev->client_history.push_back(c);
+	}
+	for (Client * c : clients) {
+		ev->client_history.push_back(c);
 	}
 }
 
@@ -43,15 +45,37 @@ void	OtherServ::READY(Command *cmd) {
 	std::string ms;
 	(void)cmd;
 
-	int tmp = 0;
+	ms = ":";
+	ms += *ev->serv;
+	ms += " SERVER ";
+	ms += *ev->serv;
+	ms += " 1 ";
+	ms += ":irc server for 42 ";
+	custom_send(ms, this);
+
 	for (OtherServ *sv : ev->otherServers) {
-		tmp += sv->connected;
+		if (sv != *(ev->otherServers.end() - 1)) {
+			for (std::string tm : sv->connected_sv) {
+				ms = ":";
+				ms += *ev->serv;
+				ms += " SERVER ";
+				ms += tm;
+				ms += " ";
+				ms += std::to_string(sv->connected_hop[tm] + 1);
+				ms += " ";
+				ms += sv->connected_info[tm];
+				custom_send(ms, this);
+			}
+			ms = ":";
+			ms += *ev->serv;
+			ms += " SERVER ";
+			ms += sv->name;
+			ms += " 2 ";
+			ms += sv->info;
+			custom_send(ms, this);
+		}
 	}
 
-	// Notify incoming server of number of servers
-	ms = "NSERV ";
-	ms += std::to_string(tmp);
-	custom_send(ms, this);
 
 	// * **CHANNELS
 	std::vector<Chan>	thisServChans = ev->channels->getChans();
@@ -90,28 +114,10 @@ void	OtherServ::READY(Command *cmd) {
 			}
 		}
 	}
-	for (Fd *f: ev->client_history) {
-		Client *c = reinterpret_cast<Client *>(f);
-
-		if (c->nick_set) {
-			c->share_Client(this);
-			ms = ":";
-			ms += c->nick;
-			ms += " QUIT";
-			custom_send(ms, this);
-		}
-	}
 	for (OtherServ *sv : ev->otherServers) {
 		if (sv != this) {
 			for (Client *c : sv->clients) {
 				c->share_Client(this);
-			}
-			for (Client *c : sv->clients_history) {
-				c->share_Client(this);
-				ms = ":";
-				ms += c->nick;
-				ms += " QUIT";
-				custom_send(ms, this);
 			}
 		}	
 	}
@@ -256,21 +262,19 @@ void	OtherServ::MODE(Command *cmd) {
 		chanModes(cmd);
 		return ;
 	}
+	bool add = false;
 	c = *search_nick(cmd->prefix);
-	c->i_mode = false;
-	c->o_mode = false;
-	c->w_mode = false;
-	c->s_mode = false;
-	if (cmd->arguments.size() >= 2) {
-		for (char m : cmd->arguments[1]) {
-			if (m == 'o')
-				c->o_mode = true;
-			else if (m == 'i')
-				c->i_mode = true;
-			else if (m == 's')
-				c->s_mode = true;
-			else if (m == 'w')
-				c->w_mode = true;
+	if (cmd->arguments.size() > 1) {
+		for (size_t i = 0; i < cmd->arguments[1].length() && i < 4; i++) {
+			if (i == 0) {
+				if (cmd->arguments[1][i] == '-')
+					;
+				else if (cmd->arguments[1][i] == '+')
+					add = true;
+				else
+					break;
+			} else if (!c->set_uMODE(cmd->arguments[1][i], add, 1))
+				break;
 		}
 	}
 
@@ -309,27 +313,48 @@ void	OtherServ::AWAY(Command *cmd) {
 	}
 }
 
-void	OtherServ::TIME(Command *cmd) {
-	std::string ms;
-	Client		*c;
-	
-	c = *search_nick(cmd->prefix);
-	c->creation = std::strtoll(cmd->arguments[0].c_str(), NULL, 10);
-	c->last = std::strtoll(cmd->arguments[1].c_str(), NULL, 10);
+void	OtherServ::VERSION(Command *cmd) {
+	std::string	ms;
 
-	ms = cmd->line;
-	for (OtherServ *sv : ev->otherServers) {
-		if (sv != this) {
-			custom_send(ms, sv);
+	if (cmd->arguments[0] == *ev->serv) {
+		ms = reply_formating((*ev->serv).c_str(), RPL_VERSION, std::vector<std::string>({*ev->version, "1", *ev->serv, "second server-to-server iterations of irc for 42 project"}), cmd->prefix.c_str());
+		custom_send(ms, this);
+	} else {
+		ms = cmd->line;
+		for (OtherServ *sv : ev->otherServers) {
+			if (sv != this) {
+				custom_send(ms, sv);
+			}
 		}
 	}
 }
 
-void	OtherServ::ADDS(Command *cmd) {
+void	OtherServ::SERVER(Command *cmd) {
 	std::string ms;
-	
-	connected += 1;
-	ms += cmd->line;
+	std::string tminfo;
+
+	ms = ":";
+	ms += *ev->serv;
+	ms += " SERVER ";
+	ms += cmd->arguments[0];
+	ms += " ";
+	ms += std::to_string(std::atoi(cmd->arguments[1].c_str()) + 1);
+	ms += " ";
+	for (size_t i = 2; i < cmd->arguments.size(); i++) {
+		ms += cmd->arguments[i];
+		ms += " ";
+		tminfo += cmd->arguments[i];
+		tminfo += " ";
+	}
+	if (!already_setup_name) {
+		name = cmd->arguments[0];
+		info = tminfo;
+		already_setup_name = true;
+	} else {
+		connected_sv.push_back(cmd->arguments[0]);
+		connected_hop.emplace(std::pair<std::string, int>(cmd->arguments[0], std::atoi(cmd->arguments[1].c_str())));
+		connected_info.emplace(std::pair<std::string, std::string>(cmd->arguments[0], tminfo));
+	}
 	for (OtherServ *sv : ev->otherServers) {
 		if (sv != this) {
 			custom_send(ms, sv);
@@ -340,7 +365,6 @@ void	OtherServ::ADDS(Command *cmd) {
 void	OtherServ::DELS(Command *cmd) {
 	std::string ms;
 	
-	connected -= std::atoi(cmd->arguments[0].c_str());
 	ms = cmd->line;
 	for (OtherServ *sv : ev->otherServers) {
 		if (sv != this) {
@@ -349,35 +373,25 @@ void	OtherServ::DELS(Command *cmd) {
 	}
 }
 
-void	OtherServ::NSERV(Command *cmd) {
-	std::string ms;
-	int			tmp = 0;
-
-	for (OtherServ *sv : ev->otherServers) {
-		tmp += sv->connected;
-	}
-	connected = std::atoi(cmd->arguments[0].c_str());
-}
-
 void	OtherServ::KILL(Command *cmd) {
 	std::string ms;
 	std::vector<Client *>::iterator c;
 	std::vector<Fd *> tmp;
 
-	c = search_nick(cmd->prefix);
+	c = search_nick(cmd->arguments[0]);
 	if (c != clients.end()) {
 		(*c)->last = time(NULL);
 		clients_history.push_back(*c);
 		clients.erase(c);
 	}
-	if (!(tmp = ev->search_list_nick(cmd->prefix)).empty()) {
+	if (!(tmp = ev->search_list_nick(cmd->arguments[0])).empty()) {
 		Client *c = reinterpret_cast<Client *>(tmp[0]);
 
 		std::string ans;
 		ev->cmd_count["QUIT"] += 1;
 
 		if (cmd->arguments.size()) {
-			for (size_t i = 0; i < cmd->arguments.size(); i++) {
+			for (size_t i = 1; i < cmd->arguments.size(); i++) {
 				ms += cmd->arguments[i];
 				ms += " ";
 			}
@@ -405,115 +419,50 @@ void	OtherServ::KILL(Command *cmd) {
 void	OtherServ::TRACE(Command *cmd) {
 	std::string ms;
 	std::vector<Fd *> tmp;
+	time_t now = time(NULL);
+	OtherServ *tmp2;
 
-	if (!(tmp = ev->search_list_nick(cmd->arguments[0])).empty() || *ev->serv == cmd->arguments[0]) {
-		if (!tmp.empty()) {
-			Client *c = reinterpret_cast<Client *>(tmp[0]);
-			std::string cl = c->o_mode ? "operator" : "user";
-			ms = ":";
-			ms += cmd->prefix;
-			ms += " TRACEUP ";
-			ms += cl;
-			ms += " ";
-			ms += c->nick;
-			ms += " ";
-			ms += c->username;
-			ms += " ";
-			ms += c->servername;
-			ms += " ";
-			ms += c->hostname;
-			ms += " 1";
-			time_t now;
-			time(&now);
-			int diff = difftime(now, c->creation);
-			ms += " ";
-			ms += std::to_string(diff);
-			custom_send(ms, this);
-		} else {
-			for (Fd * f : ev->search_list_with_mode("", "", 'o')) {
-				Client *c = reinterpret_cast<Client *>(f);
-				std::string cl = c->o_mode ? "operator" : "user";
-				ms = ":";
-				ms += cmd->prefix;
-				ms += " TRACEUP ";
-				ms += cl;
-				ms += " ";
-				ms += c->nick;
-				ms += " ";
-				ms += c->username;
-				ms += " ";
-				ms += c->servername;
-				ms += " ";
-				ms += c->hostname;
-				ms += " 1";
-				time_t now;
-				time(&now);
-				int diff = difftime(now, c->creation);
-				ms += " ";
-				ms += std::to_string(diff);
-				custom_send(ms, this);
-			}
-		}
+	if (cmd->arguments[0] == *ev->serv) {
+		ms = reply_formating((*ev->serv).c_str(), RPL_TRACESERVER, std::vector<std::string>({"1", "0" /* // !! attention ajoute le nombre de channel ici ! //*/, *ev->serv}), cmd->prefix.c_str());
+		custom_send(ms, this);
+		ms = reply_formating((*ev->serv).c_str(), RPL_TRACEEND, std::vector<std::string>({*ev->serv, "0.4.2"}), cmd->prefix.c_str());
+		custom_send(ms, this);
 	} else {
-		ms = cmd->line;
-		for (OtherServ * sv : ev->otherServers) {
+		for (OtherServ *sv : ev->otherServers) {
 			if (sv != this) {
-				custom_send(ms, sv); 
+				for (std::string tm : sv->connected_sv) {
+					if (tm == cmd->arguments[0]) {
+						tmp2 = sv;
+						break;
+					}
+				}
+				if (sv->name == cmd->arguments[0]) {
+					tmp2 = sv;
+					break;
+				}
+				if (sv->search_nick(cmd->arguments[0]) != sv->clients.end()) {
+					tmp2 = sv;
+					break;
+				}
 			}
 		}
-	}
-}
-
-void	OtherServ::TRACEUP(Command *cmd) {
-	std::string ms;
-	std::vector<Fd *> tmp;
-	std::vector<OtherServ *> tmpo;
-
-	if (!(tmp = ev->search_list_nick(cmd->prefix)).empty()) {
-		Client *c = reinterpret_cast<Client *>(tmp[0]);
-		
-		ms = cmd->arguments[1];
-		ms += "[";
-		ms += cmd->arguments[2];
-		ms += "@";
-		ms += cmd->arguments[3];
-		ms += "] (";
-		ms += cmd->arguments[4];
-		ms += ") ";
-		ms += cmd->arguments[5];
-		ms += " :";
-		ms += cmd->arguments[6];
-		ms = reply_formating(c->servername.c_str(), RPL_TRACEUSER, std::vector<std::string>({cmd->arguments[0], ms}), c->nick.c_str());
-		custom_send(ms, c);
-	} else {
-		if (!(tmpo = ev->search_othersrv_nick(cmd->prefix)).empty()) {
-			ms = ":";
-			ms += cmd->prefix;
-			ms += " TRACEUP ";
-			ms += cmd->arguments[0];
-			ms += " ";
-			ms += cmd->arguments[1];
-			ms += " ";
-			ms += cmd->arguments[2];
-			ms += " ";
-			ms += cmd->arguments[3];
-			ms += " ";
-			ms += cmd->arguments[4];
-			ms += " ";
-			ms += std::to_string(std::atoi(cmd->arguments[5].c_str()) + 1);
-			ms += " ";
-			ms += cmd->arguments[6];
-			custom_send(ms, tmpo[0]);
-		}
+		ms = reply_formating((*ev->serv).c_str(), RPL_TRACELINK, std::vector<std::string>({"0.4.2", cmd->arguments[0], tmp2->name, "F", std::to_string(now - creation)}), cmd->prefix.c_str());
+		custom_send(ms, this);
+		ms = cmd->line;
+		custom_send(ms, tmp2);
 	}
 }
 
 void	OtherServ::SQUIT(Command *cmd) {
 	std::string ms;
+	std::vector<std::string>::iterator tm;
 
 	if (*ev->serv == cmd->arguments[0]) {
 		ev->active = false;
 	} else {
+		tm = search_namecon(cmd->arguments[0]);
+		if (tm != connected_sv.end())
+			connected_sv.erase(tm);
 		for (OtherServ *sv : ev->otherServers) {
 			if (sv != this) {
 				ms = cmd->line;
@@ -831,6 +780,256 @@ void	OtherServ::NAMES(Command *cmd)
 	}
 }
 
+void	OtherServ::LINKS(Command *cmd) {
+	std::string ms = " ";
+
+	if (*ev->serv == cmd->arguments[0]) {
+		for (OtherServ *sv : ev->otherServers) {
+			for (std::string tm : sv->connected_sv) {
+				if (utils::strMatchToLower(cmd->arguments[1], tm)) {
+					ms = reply_formating((*ev->serv).c_str(), RPL_LINKS, std::vector<std::string>({tm, sv->name, std::to_string(sv->connected_hop[tm]), sv->connected_info[tm]}), cmd->prefix.c_str());
+					custom_send(ms, this);
+				}
+			}
+			if (utils::strMatchToLower(cmd->arguments[1], sv->name)) {
+				ms = reply_formating((*ev->serv).c_str(), RPL_LINKS, std::vector<std::string>({sv->name, *(ev->serv), std::to_string(sv->hop_count), sv->info}), cmd->prefix.c_str());
+				custom_send(ms, this);
+			}
+		}
+		if (utils::strMatchToLower(cmd->arguments[1], *ev->serv)) {
+			ms = reply_formating((*ev->serv).c_str(), RPL_LINKS, std::vector<std::string>({*ev->serv, *ev->serv, "0", "irc server for 42"}), cmd->prefix.c_str());
+			custom_send(ms, this);
+		}
+		ms = reply_formating((*ev->serv).c_str(), RPL_ENDOFLINKS, {cmd->arguments[1]}, cmd->prefix.c_str());
+		custom_send(ms, this);
+	} else {
+		for (OtherServ *sv : ev->otherServers) {
+			if (sv != this) {
+				ms = cmd->line;
+				custom_send(ms, sv);
+			}
+		}
+	}
+}
+
+void	OtherServ::TIME(Command *cmd) {
+	std::string	ms;
+	time_t		now = time(NULL);
+
+	if (cmd->arguments[0] == *ev->serv) {
+		ms = asctime(localtime(&now));
+		ms = std::string(&ms[0], &ms[ms.size() - 1]);
+		ms = reply_formating((*ev->serv).c_str(), RPL_TIME, std::vector<std::string>({*ev->serv, ms}), cmd->prefix.c_str());
+		custom_send(ms, this);
+	} else {
+		ms = cmd->line;
+		for (OtherServ *sv : ev->otherServers) {
+			if (sv != this) {
+				custom_send(ms, sv);
+			}
+		}
+	}
+}
+
+void	OtherServ::ADMIN(Command *cmd) {
+	std::string ms;
+
+	if (cmd->arguments[0] == *ev->serv) {
+		ms = reply_formating((*ev->serv).c_str(), RPL_ADMINME, {*ev->serv}, cmd->prefix.c_str());
+		custom_send(ms, this);
+		ms = reply_formating((*ev->serv).c_str(), RPL_ADMINLOC1, {ev->loc1}, cmd->prefix.c_str());
+		custom_send(ms, this);
+		ms = reply_formating((*ev->serv).c_str(), RPL_ADMINLOC2, {ev->loc2}, cmd->prefix.c_str());
+		custom_send(ms, this);
+		for (std::string s : ev->emails) {
+			ms = reply_formating((*ev->serv).c_str(), RPL_ADMINEMAIL, {s}, cmd->prefix.c_str());
+			custom_send(ms, this);
+		}
+	} else {
+		ms = cmd->line;
+		for (OtherServ *sv : ev->otherServers) {
+			if (sv != this) {
+				custom_send(ms, sv);
+			}
+		}
+	}
+}
+
+void	OtherServ::INFO(Command *cmd) {
+	std::list<std::string>	inf;
+	std::list<std::string>::iterator	current;
+	std::list<std::string>::iterator	end;
+	std::string buf;
+	std::string ms;
+
+	if (cmd->arguments[0] == *ev->serv) {
+		inf.push_back(" IRC --");
+		inf.push_back(" Based on RFCs given on 42 subject page : ");
+		inf.push_back(" https://github.com/qfeuilla/ft_irc/blob/master/en.subject.pdf ");
+		inf.push_back(" ");
+		inf.push_back(" This program is free software; you can redistribute it and/or");
+		inf.push_back(" modify it under the terms of the GNU General Public License as");
+		inf.push_back(" published by the Free Software Foundation; either version 2, or");
+		inf.push_back(" (at your option) any later version.");
+		inf.push_back(" ");
+		inf.push_back(" ft_irc has been developed to meet the policy needs of the");
+		inf.push_back(" RFCs IRC network. ");
+		inf.push_back("  ");
+		inf.push_back(" ft_irc development is currently ongoin with developpers :");
+		inf.push_back(" Quentin FEUILLADE--MONTIXI and Mayeul Le Monies De Sagazan");
+		inf.push_back(" see our Github : ");
+		inf.push_back(" 	- https://github.com/qfeuilla ");
+		inf.push_back(" 	- https://github.com/mle-moni ");
+		inf.push_back(" ");
+		inf.push_back(" ");
+		inf.push_back(" On-line since:");
+		buf = std::asctime(gmtime(&(ev->start)));
+		inf.push_back(std::string(&buf[0], &buf[buf.size() - 1]));
+		inf.push_back(" UTC \n");
+		
+		std::string line;
+		current = inf.begin();
+		end = inf.end();
+
+		while (current != end) {
+			line = *current;
+			line = reply_formating((*ev->serv).c_str(), RPL_INFO, {line}, cmd->prefix.c_str());
+			custom_send(line, this);
+			++current;
+		}
+
+		line = reply_formating((*ev->serv).c_str(), RPL_ENDOFINFO, {}, cmd->prefix.c_str());
+		custom_send(line, this);
+	} else {
+		ms = cmd->line;
+		for (OtherServ *sv : ev->otherServers) {
+			if (sv != this) {
+				custom_send(ms, sv);
+			}
+		}
+	}
+} 
+
+void	OtherServ::RPL_391(Command *cmd) {
+	std::string ms;
+	std::vector<Fd *> tm;
+
+	ms = cmd->line;
+	if (!((tm = ev->search_list_nick(cmd->arguments[0])).empty())) {
+		Client *c = reinterpret_cast<Client *>(tm[0]);
+		custom_send(ms, c);
+	} else {
+		for (OtherServ *sv : ev->otherServers) {
+			if (sv != this) {
+				custom_send(ms, sv);
+			}
+		}
+	}
+}
+
+void	OtherServ::RPL_351(Command *cmd) {
+	std::string ms;
+	std::vector<Fd *> tm;
+
+	ms = cmd->line;
+	if (!((tm = ev->search_list_nick(cmd->arguments[0])).empty())) {
+		Client *c = reinterpret_cast<Client *>(tm[0]);
+		custom_send(ms, c);
+	} else {
+		for (OtherServ *sv : ev->otherServers) {
+			if (sv != this) {
+				custom_send(ms, sv);
+			}
+		}
+	}
+}
+
+
+void	OtherServ::RPL_364(Command *cmd) {
+	std::string ms;
+	std::vector<Fd *> tm;
+
+	ms = cmd->line;
+	if (!((tm = ev->search_list_nick(cmd->arguments[0])).empty())) {
+		Client *c = reinterpret_cast<Client *>(tm[0]);
+		custom_send(ms, c);
+	} else {
+		for (OtherServ *sv : ev->otherServers) {
+			if (sv != this) {
+				custom_send(ms, sv);
+			}
+		}
+	}
+}
+
+void	OtherServ::RPL_365(Command *cmd) {
+	std::string ms;
+	std::vector<Fd *> tm;
+
+	ms = cmd->line;
+	if (!((tm = ev->search_list_nick(cmd->arguments[0])).empty())) {
+		Client *c = reinterpret_cast<Client *>(tm[0]);
+		custom_send(ms, c);
+	} else {
+		for (OtherServ *sv : ev->otherServers) {
+			if (sv != this) {
+				custom_send(ms, sv);
+			}
+		}
+	}
+}
+
+void	OtherServ::RPL_NTRACE(Command *cmd) {
+	std::string ms;
+	std::vector<Fd *> tm;
+
+	ms = cmd->line;
+	if (!((tm = ev->search_list_nick(cmd->arguments[0])).empty())) {
+		Client *c = reinterpret_cast<Client *>(tm[0]);
+		custom_send(ms, c);
+	} else {
+		for (OtherServ *sv : ev->otherServers) {
+			if (sv != this) {
+				custom_send(ms, sv);
+			}
+		}
+	}
+}
+
+void	OtherServ::RPL_ADMIN(Command *cmd) {
+	std::string ms;
+	std::vector<Fd *> tm;
+
+	ms = cmd->line;
+	if (!((tm = ev->search_list_nick(cmd->arguments[0])).empty())) {
+		Client *c = reinterpret_cast<Client *>(tm[0]);
+		custom_send(ms, c);
+	} else {
+		for (OtherServ *sv : ev->otherServers) {
+			if (sv != this) {
+				custom_send(ms, sv);
+			}
+		}
+	}
+}
+
+void	OtherServ::RPL_NINFO(Command *cmd) {
+	std::string ms;
+	std::vector<Fd *> tm;
+
+	ms = cmd->line;
+	if (!((tm = ev->search_list_nick(cmd->arguments[0])).empty())) {
+		Client *c = reinterpret_cast<Client *>(tm[0]);
+		custom_send(ms, c);
+	} else {
+		for (OtherServ *sv : ev->otherServers) {
+			if (sv != this) {
+				custom_send(ms, sv);
+			}
+		}
+	}
+}
+
 int		OtherServ::execute_parsed(Command *parsed) {
 	switch (parsed->cmd_code()) {
 	case NICK_CC:
@@ -857,11 +1056,8 @@ int		OtherServ::execute_parsed(Command *parsed) {
 	case TIME_CC:
 		TIME(parsed);
 		break;
-	case ADDS_CC:
-		ADDS(parsed);
-		break;
-	case NSERV_CC:
-		NSERV(parsed);
+	case SERVER_CC:
+		SERVER(parsed);
 		break;
 	case DELS_CC:
 		DELS(parsed);
@@ -871,9 +1067,6 @@ int		OtherServ::execute_parsed(Command *parsed) {
 		break;
 	case TRACE_CC:
 		TRACE(parsed);
-		break;
-	case TRACEUP_CC:
-		TRACEUP(parsed);
 		break;
 	case SQUIT_CC:
 		SQUIT(parsed);
@@ -904,6 +1097,39 @@ int		OtherServ::execute_parsed(Command *parsed) {
 		break;
 	case READY_CC:
 		READY(parsed);
+		break;
+	case VERSION_CC:
+		VERSION(parsed);
+		break;
+	case LINKS_CC:
+		LINKS(parsed);
+		break;
+	case RPL_351_CC:
+		RPL_351(parsed);
+		break;
+	case RPL_364_CC:
+		RPL_364(parsed);
+		break;
+	case RPL_365_CC:
+		RPL_365(parsed);
+		break;
+	case RPL_391_CC:
+		RPL_391(parsed);
+		break;
+	case RPL_NTRACE_CC:
+		RPL_NTRACE(parsed);
+		break;
+	case ADMIN_CC:
+		ADMIN(parsed);
+		break;
+	case RPL_ADMIN_CC:
+		RPL_ADMIN(parsed);
+		break;
+	case INFO_CC:
+		INFO(parsed);
+		break;
+	case RPL_NINFO_CC:
+		RPL_NINFO(parsed);
 		break;
 	default:
 		break;
@@ -960,15 +1186,26 @@ void	OtherServ::read_func() {
 			}
 		}
 
-		// * tell other serve that the server is disconnect
-		ms = "DELS ";
-		ms += std::to_string(connected);
+		// * tell other serve that the server is disconnect and all the depending serv
+		for (std::string tm : connected_sv) {
+			ms = "SQUIT ";
+			ms += tm;
+			ms += " :disconnection";
+			for (OtherServ *sv : ev->otherServers) {
+				if (sv != this) {
+					custom_send(ms, sv);
+				}
+			}
+		}
+		ms = "SQUIT ";
+		ms += name;
+		ms += " :disconnection";
 		for (OtherServ *sv : ev->otherServers) {
 			if (sv != this) {
 				custom_send(ms, sv);
 			}
 		}
-		delete ev->clients_fd[sock];
+		ev->trash.push_back(this); // !! split trashes
 		ev->clients_fd[sock] = new Fd();
 		std::cerr << "Other serv quit" << std::endl;
 	} else {
@@ -988,11 +1225,11 @@ void	OtherServ::read_func() {
 			for (Client *tmp : clients) {
 				std::cout << "- " << tmp->nick << "-" << tmp->realname << std::endl;
 			}
-			int tmp2 = 0;
-			for (OtherServ *sv : ev->otherServers) {
-				tmp2 += sv->connected;
+			std::cout << "Servers Connected to the other serv: " << connected_sv.size() << std::endl;
+			for (std::string tmp3 : connected_sv) {
+				std::cout << "- " << tmp3 << " at " << connected_hop[tmp3] << " hops with info " << connected_info[tmp3] << std::endl;
 			}
-			std::cout << "Servers Connected : " << tmp2 << std::endl;
+			std::cout << "This connection is with : " << name << std::endl;
 			delete parsed;
 		}
 	}
@@ -1052,6 +1289,17 @@ std::vector<Client *>	OtherServ::search_list_with_mode(char c) {
 			buff.push_back(cl);
 	}
 	return buff;
+}
+
+std::vector<std::string>::iterator OtherServ::search_namecon(std::string sv) {
+	std::vector<std::string>::iterator it = connected_sv.begin();
+
+	while (it != connected_sv.end()) {
+		if (*it == sv)
+			break;
+		std::next(it);
+	}
+	return it;
 }
 
 std::vector<Chan>::iterator	OtherServ::getChan(const std::string &name)

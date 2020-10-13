@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/20 16:41:00 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/07 19:39:02 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/12 21:44:12 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -137,14 +137,32 @@ int		Command::cmd_code() const {
 		return (NSERV_CC);
 	else if (upperCaseCommand == "DELS" || upperCaseCommand == ":DELS")
 		return (DELS_CC);
-	else if (upperCaseCommand == "TRACEUP" || upperCaseCommand == ":TRACEUP")
-		return (TRACEUP_CC);
 	else if (upperCaseCommand == "CHAN_CHG" || upperCaseCommand == ":CHAN_CHG")
 		return (CHAN_CHG_CC);
 	else if (upperCaseCommand == "CHAN_RPL" || upperCaseCommand == ":CHAN_RPL")
 		return (CHAN_RPL_CC);
 	else if (upperCaseCommand == "READY" || upperCaseCommand == ":READY")
 		return (READY_CC);
+	else if (upperCaseCommand == "351")
+		return (RPL_351_CC);
+	else if (upperCaseCommand == "364")
+		return (RPL_364_CC);
+	else if (upperCaseCommand == "365")
+		return (RPL_365_CC);
+	else if (upperCaseCommand == "391")
+		return (RPL_391_CC);
+	else if (upperCaseCommand == "200" || upperCaseCommand == "201"
+			|| upperCaseCommand == "202" || upperCaseCommand == "203"
+			|| upperCaseCommand == "204" || upperCaseCommand == "205"
+			|| upperCaseCommand == "206" || upperCaseCommand == "207"
+			|| upperCaseCommand == "208" || upperCaseCommand == "209"
+			|| upperCaseCommand == "261" || upperCaseCommand == "262")
+		return (RPL_NTRACE_CC);
+	else if (upperCaseCommand == "256" || upperCaseCommand == "257"
+			|| upperCaseCommand == "258" || upperCaseCommand == "259")
+		return (RPL_ADMIN_CC);
+	else if (upperCaseCommand == "371" || upperCaseCommand == "374")
+		return (RPL_NINFO_CC);
 	else
 		return (WRONG_CMD);
 }

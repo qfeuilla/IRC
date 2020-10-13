@@ -17,7 +17,7 @@ OBJS := $(patsubst %.cpp,%.o,$(SRCS))
 DEPENDS := $(patsubst %.cpp,%.d,$(SRCS))
 
 # c++ flags
-FLAGS = -Wall -Wextra -Werror 
+FLAGS = -Wall -Wextra -Werror -g3
 
 # Compiler
 CC = g++
@@ -47,7 +47,7 @@ fclean:		clean
 re:		fclean all
 
 install:
-	sudo apt-get update && sudo apt-get install libssl-dev hexchat
+	sudo apt-get update && sudo apt-get install libssl-dev hexchat ngircd
 
 # .PHONY means these rules get executed even if files of those names exist.
 .PHONY: all clean
