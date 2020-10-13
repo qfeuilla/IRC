@@ -24,6 +24,8 @@ namespace utils
 	std::string	delFirstWord(const std::string &str);
 	
 	std::string	strJoin(const std::vector<std::string> &vec, char sep);
+	std::string	getNickFromMask(const std::string &fullmask);
+	bool		strIsNum(const std::string &str);
 }
 
 #endif

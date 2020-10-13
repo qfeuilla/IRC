@@ -46,7 +46,7 @@ public:
 
 	Environment			*ev;
 private:
-	SSL_CTX				*ctx;
+	SSL_CTX				*ctx = nullptr;
 	int					port;
 	int					action;
 	Server				*tmp;

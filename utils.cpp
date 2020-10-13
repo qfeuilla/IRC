@@ -174,3 +174,28 @@ std::string	utils::strJoin(const std::vector<std::string> &vec, char sep)
 		return ("");
 	return (users.substr(0, users.size() - 1));
 }
+
+std::string	utils::getNickFromMask(const std::string &fullmask)
+{
+	// input looks like: nick!~user_name@servername
+	// e.g. -> ngircd!~ngircd_usr@localhost
+	size_t	end_pos = fullmask.find("!");
+	size_t	verif = fullmask.find("@");
+	std::string	nick = "";
+
+	if (end_pos == std::string::npos || end_pos < 1)
+		return ("");
+	if (verif == std::string::npos)
+		return ("");
+	nick = fullmask.substr(0, end_pos);
+	return (nick);
+}
+
+bool		utils::strIsNum(const std::string &str)
+{
+	for (char c : str) {
+		if (!utils::isdigit(c))
+			return (false);
+	}
+	return (true);
+}

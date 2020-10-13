@@ -83,8 +83,7 @@
 # define ADDS_CC		48 // * Command used to notify adding of a new server
 # define NSERV_CC		49 // * Command to notify entrying server of num of SERVERS
 # define DELS_CC		50 // * Command used to notify deleting of a new server
-# define CHAN_CHG_CC	52 // * Used between servs to notify the changes of a channel in the network
-# define CHAN_RPL_CC	53 // * Used between servs to forward a RPL / ERR to the user that triggered it
+# define TRACEUP_CC		51 // * Used for trace
 # define READY_CC		54 // * used to notify  the a server that he is ready to get his config files
 
 // * Id of the RPL that are transmitted

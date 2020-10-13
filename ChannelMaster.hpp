@@ -36,17 +36,17 @@ public:
 	void	setSrvName(const std::string &srvName);
 
 	// * join returns true on succes
-	bool	join(Client *client, const std::vector<std::string> &args, std::list<Channel*> *usrChans);
+	bool	join(Client *client, const std::vector<std::string> &args, std::list<Channel*> *usrChans, OtherServ *svFrom = nullptr);
 	// * leave returns true on succes
-	bool	leave(Client *client, const std::vector<std::string> &args);
+	bool	leave(Client *client, const std::vector<std::string> &args, OtherServ *svFrom = nullptr);
 	// * mode returns true on succes
-	bool	mode(Client *client, const std::vector<std::string> &args);
+	bool	mode(Client *client, const std::vector<std::string> &args, OtherServ *svFrom = nullptr);
 	// * kick returns true on succes
-	bool	kick(Client *client, const std::vector<std::string> &args);
+	bool	kick(Client *client, const std::vector<std::string> &args, OtherServ *svFrom = nullptr);
 	// * topic returns true on succes
-	bool	topic(Client *client, const std::vector<std::string> &args);
+	bool	topic(Client *client, const std::vector<std::string> &args, OtherServ *svFrom = nullptr);
 	// * invite returns true on succes
-	bool	invite(Client *client, const std::vector<std::string> &args);
+	bool	invite(Client *client, const std::vector<std::string> &args, OtherServ *svFrom = nullptr);
 	// * list always return true
 	bool	list(Client *client, const std::vector<std::string> &args);
 
@@ -58,14 +58,13 @@ public:
 	size_t	size() const;
 
 	// * send msg to everyone in the channel but the sender 
-	bool	broadcastMsg(Client *client, const std::string &chanName, const std::vector<std::string> &args, bool sendErrors = true);
+	bool	broadcastMsg(OtherServ *svFrom, Client *client, const std::string &chanName, const std::vector<std::string> &args, bool sendErrors = true);
 
-	std::vector<Chan>	getChans() const;
 	Channel				*getChannel(const std::string &channelName);
-	bool		joinChannel(Client *client, const std::string &channelName, const std::string &passwd);
-	bool		leaveChannel(Client *client, const std::string &channelName, const std::string &reason);
+	bool		joinChannel(Client *client, const std::string &channelName, const std::string &passwd, OtherServ *svFrom);
+	bool		leaveChannel(Client *client, const std::string &channelName, const std::string &reason, OtherServ *svFrom);
 	bool	kickFromChan(Client *client, const std::string &chanName,
-	const std::string &guyToKick, const std::string &reason);
+	const std::string &guyToKick, const std::string &reason, OtherServ *svFrom);
 
 	void		doQuit(Client *client, const std::vector<std::string> &args);
 	bool		localChanWHO(Client *client, const std::vector<std::string> &args);
@@ -73,6 +72,8 @@ public:
 	bool		delChanIfEmpty(Channel *chan);
 
 	void		changeNick(const std::string &oldNick, const std::string &newNick);
+
+	void		shareAll(OtherServ *sv) const;
 };
 
 #endif

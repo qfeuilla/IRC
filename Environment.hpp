@@ -40,6 +40,8 @@ public:
 	std::vector<Fd *>		search_list_with_mode(std::string, std::string, char);
 
 	Client	*getOtherServClientByNick(const std::string &nick);
+	Client	*searchClientEverywhere(const std::string &nick);
+	Client	*getClient(const std::string &nick);
 
 	std::vector<Fd *>	clients_fd;
 	std::vector<Fd *>	client_history;

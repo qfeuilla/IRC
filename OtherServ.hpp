@@ -44,8 +44,6 @@ public:
 	void			SQUIT(Command *);
 	void			READY(Command *);
 
-	void			CHAN_CHG(Command *);
-	void			CHAN_RPL(Command *);
 	void			JOIN(Command *);
 	void			PART(Command *);
 	void			KICK(Command *);
@@ -66,8 +64,6 @@ public:
 	void			RPL_ADMIN(Command *);
 	void			RPL_NINFO(Command *);
 
-
-	void			chanModes(Command *);
 
 	virtual void	read_func();
 	virtual void	write_func();
@@ -100,10 +96,7 @@ public:
 	time_t					creation;
 	bool					already_setup_name;
 	
-	std::vector<Chan>		chans;
-	std::vector<Chan>::iterator	getChan(const std::string &name);
-	bool	chanWHO(Client *client, const std::vector<std::string> &args);
-	void	sendPartMessage(Chan &chan, const std::string &nickName);
+	void	propagateChanMsg(const std::string &ms);
 private :
 	Environment		*ev;
 

@@ -1,15 +1,15 @@
 #include "Channel.hpp"
 #include "defines.hpp"
 
-Channel::Channel(): _name(), _users(), _modes(), _topic(), _srv_name(), _creator() {}
-Channel::Channel(const std::string &name, Client *client, const std::string &srvName)
-: _name(name), _users(), _modes(), _topic(), _srv_name(srvName), _creator(client->nick) {
+Channel::Channel(): _name(), _users(), _modes(), _topic(), _creator() {}
+Channel::Channel(const std::string &name, Client *client, OtherServ *srv)
+: _name(name), _users(), _modes(), _topic(), _creator(client->nick) {
 	if (_name.at(0) != '+') {
-		_modes.o.push_back(utils::ircLowerCase(client->nick));
-		_modes.n = true;
+		if (!srv) // if it comes from another serv, it will be followed by a MODE command if needed
+			_modes.o.push_back(utils::ircLowerCase(client->nick));
 	}
 	std::cout << "Creating channel: " << _name << "\n\n";
-	join(client, "");
+	join(client, "", srv);
 }
 Channel::~Channel() {
 	std::cout << "channel erased: " << _name << "\n\n";
@@ -25,9 +25,9 @@ const std::string	&Channel::getName() const
 {
 	return (_name);
 }
-std::string			Channel::getUsersNum() const
+int			Channel::getUsersNum() const
 {
-	return (std::to_string(_modes.users));
+	return (_modes.users);
 }
 const std::string	&Channel::getCreator() const
 {
@@ -38,23 +38,24 @@ const std::string	&Channel::getTopic() const
 	return (_topic);
 }
 
-bool				Channel::setTopic(Client *client, const std::string &newTopic)
+bool				Channel::setTopic(Client *client, const std::string &newTopic, OtherServ *svFrom)
 {
 	std::string	ms;
 	if (!isInChan(client->nick)) {
 		ms = reply_formating(client->servername.c_str(), ERR_NOTONCHANNEL, std::vector<std::string>({getName()}), client->nick.c_str());
 		return (!rplMsg(ms, client));
 	}
-	if (_modes.t && !_hasRights(client->nick)) {
+	if (_modes.t && (!svFrom && !_hasRights(client->nick))) {
 		ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
 		return (!rplMsg(ms, client));
 	}
 	_topic = std::string(newTopic);
-	ms = ":" + client->nick + "!" + client->username + "@" + client->servername;
+	ms = client->getFullMask();
 	ms += " TOPIC " + getName() + " :" +_topic;
 	rplMsg(ms, client);
 	broadcastMsg(client, ms);
-	updateServsChan(client); // update servers chan
+	ms = ":" + client->nick + " TOPIC " + getName() + " :" + _topic;
+	client->sendToAllServs(ms, svFrom);
 	return (true);
 }
 
@@ -73,31 +74,33 @@ bool				Channel::broadcastMsg(Client *sender, const std::string &msg) const
 	return (true);
 }
 
-bool				Channel::join(Client *client, const std::string &passwd)
+bool				Channel::join(Client *client, const std::string &passwd, OtherServ *svFrom)
 {
 	std::string	ms;
 
 	if (!isInChan(client->nick)) {
-		if (_modes.k != "" && _modes.k != passwd) {
-			ms = reply_formating(client->servername.c_str(), ERR_BADCHANNELKEY, std::vector<std::string>({getName()}), client->nick.c_str());
-			return (!rplMsg(ms, client));
-		}
-		if (_modes.l != -1 && _modes.users >= _modes.l) {
-			ms = reply_formating(client->servername.c_str(), ERR_CHANNELISFULL, std::vector<std::string>({getName()}), client->nick.c_str());
-			return (!rplMsg(ms, client));
-		}
-		if (_modes.i && !_isInvited(client)) {
-			ms = reply_formating(client->servername.c_str(), ERR_INVITEONLYCHAN, std::vector<std::string>({getName()}), client->nick.c_str());
-			return (!rplMsg(ms, client));
-		}
-		if (_modes.p) {
-			ms = reply_formating(client->servername.c_str(), ERR_NOSUCHCHANNEL, std::vector<std::string>({getName()}), client->nick.c_str());
-			return (!rplMsg(ms, client));
-		}
-		if (_isBanned(client)) {
-			if (!_isInvited(client)) {
-				ms = reply_formating(client->servername.c_str(), ERR_BANNEDFROMCHAN, std::vector<std::string>({getName()}), client->nick.c_str());
+		if (!svFrom) { // if it comes from a server, we must not test
+			if (_modes.k != "" && _modes.k != passwd) {
+				ms = reply_formating(client->servername.c_str(), ERR_BADCHANNELKEY, std::vector<std::string>({getName()}), client->nick.c_str());
 				return (!rplMsg(ms, client));
+			}
+			if (_modes.l != -1 && _modes.users >= _modes.l) {
+				ms = reply_formating(client->servername.c_str(), ERR_CHANNELISFULL, std::vector<std::string>({getName()}), client->nick.c_str());
+				return (!rplMsg(ms, client));
+			}
+			if (_modes.i && !_isInvited(client)) {
+				ms = reply_formating(client->servername.c_str(), ERR_INVITEONLYCHAN, std::vector<std::string>({getName()}), client->nick.c_str());
+				return (!rplMsg(ms, client));
+			}
+			if (_modes.p) {
+				ms = reply_formating(client->servername.c_str(), ERR_NOSUCHCHANNEL, std::vector<std::string>({getName()}), client->nick.c_str());
+				return (!rplMsg(ms, client));
+			}
+			if (_isBanned(client)) {
+				if (!_isInvited(client)) {
+					ms = reply_formating(client->servername.c_str(), ERR_BANNEDFROMCHAN, std::vector<std::string>({getName()}), client->nick.c_str());
+					return (!rplMsg(ms, client));
+				}
 			}
 		}
 		// on ajoute le client dans le channel, et on le retire de la liste d'invitations
@@ -105,8 +108,7 @@ bool				Channel::join(Client *client, const std::string &passwd)
 		_modes.invitation_list.remove(utils::ircLowerCase(client->nick));
 		_modes.users++;
 		
-		std::string	join_msg = ":" + client->nick;
-		join_msg += "!" + client->username + "@" + _srv_name;
+		std::string	join_msg = client->getFullMask();
 		join_msg += " JOIN :" + getName();
 
 		rplMsg(join_msg, client);
@@ -118,14 +120,20 @@ bool				Channel::join(Client *client, const std::string &passwd)
 		}
 
 		usrList(client);
+
+		ms = ":" + client->nick + " JOIN " + getName();
+		client->sendToAllServs(ms, svFrom);
+		if (_modes.users == 1) { // channel was just created
+			ms = ":" + client->nick + " MODE " + getName() + " +o " + client->nick;
+			client->sendToAllServs(ms, svFrom);
+		}
 		
-		updateServsChan(client); // update servers chan
 		return (true);
 	}
 	return (false);
 }
 
-bool				Channel::leave(Client *client, const std::string &reason, bool muted)
+bool				Channel::leave(Client *client, const std::string &reason, OtherServ *svFrom, bool muted)
 {
 	std::string		ms;
 
@@ -136,8 +144,8 @@ bool				Channel::leave(Client *client, const std::string &reason, bool muted)
 			rplMsg(ms, client);
 		return (false);
 	}
-	ms = ":" + client->nick + "!" + client->username + "@";
-	ms += client->servername + " PART " + getName();
+	ms = client->getFullMask();
+	ms += " PART " + getName();
 	ms += (reason != "") ? " :" + reason : "";
 	if (!muted) {
 		rplMsg(ms, client);
@@ -150,23 +158,30 @@ bool				Channel::leave(Client *client, const std::string &reason, bool muted)
 		_modes.v.remove(utils::ircLowerCase(user->first));
 	_users.erase(user);
 	_modes.users--;
-	updateServsChan(client); // update servers chan
+	if (!muted) {
+		ms = ":" + client->nick + " PART " + getName();
+		ms += (reason != "") ? " :" + reason : "";
+		client->sendToAllServs(ms, svFrom);
+	}
 	return (true);
 }
 
 // modes
 
-bool	Channel::mode_O(bool append, Client *client, const std::string &target)
+bool	Channel::mode_O(OtherServ *svFrom, bool append, Client *client, const std::string &target)
 {
 	std::string ms;
 	if (!isInChan(target))
 		return (true);
-	if (append && utils::strCmp(client->nick, _creator)) {
+	if (append && (svFrom || utils::strCmp(client->nick, _creator))) {
 		_creator = target;
-		ms = ":" + client->nick + "!" + client->username + "@";
-		ms += client->servername + " MODE " + getName() + " +O " + utils::ircLowerCase(target);
+		ms = client->getFullMask();
+		ms += " MODE " + getName() + " +O " + utils::ircLowerCase(target);
 		broadcastMsg(client, ms);
-		return (rplMsg(ms, client));
+		rplMsg(ms, client);
+		ms = ":" + client->nick + " MODE " + getName() + " +O " + utils::ircLowerCase(target);
+		client->sendToAllServs(ms, svFrom);
+		return (true);
 	}
 
 	if (!append) {
@@ -176,315 +191,393 @@ bool	Channel::mode_O(bool append, Client *client, const std::string &target)
 	return (!rplMsg(ms, client));
 }
 
-bool	Channel::mode_o(bool append, Client *client, const std::string &target)
+bool	Channel::mode_o(OtherServ *svFrom, bool append, Client *client, const std::string &target)
 {
 	std::string ms;
 	if (!isInChan(target))
 		return (true);
-	if (append && _hasRights(client->nick)) {
+	if (append && (svFrom || _hasRights(client->nick))) {
 		if (_isInList(target, _modes.o)) // target is already chanop
 			return (true);
 		_modes.o.push_back(utils::ircLowerCase(target));
-		ms = ":" + client->nick + "!" + client->username + "@";
-		ms += client->servername + " MODE " + getName() + " +o " + utils::ircLowerCase(target);
+		ms = client->getFullMask();
+		ms += " MODE " + getName() + " +o " + utils::ircLowerCase(target);
 		broadcastMsg(client, ms);
-		return (rplMsg(ms, client));
+		rplMsg(ms, client);
+		ms = ":" + client->nick + " MODE " + getName() + " +o " + utils::ircLowerCase(target);
+		client->sendToAllServs(ms, svFrom);
+		return (true);
 	}
 
-	if (!append && _hasRights(client->nick)) {
+	if (!append && (svFrom || _hasRights(client->nick))) {
 		if (!_isInList(target, _modes.o)) // target is not chanop
 			return (true);
 		_modes.o.remove(utils::ircLowerCase(target));
-		ms = ":" + client->nick + "!" + client->username + "@";
-		ms += client->servername + " MODE " + getName() + " -o " + utils::ircLowerCase(target);
+		ms = client->getFullMask();
+		ms += " MODE " + getName() + " -o " + utils::ircLowerCase(target);
 		broadcastMsg(client, ms);
-		return (rplMsg(ms, client));
+		rplMsg(ms, client);
+		ms = ":" + client->nick + " MODE " + getName() + " -o " + utils::ircLowerCase(target);
+		client->sendToAllServs(ms, svFrom);
+		return (true);
 	}
 	ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
 	return (!rplMsg(ms, client));
 }
 
-bool	Channel::mode_v(bool append, Client *client, const std::string &target)
+bool	Channel::mode_v(OtherServ *svFrom, bool append, Client *client, const std::string &target)
 {
 	std::string ms;
 	if (!isInChan(target))
 		return (true);
-	if (append && _hasRights(client->nick)) {
+	if (append && (svFrom || _hasRights(client->nick))) {
 		if (_isInList(target, _modes.v))
 			return (true);
 		_modes.v.push_back(utils::ircLowerCase(target));
-		ms = ":" + client->nick + "!" + client->username + "@";
-		ms += client->servername + " MODE " + getName() + " +v " + utils::ircLowerCase(target);
+		ms = client->getFullMask();
+		ms += " MODE " + getName() + " +v " + utils::ircLowerCase(target);
 		broadcastMsg(client, ms);
-		return (rplMsg(ms, client));
+		rplMsg(ms, client);
+		ms = ":" + client->nick + " MODE " + getName() + " +v " + utils::ircLowerCase(target);
+		client->sendToAllServs(ms, svFrom);
+		return (true);
 	}
 
-	if (!append && _hasRights(client->nick)) {
+	if (!append && (svFrom || _hasRights(client->nick))) {
 		if (!_isInList(target, _modes.v))
 			return (true);
 		_modes.v.remove(utils::ircLowerCase(target));
-		ms = ":" + client->nick + "!" + client->username + "@";
-		ms += client->servername + " MODE " + getName() + " -v " + utils::ircLowerCase(target);
+		ms = client->getFullMask();
+		ms += " MODE " + getName() + " -v " + utils::ircLowerCase(target);
 		broadcastMsg(client, ms);
-		return (rplMsg(ms, client));
+		rplMsg(ms, client);
+		ms = ":" + client->nick + " MODE " + getName() + " -v " + utils::ircLowerCase(target);
+		client->sendToAllServs(ms, svFrom);
+		return (true);
 	}
 	ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
 	return (!rplMsg(ms, client));
 }
 
-bool	Channel::mode_b(bool append, Client *client, const std::string &mask)
+bool	Channel::mode_b(OtherServ *svFrom, bool append, Client *client, const std::string &mask)
 {
 	std::string ms;
 	time_t		time;
-	std::string	fullmask = ":" + client->nick + "!" + client->username + "@" + client->servername;
+	std::string	fullmask = client->getFullMask();
 
 	std::time(&time);
-	if (append && _hasRights(client->nick)) {
+	if (append && (svFrom || _hasRights(client->nick))) {
 		_modes.b[utils::ircLowerCase(mask)] = std::pair<std::string, time_t>(fullmask, time);
-		ms = ":" + client->nick + "!" + client->username + "@";
-		ms += client->servername + " MODE " + getName() + " +b " + utils::ircLowerCase(mask);
+		ms = client->getFullMask();
+		ms += " MODE " + getName() + " +b " + utils::ircLowerCase(mask);
 		broadcastMsg(client, ms);
-		return (rplMsg(ms, client));
+		rplMsg(ms, client);
+		ms = ":" + client->nick + " MODE " + getName() + " +b " + utils::ircLowerCase(mask);
+		client->sendToAllServs(ms, svFrom);
+		return (true);
 	}
 
-	if (!append && _hasRights(client->nick)) {
+	if (!append && (svFrom || _hasRights(client->nick))) {
 		if (_modes.b.erase(utils::ircLowerCase(mask)) == 0)
 			return (true);
-		ms = ":" + client->nick + "!" + client->username + "@";
-		ms += client->servername + " MODE " + getName() + " -b " + utils::ircLowerCase(mask);
+		ms = client->getFullMask();
+		ms += " MODE " + getName() + " -b " + utils::ircLowerCase(mask);
 		broadcastMsg(client, ms);
-		return (rplMsg(ms, client));
+		rplMsg(ms, client);
+		ms = ":" + client->nick + " MODE " + getName() + " -b " + utils::ircLowerCase(mask);
+		client->sendToAllServs(ms, svFrom);
+		return (true);
 	}
 	ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
 	return (!rplMsg(ms, client));
 }
 
-bool	Channel::mode_e(bool append, Client *client, const std::string &mask)
+bool	Channel::mode_e(OtherServ *svFrom, bool append, Client *client, const std::string &mask)
 {
 	std::string ms;
 	time_t		time;
-	std::string	fullmask = ":" + client->nick + "!" + client->username + "@" + client->servername;
+	std::string	fullmask = client->getFullMask();
 
 	std::time(&time);
-	if (append && _hasRights(client->nick)) {
+	if (append && (svFrom || _hasRights(client->nick))) {
 		_modes.e[utils::ircLowerCase(mask)] = std::pair<std::string, time_t>(fullmask, time);
-		ms = ":" + client->nick + "!" + client->username + "@";
-		ms += client->servername + " MODE " + getName() + " +e " + utils::ircLowerCase(mask);
+		ms = client->getFullMask();
+		ms += " MODE " + getName() + " +e " + utils::ircLowerCase(mask);
 		broadcastMsg(client, ms);
-		return (rplMsg(ms, client));
+		rplMsg(ms, client);
+		ms = ":" + client->nick + " MODE " + getName() + " +e " + utils::ircLowerCase(mask);
+		client->sendToAllServs(ms, svFrom);
+		return (true);
 	}
 
-	if (!append && _hasRights(client->nick)) {
+	if (!append && (svFrom || _hasRights(client->nick))) {
 		if (_modes.e.erase(utils::ircLowerCase(mask)) == 0)
 			return (true);
-		ms = ":" + client->nick + "!" + client->username + "@";
-		ms += client->servername + " MODE " + getName() + " -e " + utils::ircLowerCase(mask);
+		ms = client->getFullMask();
+		ms += " MODE " + getName() + " -e " + utils::ircLowerCase(mask);
 		broadcastMsg(client, ms);
-		return (rplMsg(ms, client));
+		rplMsg(ms, client);
+		ms = ":" + client->nick + " MODE " + getName() + " -e " + utils::ircLowerCase(mask);
+		client->sendToAllServs(ms, svFrom);
+		return (true);
 	}
 	ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
 	return (!rplMsg(ms, client));
 }
 
-bool	Channel::mode_I(bool append, Client *client, const std::string &mask)
+bool	Channel::mode_I(OtherServ *svFrom, bool append, Client *client, const std::string &mask)
 {
 	std::string ms;
 	time_t		time;
-	std::string	fullmask = ":" + client->nick + "!" + client->username + "@" + client->servername;
+	std::string	fullmask = client->getFullMask();
 
 	std::time(&time);
-	if (append && _hasRights(client->nick)) {
+	if (append && (svFrom || _hasRights(client->nick))) {
 		_modes.I[utils::ircLowerCase(mask)] = std::pair<std::string, time_t>(fullmask, time);
-		ms = ":" + client->nick + "!" + client->username + "@";
-		ms += client->servername + " MODE " + getName() + " +I " + utils::ircLowerCase(mask);
+		ms = client->getFullMask();
+		ms += " MODE " + getName() + " +I " + utils::ircLowerCase(mask);
 		broadcastMsg(client, ms);
-		return (rplMsg(ms, client));
+		rplMsg(ms, client);
+		ms = ":" + client->nick + " MODE " + getName() + " +I " + utils::ircLowerCase(mask);
+		client->sendToAllServs(ms, svFrom);
+		return (true);
 	}
 
-	if (!append && _hasRights(client->nick)) {
+	if (!append && (svFrom || _hasRights(client->nick))) {
 		if (_modes.I.erase(utils::ircLowerCase(mask)) == 0)
 			return (true);
-		ms = ":" + client->nick + "!" + client->username + "@";
-		ms += client->servername + " MODE " + getName() + " -I " + utils::ircLowerCase(mask);
+		ms = client->getFullMask();
+		ms += " MODE " + getName() + " -I " + utils::ircLowerCase(mask);
 		broadcastMsg(client, ms);
-		return (rplMsg(ms, client));
+		rplMsg(ms, client);
+		ms = ":" + client->nick + " MODE " + getName() + " -I " + utils::ircLowerCase(mask);
+		client->sendToAllServs(ms, svFrom);
+		return (true);
 	}
 	ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
 	return (!rplMsg(ms, client));
 }
 
-bool	Channel::mode_p(bool append, Client *client)
+bool	Channel::mode_p(OtherServ *svFrom, bool append, Client *client)
 {
 	std::string ms;
-	if (append && _hasRights(client->nick)) {
+	if (append && (svFrom || _hasRights(client->nick))) {
 		_modes.p = true;
-		ms = ":" + client->nick + "!" + client->username + "@";
-		ms += client->servername + " MODE " + getName() + " +p";
+		ms = client->getFullMask();
+		ms += " MODE " + getName() + " +p";
 		broadcastMsg(client, ms);
-		return (rplMsg(ms, client));
+		rplMsg(ms, client);
+		ms = ":" + client->nick + " MODE " + getName() + " +p";
+		client->sendToAllServs(ms, svFrom);
+		return (true);
 	}
-	if (!append && _hasRights(client->nick)) {
+	if (!append && (svFrom || _hasRights(client->nick))) {
 		_modes.p = false;
-		ms = ":" + client->nick + "!" + client->username + "@";
-		ms += client->servername + " MODE " + getName() + " -p";
+		ms = client->getFullMask();
+		ms += " MODE " + getName() + " -p";
 		broadcastMsg(client, ms);
-		return (rplMsg(ms, client));
+		rplMsg(ms, client);
+		ms = ":" + client->nick + " MODE " + getName() + " -p";
+		client->sendToAllServs(ms, svFrom);
+		return (true);
 	}
 	ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
 	return (!rplMsg(ms, client));
 }
 
-bool	Channel::mode_s(bool append, Client *client)
+bool	Channel::mode_s(OtherServ *svFrom, bool append, Client *client)
 {
 	std::string ms;
-	if (append && _hasRights(client->nick)) {
+	if (append && (svFrom || _hasRights(client->nick))) {
 		_modes.s = true;
-		ms = ":" + client->nick + "!" + client->username + "@";
-		ms += client->servername + " MODE " + getName() + " +s";
+		ms = client->getFullMask();
+		ms += " MODE " + getName() + " +s";
 		broadcastMsg(client, ms);
-		return (rplMsg(ms, client));
+		rplMsg(ms, client);
+		ms = ":" + client->nick + " MODE " + getName() + " +s";
+		client->sendToAllServs(ms, svFrom);
+		return (true);
 	}
-	if (!append && _hasRights(client->nick)) {
+	if (!append && (svFrom || _hasRights(client->nick))) {
 		_modes.s = false;
-		ms = ":" + client->nick + "!" + client->username + "@";
-		ms += client->servername + " MODE " + getName() + " -s";
+		ms = client->getFullMask();
+		ms += " MODE " + getName() + " -s";
 		broadcastMsg(client, ms);
-		return (rplMsg(ms, client));
+		rplMsg(ms, client);
+		ms = ":" + client->nick + " MODE " + getName() + " -s";
+		client->sendToAllServs(ms, svFrom);
+		return (true);
 	}
 	ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
 	return (!rplMsg(ms, client));
 }
 
-bool	Channel::mode_i(bool append, Client *client)
+bool	Channel::mode_i(OtherServ *svFrom, bool append, Client *client)
 {
 	std::string ms;
-	if (append && _hasRights(client->nick)) {
+	if (append && (svFrom || _hasRights(client->nick))) {
 		_modes.i = true;
-		ms = ":" + client->nick + "!" + client->username + "@";
-		ms += client->servername + " MODE " + getName() + " +i";
+		ms = client->getFullMask();
+		ms += " MODE " + getName() + " +i";
 		broadcastMsg(client, ms);
-		return (rplMsg(ms, client));
+		rplMsg(ms, client);
+		ms = ":" + client->nick + " MODE " + getName() + " +i";
+		client->sendToAllServs(ms, svFrom);
+		return (true);
 	}
-	if (!append && _hasRights(client->nick)) {
+	if (!append && (svFrom || _hasRights(client->nick))) {
 		_modes.i = false;
-		ms = ":" + client->nick + "!" + client->username + "@";
-		ms += client->servername + " MODE " + getName() + " -i";
+		ms = client->getFullMask();
+		ms += " MODE " + getName() + " -i";
 		broadcastMsg(client, ms);
-		return (rplMsg(ms, client));
+		rplMsg(ms, client);
+		ms = ":" + client->nick + " MODE " + getName() + " -i";
+		client->sendToAllServs(ms, svFrom);
+		return (true);
 	}
 	ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
 	return (!rplMsg(ms, client));
 }
 
-bool	Channel::mode_t(bool append, Client *client)
+bool	Channel::mode_t(OtherServ *svFrom, bool append, Client *client)
 {
 	std::string ms;
-	if (append && _hasRights(client->nick)) {
+	if (append && (svFrom || _hasRights(client->nick))) {
 		_modes.t = true;
-		ms = ":" + client->nick + "!" + client->username + "@";
-		ms += client->servername + " MODE " + getName() + " +t";
+		ms = client->getFullMask();
+		ms += " MODE " + getName() + " +t";
 		broadcastMsg(client, ms);
-		return (rplMsg(ms, client));
+		rplMsg(ms, client);
+		ms = ":" + client->nick + " MODE " + getName() + " +t";
+		client->sendToAllServs(ms, svFrom);
+		return (true);
 	}
-	if (!append && _hasRights(client->nick)) {
+	if (!append && (svFrom || _hasRights(client->nick))) {
 		_modes.t = false;
-		ms = ":" + client->nick + "!" + client->username + "@";
-		ms += client->servername + " MODE " + getName() + " -t";
+		ms = client->getFullMask();
+		ms += " MODE " + getName() + " -t";
 		broadcastMsg(client, ms);
-		return (rplMsg(ms, client));
+		rplMsg(ms, client);
+		ms = ":" + client->nick + " MODE " + getName() + " -t";
+		client->sendToAllServs(ms, svFrom);
+		return (true);
 	}
 	ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
 	return (!rplMsg(ms, client));
 }
 
-bool	Channel::mode_m(bool append, Client *client)
+bool	Channel::mode_m(OtherServ *svFrom, bool append, Client *client)
 {
 	std::string ms;
-	if (append && _hasRights(client->nick)) {
+	if (append && (svFrom || _hasRights(client->nick))) {
 		_modes.m = true;
-		ms = ":" + client->nick + "!" + client->username + "@";
-		ms += client->servername + " MODE " + getName() + " +m";
+		ms = client->getFullMask();
+		ms += " MODE " + getName() + " +m";
 		broadcastMsg(client, ms);
-		return (rplMsg(ms, client));
+		rplMsg(ms, client);
+		ms = ":" + client->nick + " MODE " + getName() + " +m";
+		client->sendToAllServs(ms, svFrom);
+		return (true);
 	}
-	if (!append && _hasRights(client->nick)) {
+	if (!append && (svFrom || _hasRights(client->nick))) {
 		_modes.m = false;
-		ms = ":" + client->nick + "!" + client->username + "@";
-		ms += client->servername + " MODE " + getName() + " -m";
+		ms = client->getFullMask();
+		ms += " MODE " + getName() + " -m";
 		broadcastMsg(client, ms);
-		return (rplMsg(ms, client));
+		rplMsg(ms, client);
+		ms = ":" + client->nick + " MODE " + getName() + " -m";
+		client->sendToAllServs(ms, svFrom);
+		return (true);
 	}
 	ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
 	return (!rplMsg(ms, client));
 }
 
-bool	Channel::mode_n(bool append, Client *client)
+bool	Channel::mode_n(OtherServ *svFrom, bool append, Client *client)
 {
 	std::string ms;
-	if (append && _hasRights(client->nick)) {
+	if (append && (svFrom || _hasRights(client->nick))) {
 		_modes.n = true;
-		ms = ":" + client->nick + "!" + client->username + "@";
-		ms += client->servername + " MODE " + getName() + " +n";
+		ms = client->getFullMask();
+		ms += " MODE " + getName() + " +n";
 		broadcastMsg(client, ms);
-		return (rplMsg(ms, client));
+		rplMsg(ms, client);
+		ms = ":" + client->nick + " MODE " + getName() + " +n";
+		client->sendToAllServs(ms, svFrom);
+		return (true);
 	}
-	if (!append && _hasRights(client->nick)) {
+	if (!append && (svFrom || _hasRights(client->nick))) {
 		_modes.n = false;
-		ms = ":" + client->nick + "!" + client->username + "@";
-		ms += client->servername + " MODE " + getName() + " -n";
+		ms = client->getFullMask();
+		ms += " MODE " + getName() + " -n";
 		broadcastMsg(client, ms);
-		return (rplMsg(ms, client));
+		rplMsg(ms, client);
+		ms = ":" + client->nick + " MODE " + getName() + " -n";
+		client->sendToAllServs(ms, svFrom);
+		return (true);
 	}
 	ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
 	return (!rplMsg(ms, client));
 }
 
-bool	Channel::mode_q(bool append, Client *client)
+bool	Channel::mode_q(OtherServ *svFrom, bool append, Client *client)
 {
 	std::string ms;
-	if (append && _hasRights(client->nick)) {
+	if (append && (svFrom || _hasRights(client->nick))) {
 		_modes.q = true;
-		ms = ":" + client->nick + "!" + client->username + "@";
-		ms += client->servername + " MODE " + getName() + " +q";
+		ms = client->getFullMask();
+		ms += " MODE " + getName() + " +q";
 		broadcastMsg(client, ms);
-		return (rplMsg(ms, client));
+		rplMsg(ms, client);
+		ms = ":" + client->nick + " MODE " + getName() + " +q";
+		client->sendToAllServs(ms, svFrom);
+		return (true);
 	}
-	if (!append && _hasRights(client->nick)) {
+	if (!append && (svFrom || _hasRights(client->nick))) {
 		_modes.q = false;
-		ms = ":" + client->nick + "!" + client->username + "@";
-		ms += client->servername + " MODE " + getName() + " -q";
+		ms = client->getFullMask();
+		ms += " MODE " + getName() + " -q";
 		broadcastMsg(client, ms);
-		return (rplMsg(ms, client));
+		rplMsg(ms, client);
+		ms = ":" + client->nick + " MODE " + getName() + " -q";
+		client->sendToAllServs(ms, svFrom);
+		return (true);
 	}
 	ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
 	return (!rplMsg(ms, client));
 }
 
-bool	Channel::mode_l(bool append, Client *client, int limit)
+bool	Channel::mode_l(OtherServ *svFrom, bool append, Client *client, int limit)
 {
 	std::string ms;
-	if (append && _hasRights(client->nick)) {
+	if (append && (svFrom || _hasRights(client->nick))) {
 		_modes.l = limit;
-		ms = ":" + client->nick + "!" + client->username + "@";
-		ms += client->servername + " MODE " + getName() + " +l " + std::to_string(limit);
+		ms = client->getFullMask();
+		ms += " MODE " + getName() + " +l " + std::to_string(limit);
 		broadcastMsg(client, ms);
-		return (rplMsg(ms, client));
+		rplMsg(ms, client);
+		ms = ":" + client->nick + " MODE " + getName() + " +l " + std::to_string(limit);
+		client->sendToAllServs(ms, svFrom);
+		return (true);
 	}
-	if (!append && _hasRights(client->nick)) {
+	if (!append && (svFrom || _hasRights(client->nick))) {
 		_modes.l = -1;
-		ms = ":" + client->nick + "!" + client->username + "@";
-		ms += client->servername + " MODE " + getName() + " -l";
+		ms = client->getFullMask();
+		ms += " MODE " + getName() + " -l";
 		broadcastMsg(client, ms);
-		return (rplMsg(ms, client));
+		rplMsg(ms, client);
+		ms = ":" + client->nick + " MODE " + getName() + " -l";
+		client->sendToAllServs(ms, svFrom);
+		return (true);
 	}
 	ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
 	return (!rplMsg(ms, client));
 }
 
-bool	Channel::mode_k(bool append, Client *client, const std::string &passwd)
+bool	Channel::mode_k(OtherServ *svFrom, bool append, Client *client, const std::string &passwd)
 {
 	std::string ms;
-	if (!_hasRights(client->nick)) {
+	if (!svFrom && !_hasRights(client->nick)) {
 		ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
 		return (!rplMsg(ms, client));
 	}
@@ -495,16 +588,22 @@ bool	Channel::mode_k(bool append, Client *client, const std::string &passwd)
 			return (!rplMsg(ms, client));
 		}
 		_modes.k = passwd;
-		ms = ":" + client->nick + "!" + client->username + "@";
-		ms += client->servername + " MODE " + getName() + " +k " + passwd;
+		ms = client->getFullMask();
+		ms += " MODE " + getName() + " +k " + passwd;
 		broadcastMsg(client, ms);
-		return (rplMsg(ms, client));
+		rplMsg(ms, client);
+		ms = ":" + client->nick + " MODE " + getName() + " +k " + passwd;
+		client->sendToAllServs(ms, svFrom);
+		return (true);
 	} else {
 		_modes.k = "";
-		ms = ":" + client->nick + "!" + client->username + "@";
-		ms += client->servername + " MODE " + getName() + " -k";
+		ms = client->getFullMask();
+		ms += " MODE " + getName() + " -k";
 		broadcastMsg(client, ms);
-		return (rplMsg(ms, client));
+		rplMsg(ms, client);
+		ms = ":" + client->nick + " MODE " + getName() + " -k";
+		client->sendToAllServs(ms, svFrom);
+		return (true);
 	}
 }
 
@@ -529,18 +628,18 @@ bool	Channel::getModeN() const
 	return (_modes.n);
 }
 
-bool	Channel::kick(Client *client, const std::string &guyToKick, const std::string &reason)
+bool	Channel::kick(Client *client, const std::string &guyToKick, const std::string &reason, OtherServ *svFrom)
 {
 	std::string	ms;
 	_users_map::iterator	userToKick = _users.find(utils::ircLowerCase(guyToKick));
 
-	if (_hasRights(client->nick)) {
+	if (svFrom || _hasRights(client->nick)) {
 		if (userToKick == _users.end()) {
 			ms = reply_formating(client->servername.c_str(), ERR_USERNOTINCHANNEL, std::vector<std::string>({guyToKick, getName()}), client->nick.c_str());
 			return (!rplMsg(ms, client));
 		}
-		ms = ":" + client->nick + "!a" + client->username + "@";
-		ms += client->servername + " KICK " + getName() + " " + guyToKick;
+		ms = client->getFullMask();
+		ms += " KICK " + getName() + " " + guyToKick;
 		ms += (reason != "") ? " :" + reason : " :" + client->nick;
 		rplMsg(ms, client);
 		broadcastMsg(client, ms);
@@ -551,44 +650,52 @@ bool	Channel::kick(Client *client, const std::string &guyToKick, const std::stri
 			_modes.v.remove(utils::ircLowerCase(userToKick->first));
 		_users.erase(userToKick);
 		_modes.users--;
-		updateServsChan(client); // update servers chan
-
+		
+		ms = ":" + client->nick + " KICK " + getName() + " " + guyToKick;
+		ms += (reason != "") ? " :" + reason : " :" + client->nick;
+		client->sendToAllServs(ms, svFrom);
 		return (true);
 	}
 	ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
 	return (!rplMsg(ms, client));
 }
 
-bool	Channel::invite(Client *client, const std::string &guyToInvite)
+bool	Channel::invite(Client *client, const std::string &guyToInvite, OtherServ *svFrom)
 {
 	std::string	ms;
 	_users_map::iterator	userToInvite = _users.find(utils::ircLowerCase(guyToInvite));
 	Client		*clientToInvite = client->getOtherClient(guyToInvite);
 
-	if (!clientToInvite) {
-		ms = reply_formating(client->servername.c_str(), ERR_NOSUCHNICK, {guyToInvite}, client->nick.c_str());
-		return (!rplMsg(ms, client));
-	}
-	if (!isInChan(client->nick)) {
-		ms = reply_formating(client->servername.c_str(), ERR_NOTONCHANNEL, {getName()}, client->nick.c_str());
-		return (!rplMsg(ms, client));
-	}
-	if (!_hasRights(client->nick)) {
-		ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
-		return (!rplMsg(ms, client));
-	}
-	if (userToInvite != _users.end()) { // user is already in channel (no need to invite)
-		ms = reply_formating(client->servername.c_str(), ERR_USERONCHANNEL, std::vector<std::string>({guyToInvite, getName()}), client->nick.c_str());
-		return (!rplMsg(ms, client));
+	if (!svFrom) {
+		if (!clientToInvite) {
+			ms = reply_formating(client->servername.c_str(), ERR_NOSUCHNICK, {guyToInvite}, client->nick.c_str());
+			return (!rplMsg(ms, client));
+		}
+		if (!isInChan(client->nick)) {
+			ms = reply_formating(client->servername.c_str(), ERR_NOTONCHANNEL, {getName()}, client->nick.c_str());
+			return (!rplMsg(ms, client));
+		}
+		if (!_hasRights(client->nick)) {
+			ms = reply_formating(client->servername.c_str(), ERR_CHANOPRIVSNEEDED, {getName()}, client->nick.c_str());
+			return (!rplMsg(ms, client));
+		}
+		if (userToInvite != _users.end()) { // user is already in channel (no need to invite)
+			ms = reply_formating(client->servername.c_str(), ERR_USERONCHANNEL, std::vector<std::string>({guyToInvite, getName()}), client->nick.c_str());
+			return (!rplMsg(ms, client));
+		}
 	}
 	if (!_isInList(guyToInvite, _modes.invitation_list))
 		_modes.invitation_list.push_back(utils::ircLowerCase(guyToInvite));
-	ms = ":" + client->nick + "!" + client->username + "@" + client->servername;
+	ms = client->getFullMask();
 	ms += " INVITE " + utils::ircLowerCase(guyToInvite) + " :" + getName();
 	rplMsg(ms, clientToInvite);
 	ms = reply_formating(client->servername.c_str(), RPL_INVITING,
 	std::vector<std::string>({utils::ircLowerCase(guyToInvite), getName()}), client->nick.c_str());
-	return (rplMsg(ms, client));
+	rplMsg(ms, client);
+
+	ms = ":" + client->nick + " INVITE " + utils::ircLowerCase(guyToInvite) + " :" + getName();
+	client->sendToAllServs(ms, svFrom);
+	return (true);
 }
 
 bool				Channel::isEmpty() const
@@ -655,18 +762,19 @@ void		Channel::changeNick(const std::string &oldNick, const std::string &newNick
 	_users.insert(std::pair<std::string, Client*>(utils::ircLowerCase(newNick), client));
 	// * not in RFC but usefull
 	// :paprika!~pokemon@ip-46.net-80-236-89.joinville.rev.numericable.fr NICK :patrick-2
-	ms = ":" + oldNick + "!" + client->username + "@" + client->servername;
+	ms = client->getFullMask();
 	ms += " NICK :" + newNick;
+	std::cout << "miaw new nick is == " << newNick << "\n\n";
 	if (!_modes.q)
 		broadcastMsg(client, ms);
-	updateServsChan(client);
+	rplMsg(ms, client);
 }
 
 bool		Channel::quit(Client *client, const std::vector<std::string> &args)
 {
 	// QUIT :allez salut
 	// :sdlfjJFFFF!~Oui_eneffet@CJ-eef.m3i.5tviju.IP QUIT :Quit: allez a +
-	std::string	ms = ":" + client->nick + "!" + client->username + "@" + client->servername;
+	std::string	ms = client->getFullMask();
 	ms += " QUIT ";
 	for (size_t i = 0; i < args.size(); i++) {
 		ms += args[i];
@@ -674,21 +782,14 @@ bool		Channel::quit(Client *client, const std::vector<std::string> &args)
 			ms += " ";
 	}
 	broadcastMsg(client, ms);
-	leave(client, "", true);
-	updateServsChan(client);
+	leave(client, "", nullptr, true);
 	return (true);
 }
 
 // * this function always returns true
 bool		Channel::rplMsg(std::string ms, Client *c)
 {
-	std::string	msg = ":" + c->nick + " CHAN_RPL ";
-	if (c->sock == -1) { // we need to send msg to the server on which the client is connected
-		msg += ms;
-		OtherServ *srv = c->serv;
-		if (!srv)
-			return (true);
-		custom_send(msg, srv);
+	if (c->sock == -1) {
 		return (true);
 	}
 	custom_send(ms, c);
@@ -718,23 +819,28 @@ std::vector<std::string>	Channel::getUsersVec() const
 	return (users);
 }
 
-void			Channel::updateServsChan(Client *c) const
+std::vector<std::string>	Channel::getOpersVec() const
 {
-	std::string	ms;
+	std::vector<std::string>	users;
+	for (std::string nick: _modes.o) {
+		users.push_back(std::string(nick));
+	}
+	return (users);
+}
 
-	if (getName().at(0) == '&')
-		return ; // channel is local to this serv
-	ms = "CHAN_CHG ";
-	ms += getName() + "," + getUsersNum() + "," + getModes() + " ";
-	ms += getUsersStr();
-	ms += (getTopic() != "") ? ":" + getTopic() : ":!";
-	c->sendToAllServs(ms);
+std::vector<std::string>	Channel::getVoicedVec() const
+{
+	std::vector<std::string>	users;
+	for (std::string nick: _modes.v) {
+		users.push_back(std::string(nick));
+	}
+	return (users);
 }
 
 // returns true if user is banned
 bool		Channel::_isBanned(Client *client) const
 {
-	std::string	fullmask = ":" + client->nick + "!" + client->username + "@" + client->servername;
+	std::string	fullmask = client->getFullMask();
 	for (std::pair<std::string, std::pair<std::string, time_t> > pair : _modes.b) {
 		if (utils::strMatchToLower(pair.first, fullmask))
 			return (!_isInExceptionList(client));
@@ -745,7 +851,7 @@ bool		Channel::_isBanned(Client *client) const
 // returns true if user is in the execption list
 bool		Channel::_isInExceptionList(Client *client) const
 {
-	std::string	fullmask = ":" + client->nick + "!" + client->username + "@" + client->servername;
+	std::string	fullmask = client->getFullMask();
 	for (std::pair<std::string, std::pair<std::string, time_t> > pair : _modes.e) {
 		if (utils::strMatchToLower(pair.first, fullmask))
 			return (true);
@@ -755,7 +861,7 @@ bool		Channel::_isInExceptionList(Client *client) const
 
 bool		Channel::_isInvited(Client *client) const
 {
-	std::string	fullmask = ":" + client->nick + "!" + client->username + "@" + client->servername;
+	std::string	fullmask = client->getFullMask();
 	if (_isInList(client->nick, _modes.invitation_list))
 		return (true);
 	for (std::pair<std::string, std::pair<std::string, time_t> > pair : _modes.I) {
@@ -852,7 +958,9 @@ bool		Channel::who(Client *client) const
 		Client *c = pair.second;
 		ms = ":" + client->servername + " 352 " + client->nick + " " + getName() + " ";
 		ms += c->username + " " + c->hostname + " " + c->servername + " " + c->nick;
-		ms += " H :" + std::to_string(c->hop_count) + " " + c->realname;
+		ms += " H" + (_hasRights(c->nick) ? std::string("@") : std::string(""));
+		ms += (_isInList(c->nick, _modes.v)) ? std::string("+") : std::string("");
+		ms += " :" + std::to_string(c->hop_count) + " " + c->realname;
 		custom_send(ms, client);
 	}
 	ms = ":" + client->servername + " 315 " + client->nick + " " + getName() + " :End of /WHO list";

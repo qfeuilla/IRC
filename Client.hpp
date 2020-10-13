@@ -126,11 +126,9 @@ public:
 
 	static bool	thereIsAFullCmd(size_t &pos, size_t& charsToJump, const std::string &str);
 
-	OtherServ	*getServByChannelName(const std::string &nickname);
+	std::string		getFullMask() const;
 
-	std::vector<Chan>	getServsChans();
-
-	void		sendToAllServs(const std::string &ms);
+	void		sendToAllServs(const std::string &ms, OtherServ *servFrom = nullptr);
 	void		setEnv(Environment *env);
 	Environment			*ev;
 

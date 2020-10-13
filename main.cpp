@@ -6,7 +6,7 @@
 /*   By: qfeuilla <qfeuilla@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/09/17 18:28:49 by qfeuilla          #+#    #+#             */
-/*   Updated: 2020/10/11 20:48:01 by qfeuilla         ###   ########.fr       */
+/*   Updated: 2020/10/13 15:38:48 by qfeuilla         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -41,15 +41,15 @@ void	free_all(Server *se) {
 	} for (OtherServ *sv : tmp->lostServers) {
 		delete sv;
 	}
+	for (Fd *f : tmp->trash) {
+		delete f;
+	}
 	for (Fd *f : tmp->client_history) {
 		if (f->type == FD_CLIENT) {
 			Client *c = reinterpret_cast<Client *>(f);
 			if (c->is_ssl)
 				SSL_free(c->ssl);
 		}
-		delete f;
-	}
-	for (Fd *f : tmp->trash) {
 		delete f;
 	}
 	delete tmp;
