@@ -2,6 +2,7 @@
 ## IRC server implementation in cpp, a 42 school project
 
 This project was a group project, our group was: https://github.com/qfeuilla + https://github.com/mle-moni
+
 We finished this project in approx. 3 weeks
 
 ## INSTALL:
